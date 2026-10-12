@@ -1,0 +1,10 @@
+:root { font-family: system-ui, sans-serif; color: #222; background: #f7f7f2; }
+body { margin: 0; }
+a { color: #176243; }
+.site-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 5vw; border-bottom: 1px solid #ddd; background: #fff; }
+.brand { font-weight: 700; text-decoration: none; }
+.content { max-width: 720px; margin: 12vh auto; padding: 0 1.5rem; }
+.eyebrow { color: #176243; font-weight: 700; letter-spacing: .15em; }
+h1 { font-size: clamp(2rem, 6vw, 3.5rem); line-height: 1.1; }
+p { line-height: 1.6; }
+.status { display: inline-block; margin-top: 1.5rem; padding: .75rem 1rem; border-radius: .5rem; background: #e1eee5; }
