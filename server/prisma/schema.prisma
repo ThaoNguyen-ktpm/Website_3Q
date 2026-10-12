@@ -7,17 +7,108 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+}
+
 model User {
   id           Int      @id @default(autoincrement())
-  email        String   @unique
-  passwordHash String
+  email        String   @unique @db.VarChar(191)
+  passwordHash String   @db.VarChar(255)
+  role         UserRole @default(CUSTOMER)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  cart         Cart?
+  orders       Order[]
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(191)
+  slug      String    @unique @db.VarChar(191)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Product {
+  id          Int         @id @default(autoincrement())
+  categoryId  Int
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name        String      @db.VarChar(191)
+  slug        String      @unique @db.VarChar(191)
+  priceVnd    Int         @db.UnsignedInt
+  stock       Int         @default(0) @db.UnsignedInt
+  imageUrl    String?     @db.VarChar(2048)
+  description String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+
+  @@index([categoryId])
+}
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
   id        Int      @id @default(autoincrement())
-  name      String
-  priceVnd  Int
-  stock     Int      @default(0)
-  createdAt DateTime @default(now())
+  cartId    Int
+  productId Int
+  quantity  Int      @db.UnsignedInt
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, productId])
+  @@index([productId])
+}
+
+model Order {
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  user            User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod @default(COD)
+  totalVnd        Int           @db.UnsignedInt
+  recipientName   String        @db.VarChar(191)
+  recipientPhone  String        @db.VarChar(30)
+  shippingAddress String        @db.VarChar(500)
+  items           OrderItem[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id           Int     @id @default(autoincrement())
+  orderId      Int
+  productId    Int
+  productName  String  @db.VarChar(191)
+  unitPriceVnd Int     @db.UnsignedInt
+  quantity     Int     @db.UnsignedInt
+  subtotalVnd  Int     @db.UnsignedInt
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productId])
+  @@index([productId])
 }
