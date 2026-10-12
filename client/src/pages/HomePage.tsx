@@ -1,15 +1,31 @@
-import { useHealth } from '../hooks/useHealth';
+import { ProductCard } from '../components/ProductCard';
+import { useProducts } from '../hooks/useProducts';
 
 export function HomePage() {
-  const health = useHealth();
-  const status = health === 'online' ? 'API sẵn sàng' : health === 'loading' ? 'Đang kiểm tra API…' : 'API chưa kết nối';
+  const state = useProducts();
 
   return (
     <main className="content">
-      <p className="eyebrow">DỰ ÁN THỬ</p>
-      <h1>Khung cửa hàng đã sẵn sàng.</h1>
-      <p>Đây là bản khởi tạo. Sản phẩm, giỏ hàng và đặt hàng sẽ được bổ sung ở các task tiếp theo.</p>
-      <div className="status" role="status">{status}</div>
+      <div className="intro">
+        <p className="eyebrow">CỬA HÀNG MẪU</p>
+        <h1>Khám phá sản phẩm</h1>
+        <p>Túi xách, đồng hồ và phụ kiện trong dự án thử nghiệm.</p>
+      </div>
+
+      {state.status === 'loading' && <p role="status">Đang tải sản phẩm…</p>}
+      {state.status === 'error' && <p role="alert">{state.message}</p>}
+      {state.status === 'success' && (
+        <section aria-label="Danh sách sản phẩm">
+          <p className="product-count">{state.products.length} sản phẩm</p>
+          {state.products.length === 0 ? (
+            <p>Chưa có sản phẩm nào.</p>
+          ) : (
+            <ul className="product-grid">
+              {state.products.map((product) => <ProductCard key={product.id} product={product} />)}
+            </ul>
+          )}
+        </section>
+      )}
     </main>
   );
 }

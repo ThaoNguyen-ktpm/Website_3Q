@@ -45,6 +45,7 @@ npm run dev --workspace client
 
 - Web: http://localhost:5173
 - API: http://localhost:4000/api/health → `{"status":"ok"}`
+- Danh sách sản phẩm: http://localhost:4000/api/products → `{ "products": [...] }`. Trang chủ tải và hiển thị các sản phẩm mẫu từ API.
 
 Vite chuyển tiếp `/api` sang cổng 4000 trong chế độ dev. Không dùng cổng 3100.
 
@@ -67,4 +68,4 @@ npm test
 - `server/src/middlewares`: xử lý lỗi và middleware.
 - `client/src/pages`, `components`, `api`, `hooks`: giao diện và gọi API.
 
-Dự án hiện chưa triển khai API tài khoản, sản phẩm, giỏ hàng hoặc đặt hàng. Schema đã sẵn sàng cho các bước đó.
+Dự án hiện chưa triển khai API tài khoản, giỏ hàng hoặc đặt hàng. Schema đã sẵn sàng cho các bước đó.
