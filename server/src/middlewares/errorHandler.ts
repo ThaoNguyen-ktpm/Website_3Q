@@ -16,8 +16,9 @@ export class ApiError extends Error {
 
 export const errorHandler: ErrorRequestHandler = (error: unknown, _request, response, _next) => {
   const knownError = error instanceof ApiError;
-  const statusCode = knownError ? error.statusCode : 500;
-  const code = knownError ? error.code : 'INTERNAL_ERROR';
-  const message = knownError ? error.message : 'Đã xảy ra lỗi máy chủ.';
+  const malformedJson = error instanceof SyntaxError && 'status' in error && error.status === 400 && 'body' in error;
+  const statusCode = knownError ? error.statusCode : malformedJson ? 400 : 500;
+  const code = knownError ? error.code : malformedJson ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR';
+  const message = knownError ? error.message : malformedJson ? 'JSON không hợp lệ.' : 'Đã xảy ra lỗi máy chủ.';
   response.status(statusCode).json({ error: { code, message } });
 };

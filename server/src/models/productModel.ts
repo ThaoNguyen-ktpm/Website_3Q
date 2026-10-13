@@ -1,7 +1,8 @@
 import { prisma } from './prisma.js';
 
-export function findProducts() {
+export function findProducts(categorySlug?: string) {
   return prisma.product.findMany({
+    where: categorySlug ? { category: { slug: categorySlug } } : undefined,
     select: {
       id: true,
       name: true,

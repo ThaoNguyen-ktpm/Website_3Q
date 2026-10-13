@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -24,8 +24,8 @@ enum PaymentMethod {
 
 model User {
   id           Int      @id @default(autoincrement())
-  email        String   @unique @db.VarChar(191)
-  passwordHash String   @db.VarChar(255)
+  email        String   @unique
+  passwordHash String
   role         UserRole @default(CUSTOMER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -35,8 +35,8 @@ model User {
 
 model Category {
   id        Int       @id @default(autoincrement())
-  name      String    @db.VarChar(191)
-  slug      String    @unique @db.VarChar(191)
+  name      String
+  slug      String    @unique
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -46,12 +46,12 @@ model Product {
   id          Int         @id @default(autoincrement())
   categoryId  Int
   category    Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  name        String      @db.VarChar(191)
-  slug        String      @unique @db.VarChar(191)
-  priceVnd    Int         @db.UnsignedInt
-  stock       Int         @default(0) @db.UnsignedInt
-  imageUrl    String?     @db.VarChar(2048)
-  description String?     @db.Text
+  name        String
+  slug        String      @unique
+  priceVnd    Int
+  stock       Int         @default(0)
+  imageUrl    String?
+  description String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   cartItems   CartItem[]
@@ -73,7 +73,7 @@ model CartItem {
   id        Int      @id @default(autoincrement())
   cartId    Int
   productId Int
-  quantity  Int      @db.UnsignedInt
+  quantity  Int
   cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
 
@@ -87,10 +87,10 @@ model Order {
   user            User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   status          OrderStatus   @default(PENDING)
   paymentMethod   PaymentMethod @default(COD)
-  totalVnd        Int           @db.UnsignedInt
-  recipientName   String        @db.VarChar(191)
-  recipientPhone  String        @db.VarChar(30)
-  shippingAddress String        @db.VarChar(500)
+  totalVnd        Int
+  recipientName   String
+  recipientPhone  String
+  shippingAddress String
   items           OrderItem[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -102,10 +102,10 @@ model OrderItem {
   id           Int     @id @default(autoincrement())
   orderId      Int
   productId    Int
-  productName  String  @db.VarChar(191)
-  unitPriceVnd Int     @db.UnsignedInt
-  quantity     Int     @db.UnsignedInt
-  subtotalVnd  Int     @db.UnsignedInt
+  productName  String
+  unitPriceVnd Int
+  quantity     Int
+  subtotalVnd  Int
   order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product      Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 

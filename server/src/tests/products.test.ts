@@ -21,4 +21,22 @@ describe('GET /api/products', () => {
     });
   });
 
+  it('lọc theo slug danh mục hợp lệ', async () => {
+    vi.mocked(findProducts).mockResolvedValue([]);
+
+    const response = await request(app).get('/api/products?category=tui-xach');
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ products: [] });
+    expect(findProducts).toHaveBeenCalledWith('tui-xach');
+  });
+
+  it('từ chối tham số lọc không hợp lệ bằng định dạng lỗi chung', async () => {
+    const response = await request(app).get('/api/products?category=Tui%20xach');
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: { code: 'VALIDATION_ERROR', message: 'Tham số lọc sản phẩm không hợp lệ.' },
+    });
+    expect(findProducts).not.toHaveBeenCalled();
+  });
+
 });

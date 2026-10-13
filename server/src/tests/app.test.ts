@@ -16,4 +16,15 @@ describe('API', () => {
       error: { code: 'NOT_FOUND', message: 'Không tìm thấy đường dẫn.' },
     });
   });
+
+  it('trả lỗi thống nhất khi JSON không hợp lệ', async () => {
+    const response = await request(app)
+      .post('/api/products')
+      .set('Content-Type', 'application/json')
+      .send('{');
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: { code: 'VALIDATION_ERROR', message: 'JSON không hợp lệ.' },
+    });
+  });
 });
