@@ -19,6 +19,8 @@ a { color: #176243; }
 }
 
 .brand { font-weight: 700; text-decoration: none; }
+.site-footer { padding: 1.5rem 1rem; border-top: 1px solid #dfe5dc; text-align: center; color: #607169; font-size: .85rem; }
+.site-footer p { margin: 0; }
 .content { max-width: 1160px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
 .intro { max-width: 640px; margin-bottom: 3rem; }
 .eyebrow { color: #176243; font-size: .8rem; font-weight: 700; letter-spacing: .15em; }
