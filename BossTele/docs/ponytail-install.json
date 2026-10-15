@@ -1,0 +1,40 @@
+{
+    "repository":  "https://github.com/DietrichGebert/ponytail.git",
+    "commit":  "2961b52fc1fe6a5a87c7a959a79512e5c2f3ffe5",
+    "installedDate":  "2026-10-14",
+    "scope":  "D:\\Website_3Q",
+    "installation":  "project skills; no lifecycle hooks",
+    "claudeSkillsJunction":  ".claude/skills -\u003e .agents/skills",
+    "skills":  [
+                   {
+                       "name":  "ponytail",
+                       "sha256":  "FC12A0B9588A7FA3543D31DDC41541F735A5626105781643873110F2DA1BD52A",
+                       "path":  ".agents/skills/ponytail/SKILL.md"
+                   },
+                   {
+                       "name":  "ponytail-audit",
+                       "sha256":  "3AB632CE4695DE214DAFE4DB13D6F939E1C4BE328BD0754EA751DC28B70BE554",
+                       "path":  ".agents/skills/ponytail-audit/SKILL.md"
+                   },
+                   {
+                       "name":  "ponytail-debt",
+                       "sha256":  "4666DFD5FBAB7B8B4A6A0D8F5CCAE20603FE773443E958D47AA00845D888C0C4",
+                       "path":  ".agents/skills/ponytail-debt/SKILL.md"
+                   },
+                   {
+                       "name":  "ponytail-gain",
+                       "sha256":  "CE19DA91423C46C89205C5089AEB8BF40DE3E6432C87F213A4BF180FB9919686",
+                       "path":  ".agents/skills/ponytail-gain/SKILL.md"
+                   },
+                   {
+                       "name":  "ponytail-help",
+                       "sha256":  "D677EE12119D1D7531A93162A97A585E2A33D9CA4B5B70D2F62A2FAD4CEE2F29",
+                       "path":  ".agents/skills/ponytail-help/SKILL.md"
+                   },
+                   {
+                       "name":  "ponytail-review",
+                       "sha256":  "AFFA0EEDCA467B58699FAFBEA28F6F85352AA3E7F23785964BF42F029A291504",
+                       "path":  ".agents/skills/ponytail-review/SKILL.md"
+                   }
+               ]
+}

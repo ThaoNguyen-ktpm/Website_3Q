@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-14",
+  "mode": "live_read_only",
+  "query": "Chanel",
+  "results": [
+    {
+      "source": "kiotviet",
+      "status": "ok",
+      "matchedOnFirstPage": 100,
+      "hasMore": true,
+      "sampleSkus": [
+        "SP022466",
+        "SP022641",
+        "SP016933"
+      ]
+    },
+    {
+      "source": "sapo-web",
+      "status": "ok",
+      "matchedOnFirstPage": 250,
+      "hasMore": true,
+      "sampleSkus": [
+        "SP024730",
+        "SP024739",
+        "SP024754"
+      ]
+    }
+  ],
+  "kiotSkuCheck": {
+    "sku": "SP022466",
+    "status": "ok",
+    "matched": 1,
+    "complete": true
+  }
+}

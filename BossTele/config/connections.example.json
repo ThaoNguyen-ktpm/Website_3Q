@@ -1,0 +1,19 @@
+{
+  "kiotviet": {
+    "retailer": "",
+    "clientId": "",
+    "clientSecret": ""
+  },
+  "sapoWeb": {
+    "domain": "",
+    "authType": "basic",
+    "apiKey": "",
+    "apiSecret": "",
+    "accessToken": ""
+  },
+  "sapoPos": {
+    "baseUrl": "",
+    "accessToken": "",
+    "documentationUrl": ""
+  }
+}

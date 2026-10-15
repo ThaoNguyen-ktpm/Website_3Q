@@ -1,0 +1,55 @@
+
+> bosstele-local-tools@0.1.0 test
+> node --test test/*.test.js
+
+✔ parses decimal forms and adds finite numbers (1.6005ms)
+✔ CLI success: 2 3 (42.8157ms)
+✔ CLI success: -1.5 0.5 (44.9024ms)
+✔ CLI success: 1e3 .5 (40.0086ms)
+✔ CLI success: +3 -0 (41.2867ms)
+✔ CLI success: -0 -0 (38.7089ms)
+✔ CLI success: 0.1 0.2 (41.6101ms)
+✔ CLI success: 1.7976931348623157e308 0 (47.6858ms)
+✔ rejects 0 arguments (38.9517ms)
+✔ rejects 1 arguments (40.359ms)
+✔ rejects 3 arguments (39.1491ms)
+✔ rejects invalid value "" in either position (77.2074ms)
+✔ rejects invalid value " 1" in either position (78.7577ms)
+✔ rejects invalid value "1 " in either position (74.9195ms)
+✔ rejects invalid value "1\n" in either position (76.9491ms)
+✔ rejects invalid value "1\r\n" in either position (81.1373ms)
+✔ rejects invalid value "abc" in either position (81.3266ms)
+✔ rejects invalid value "1abc" in either position (79.2353ms)
+✔ rejects invalid value "0x10" in either position (82.7346ms)
+✔ rejects invalid value "1_000" in either position (79.4236ms)
+✔ rejects invalid value "1,5" in either position (80.2732ms)
+✔ rejects invalid value "Infinity" in either position (79.4756ms)
+✔ rejects invalid value "NaN" in either position (79.9287ms)
+✔ rejects invalid value "--1" in either position (75.4817ms)
+✔ rejects invalid value "1e" in either position (79.1684ms)
+✔ rejects invalid value "." in either position (79.3605ms)
+✔ rejects invalid value "1e400" in either position (79.2059ms)
+✔ reports the first invalid argument only (39.9929ms)
+✔ rejects overflow for 1e308 (38.1287ms)
+✔ rejects overflow for -1e308 (39.3235ms)
+✔ missing keys and unknown POS contract make zero network calls (2.2465ms)
+✔ Kiot name search authenticates once, paginates and keeps identifiers (0.7879ms)
+✔ exact Kiot SKU rejects a mismatched response and treats 404 as not found (0.2983ms)
+✔ Sapo Web name search reads products with token and preserves variant ID (0.4764ms)
+✔ Sapo private-app Basic auth keeps credentials out of URL and output (0.3941ms)
+✔ Sapo exact SKU scan finds matches across pages without merging duplicate SKU (1.129ms)
+✔ limited SKU scan reports incomplete even with no matching rows (0.445ms)
+✔ bad Sapo domains fail before sending credentials (0.4069ms)
+✔ HTTP and transport errors never echo provider response or secret (0.6061ms)
+✔ malformed response is an error, not an empty catalog (0.3223ms)
+✔ one failed platform does not discard successful platform results (0.3513ms)
+✔ invalid CLI options and queries cause no requests (0.455ms)
+✔ name search filters unrelated API rows and unknown stock/price stay null (0.2337ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1867.3895

@@ -1,0 +1,38 @@
+✔ parses decimal forms and adds finite numbers (1.6299ms)
+✔ CLI success: 2 3 (40.1603ms)
+✔ CLI success: -1.5 0.5 (35.6529ms)
+✔ CLI success: 1e3 .5 (40.0148ms)
+✔ CLI success: +3 -0 (38.9823ms)
+✔ CLI success: -0 -0 (45.7479ms)
+✔ CLI success: 0.1 0.2 (44.847ms)
+✔ CLI success: 1.7976931348623157e308 0 (38.8335ms)
+✔ rejects 0 arguments (41.3752ms)
+✔ rejects 1 arguments (39.8939ms)
+✔ rejects 3 arguments (41.6069ms)
+✔ rejects invalid value "" in either position (73.4457ms)
+✔ rejects invalid value " 1" in either position (91.1826ms)
+✔ rejects invalid value "1 " in either position (85.8063ms)
+✔ rejects invalid value "1\n" in either position (77.8234ms)
+✔ rejects invalid value "1\r\n" in either position (79.2945ms)
+✔ rejects invalid value "abc" in either position (74.0351ms)
+✔ rejects invalid value "1abc" in either position (83.6337ms)
+✔ rejects invalid value "0x10" in either position (88.2456ms)
+✔ rejects invalid value "1_000" in either position (76.9939ms)
+✔ rejects invalid value "1,5" in either position (80.0641ms)
+✔ rejects invalid value "Infinity" in either position (79.891ms)
+✔ rejects invalid value "NaN" in either position (78.9463ms)
+✔ rejects invalid value "--1" in either position (83.4533ms)
+✔ rejects invalid value "1e" in either position (78.6964ms)
+✔ rejects invalid value "." in either position (88.8443ms)
+✔ rejects invalid value "1e400" in either position (74.8979ms)
+✔ reports the first invalid argument only (37.7632ms)
+✔ rejects overflow for 1e308 (37.8ms)
+✔ rejects overflow for -1e308 (53.1073ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1902.4796

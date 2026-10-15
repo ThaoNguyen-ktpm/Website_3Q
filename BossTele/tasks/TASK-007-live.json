@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-14",
+  "mode": "live_read_only",
+  "nameSearch": {
+    "displayed": 10,
+    "sources": [
+      "kiotviet",
+      "sapo-web"
+    ],
+    "warnings": [
+      "kiotviet: dữ liệu lấy lúc 2026-10-14T10:33:59.945Z.",
+      "kiotviet: còn kết quả/trang chưa xem; gõ “xem thêm”.",
+      "sapo-web: dữ liệu lấy lúc 2026-10-14T10:33:59.549Z.",
+      "sapo-web: còn kết quả/trang chưa xem; gõ “xem thêm”."
+    ]
+  },
+  "blocked": {
+    "action": "blocked",
+    "aiCalls": 0
+  },
+  "more": {
+    "displayed": 10,
+    "additionalApiRequests": 0
+  },
+  "kiotSku": {
+    "displayed": 1,
+    "source": "kiotviet",
+    "sku": "SP022466",
+    "messages": [
+      "kiotviet: dữ liệu lấy lúc 2026-10-14T10:34:00.070Z."
+    ]
+  },
+  "calculation": {
+    "sellingPrice": "168750000",
+    "aiStatus": "disabled",
+    "aiCalls": 0
+  },
+  "sapoSku": {
+    "displayed": 1,
+    "found": true,
+    "warnings": [
+      "sapo-web: dữ liệu lấy lúc 2026-10-14T10:34:00.491Z.",
+      "sapo-web: còn kết quả/trang chưa xem; gõ “xem thêm”.",
+      "sapo-web: Chưa quét hết danh mục; kết quả SKU có thể còn thiếu."
+    ]
+  },
+  "stats": {
+    "aiCalls": 0,
+    "apiRequests": 4,
+    "cacheEntries": 4
+  }
+}

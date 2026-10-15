@@ -1,0 +1,11 @@
+{
+  "name": "bosstele-local-tools",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "search": "node search-products.js",
+    "chat": "node chat.js"
+  },
+  "engines": { "node": ">=22" }
+}

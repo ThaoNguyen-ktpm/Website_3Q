@@ -1,0 +1,174 @@
+[PLAN] Thiết kế hệ thống AI Agent định giá
+Lộ trình thực hiện
+Prompt dự án ChatGPT: hướng dẫn cụ thể để nó brainstorm idea về tất cả những gì liên quan; yêu cầu nó tự đánh giá lại các plan của mình, tìm lỗi bất hợp lý để tối ưu.
+Tự đánh giá thực tế BaoQ Luxury đang ở bước nào của dự án này, bằng cách tự đặt ra những câu hỏi để xác định.
+Tạo bộ tài liệu hướng dẫn các trigger giảm giá tự động của KiotViet.
+Prompt brainstorm idea và plan tạo agent làm price system dựa trên những dữ kiện đã có.
+Dùng idea đó cho cả 3 model AI tự brainstorm, phân tích ra những điểm sai có thể gặp ở idea này và fix lỗi ở bước kế hoạch => prompt 1 câu lệnh xây dựng từng bước.
+Triển khai dự kiến ở model Sonnet 5 của Claude.
+Kiểm thử web app và Agent xem hoạt động như thế nào.
+Đề xuất các agent có thể phát triển trong tương lai.
+Plan mapping sơ đồ tư duy hiện tại
+1. Studio (Vinh host khâu media)
+KiotViet, sau khi đã có mô tả sản phẩm và bộ quy ước (Nam sẽ tải lên): chạy file qua chương trình + folder ảnh đã chụp => paste qua Sapo => lên website luôn => edit ảnh.
+Nhận thông tin trigger từ Price System => auto sale => tự động edit và ghép ảnh cho sale bán hoặc tạo chiến dịch. Bước này bắt buộc phải có trigger từ Price System vì gần như mỗi ngày đều có ảnh hàng sale cần bán.
+Ví dụ: sau khi edit xong ảnh mới => ưu tiên xuất sale hết ảnh cũ (đã chốt với nhau: từ tháng 7 - tháng 8 là M0).
+
+2. Marketing
+(chưa có nội dung)
+
+3. Data
+File raw hàng bán và file raw hàng thu tồn kho day-to-sell 01 Sapo (kết nối bằng API): khi xuất file này ra chỉ nhận BaoQ's SKU bắt đầu từ trường thứ 2.
+File phân tích thị trường (đã chạy qua bộ quy ước): những hàng ở đây sẽ không có SKU KiotViet.
+4. Trigger
+Tính năng auto sale của Nguyên: đọc tài liệu này để hiểu logic.
+5. Price Engine (AI Agent)
+Mapping bằng BaoQ's SKU => chạy qua tất cả các file phân tích thị trường.
+
+Ví dụ: 1 túi Classic Chanel => 3 mức giá:
+
+Giá thị trường gần nhất (trung vị).
+Giá đã bán gần nhất (day-to-sell).
+Giá thu trung vị (nếu có).
+=> AI Agent sẽ đánh giá dựa trên tính xác suất và logic của hàng hoá.
+
+Trường hợp 1: Hàng đã từng thu và bán (ví dụ Classic Chanel)
+Vòng số 1
+
+Giá thị trường: 170tr.
+Giá BaoQ đã bán gần nhất: 165tr (trong 5 ngày).
+Giá thu trung vị dựa trên logic tỉ lệ lợi nhuận mong muốn. Ví dụ lần thu gần nhất 150tr => tỉ lệ lợi nhuận 10%, nhưng tỉ lệ lợi nhuận trung bình mong muốn là 12,5% ở rank đồ trên 150tr.
+=> Giải thích: thị trường bán món này 170tr, BaoQ bán 165tr trong vòng 5 ngày => cần nâng giá bán lên bao nhiêu để đạt được tỉ lệ lợi nhuận mong muốn? => 168tr7 giá bán (vòng số 2).
+
+Nếu thu được và bán ở 168tr7 nhưng day-to-sell vẫn 10 ngày => đề xuất giá bán nên nâng lên 170tr hoặc 180tr.
+
+Giả sử mức day-to-sell tối thiểu shop mong muốn ở range đồ 150-200tr là 90 ngày.
+
+=> Khúc này cần AI Agent học được và ra quyết định ở những lần thu sau.
+
+Vòng số 2
+
+Giá thị trường ghi nhận ở thời điểm gần nhất: 175tr.
+Giá bán BaoQ ở vòng số 2: 168tr700k (day-to-sell 5 ngày, tức sớm hơn dự kiến 85 ngày), rẻ hơn thị trường 7tr3.
+Đề xuất: nâng giá thu, tăng giá bán, miễn là khớp lợi nhuận mong muốn 12,5% ở rank hàng hoá 150-200tr.
+Có thể vẫn thu 150tr nếu là lộc, nhưng giá bán phải đổi để phù hợp với thị trường.
+Đề xuất giá bán ở khúc này phải gần trung vị thị trường nhất, ví dụ 172tr5, và giá thu trong khoảng lợi nhuận mong muốn 12,5% là an toàn.
+Trường hợp thu được thấp hơn thì tốt, nhưng vẫn đề xuất được giá thu hợp lý dựa trên logic giá, và AI sẽ tự học qua xác suất.
+Trường hợp 2: Giá thị trường giảm và day-to-sell lâu
+Ví dụ: Seasonal flap bag Chanel (có 2 khung trigger: day-to-sell và auto sale).
+
+Vòng 1 – dữ kiện đã có: BaoQ thu 150tr, bán 165tr, day-to-sell 55 ngày, giá thị trường gần nhất 160tr (nghĩa là giá đang rớt, đồ qua trend).
+AI Agent dự đoán giá thu dựa trên rank lợi nhuận mong muốn vẫn là 12,5%, nhưng đề xuất giá bán thấp hơn theo logic trigger giá của Nguyên đã đặt. Ví dụ đối với hàng đã qua 30 ngày thì hạ giá bán 3tr => đề xuất giá bán 162tr nếu gặp lại món đó ở vòng số 2.
+Trường hợp 3: Hàng chưa từng thu bao giờ (chưa có trong file raw bán)
+3.1. Đã có trong file phân tích thị trường
+
+Hàng new season.
+Hàng hiếm High tier (Capucines croc, VCA 10 bông).
+=> Mapping vào tỉ lệ lợi nhuận mong muốn rồi đề xuất giá offer.
+
+Ví dụ: 1 món vòng Cartier 500tr chưa bao giờ bán => giả sử rank lợi nhuận mong muốn ở tier này là 10% => đề xuất giá thu. Nhưng khúc này cần Nguyên duyệt cuối.
+
+3.2. Không có trên file phân tích thị trường
+
+Khúc này Nguyên tự xử lý, tự họp, tự ra giá.
+Nhưng khi báo giá xong phải đưa lên file phân tích thị trường luôn.
+Ví dụ: 1 cái vòng cổ VCA con bọ 2 vòng 10 lá => offer theo khung trigger báo giá, theo công thức có sẵn (offer 300tr). Nếu thu được thì sẽ kiểm chứng qua 2 trường hợp sau:
+
+Bán dựa trên range lợi nhuận mong muốn ở 300tr là 10% => bán 330tr với day-to-sell tối thiểu 30 ngày => đây là 1 data real của shop.
+Không bán được: day-to-sell cao hơn 65 ngày, đã giảm giá mốc thứ 2 của trigger sale tự động => kết luận món này không ổn, phải sale ở mốc thứ 2 mới bán được, tức đã sale còn 316tr => dữ kiện sẽ được ghi nhận với mức giá 316tr.
+6. Hiển thị HTML frontend
+Màn hình chính dùng để tra cứu giá, có ô feedback cho AI.
+Cột duyệt giá sale tự động theo logic của trigger => có nút duyệt => Sapo sẽ sale đồng loạt theo điều kiện mà trigger đã có.
+Việc cần làm bây giờ: xây dựng chính sách giá
+I. Khung trigger sale tự động
+Lấy công thức của Nguyên áp vào, lấy giá chuẩn từ tháng 6 đổ về được gọi là M0 => bắt đầu sale. Phần này làm trước luôn để edit bán.
+
+Khung trigger chỉ được tự động đến giá vốn của hàng hoá. Nếu sau khi sale xuống tới giá vốn thì phải có duyệt cuối của founder.
+
+II. Lợi nhuận mong muốn ở từng rank hàng hoá, từng hạng mục cụ thể
+Những món hot trend sẽ cần xử lý riêng.
+
+Ví dụ hạng mục túi (lợi nhuận gộp thực tế, và đây cũng là mức mong muốn cần đạt được):
+
+Dưới 50tr: 30%.
+50-100tr: 23%.
+100-150tr: 15%.
+150-200tr: 12,5%.
+Chạy AI cho vào file thu bán => phân tích đối với hạng mục túi thì lợi nhuận gộp là bao nhiêu %.
+
+III. Mức day-to-sell mong muốn cho từng danh mục hàng hoá
+Ví dụ: hàng hot trend ở range 150-200tr là 90 ngày, giá 165tr.
+
+Nên ở vòng 1 thì vòng 2 mình sẽ có dữ kiện.
+
+IV. Khung báo giá dựa trên công thức có sẵn từ kiến thức của founder
+Ví dụ: Cartier các mẫu hiếm sẽ offer bao nhiêu % giá hãng => lên web xem giá hiện tại và cố tìm trên thị trường Facebook xem giá bán thường offer theo khung bao nhiêu % trên giá hãng.
+
+Phần này dành cho những trường hợp đóng khung được, ví dụ trang sức fine jewelry, Hermès, đồ new season theo cảm quan => sẽ xem như 1 nhật ký log của founder, nhập feedback liên tục.
+
+=> Theo thời gian, data của mình sẽ đủ lớn để phủ được mục tiêu bao nhiêu phần trăm giá thị trường.
+
+Lưu ý
+Hệ thống báo giá và Studio phải làm sao để hàng hoá lên ảnh tốt => marketing phải tốt => lên web đều đặn => live đều đặn (làm lịch live, chia sản phẩm ưu tiên sale off những sản phẩm đã đạt các mốc trigger theo điều kiện).
+
+Thẻ 2: Các prompt theo từng bước
+STEP 1: Cải thiện prompt hướng dẫn công việc và các bước xây dựng AI Agent Price System
+Bạn là chuyên gia về cơ sở dữ liệu, lập trình viên, thiết kế website và là quản lý cấp cao của doanh nghiệp BaoQ Luxury.
+
+Bạn đang thiết kế web app nội bộ và là chủ thầu xây dựng hệ thống định giá Price System của tôi, hỗ trợ tôi (CEO của công ty) tách kiến thức định giá ra khỏi đầu, đưa nó vào hệ thống nội bộ.
+
+Hệ thống sẽ bao gồm các bước tự động hạ giá theo các mốc đã định sẵn, và hệ thống định giá dựa vào các cơ sở dữ liệu thu thập được từ quá trình bán hàng, lịch sử tồn kho, lịch sử deal giá, file phân tích thị trường livestream của các shop nổi tiếng trong ngành, và bộ quy ước SKU (còn được gọi là định danh sản phẩm) của tôi. Tất cả đang được tôi thao tác bằng Microsoft 365.
+
+Mục tiêu: xây dựng thành công Price System web app dùng nội bộ, đủ tiêu chuẩn bảo mật dữ liệu (tài sản lớn nhất của doanh nghiệp), tách kiến thức định giá trong đầu founder ra thành dữ liệu. Từ đó xây dựng 1 hệ thống AI Agent tự phát triển, nghiên cứu và đánh giá lại từ dữ liệu thị trường và dữ liệu của doanh nghiệp, để định giá sản phẩm nhanh gọn và có thể phân quyền được.
+
+Yêu cầu: thường xuyên đánh giá lại các plan trong lúc thực hiện; nếu có gì chưa hợp lý thì chủ động đề xuất giải pháp để tối ưu hoá quá trình làm việc; ưu tiên yếu tố bảo mật trước, định giá sau; biết phân bổ công việc cần thiết trong file RACI để lên kế hoạch làm việc cho toàn bộ nhân viên.
+
+STEP 2: Cải thiện prompt sau
+Hãy dựa vào tất cả các dữ liệu hiện tại của tôi, tự đánh giá các bước tôi đang làm hiện đang ở đâu trong lộ trình xây dựng AI Agent bằng cách đặt câu hỏi, gắn nó vào bức tranh tổng, gợi ý thực hiện cụ thể và hiệu quả. Sau đó cho ra 1 plan làm việc phù hợp cho team của tôi (gióng xuống file RACI của doanh nghiệp) cho đến khi xây dựng thành công Price System.
+
+Trước mắt, tôi muốn bạn tìm hiểu rõ luồng hoạt động của Price System hiện tại vì nó liên quan mật thiết tới bước nhập liệu hàng hoá từ KiotViet lên Sapo nằm trong BaoQ's Studio của tôi. Đây là bản tóm tắt chương trình hoàn tất của BaoQ's Studio.
+
+STEP 3: Cải thiện prompt sau
+Từ những luồng làm việc trên, hãy brainstorm idea và plan tạo agent làm Price System dựa trên những dữ kiện đã có => sau đó chọn ra idea tối ưu nhất để thực thi. Sau đó xuất thành 1 bản hướng dẫn và kế hoạch thực hiện để AI khác làm.
+
+Lưu ý: sau khi chốt idea phải hướng dẫn nhập liệu như thế nào cho đúng, nhập liệu từ luồng nào cho đúng, và bảo mật.
+
+Ở bước này: brainstorm và cải thiện prompt bằng Astra 6 Max, sau đó so sánh với Fable 5, nhờ nó đánh giá lại, nếu có gì cần sửa thì sửa.
+
+STEP 4: Đánh giá tính khả thi bằng Fable 5 của Claude
+Chạy idea và hướng làm việc đó qua Fable 5 của Claude để nó đánh giá tính khả thi cũng như khả năng thực thi, tìm và fix thẳng lỗi ngay tại bước lên plan.
+
+STEP 4.1: Thiết kế frontend (làm song song)
+Luồng làm việc này có thể làm song song bất cứ lúc nào, vì đây là thiết kế frontend hiển thị, ưu tiên đẹp và dễ nhìn là ok. Luồng này assign cho Hùng thiết kế frontend cho đẹp.
+
+Hãy thiết kế cho tôi 1 bản thiết kế web app nội bộ dùng để tôi làm việc và hiển thị. Về công nghệ, mình chọn backend Python + PostgreSQL hiện có trong thiết kế + OpenAI Agents SDK, chạy Agent trong ứng dụng BAOQ để kiểm soát công cụ, lưu trạng thái và duyệt. SDK hỗ trợ mô hình ứng dụng tự quản lý deployment, storage và approvals này.
+
+Model cụ thể sẽ chọn sau khi thử trên bộ case BAOQ.
+
+Ở bước này, gắn 5 step tạo Dashboard vào, xong kêu nó xuất ra thành 1 bản mockup để xem giao diện web.
+
+STEP 5: Tạo web app "Baoq's Price System Internal Used Only"
+Cải thiện prompt tiếp nhưng trong chính hội thoại idea.
+
+Chốt idea dựa vào bản kế hoạch và thiết kế trên, hãy tạo cho tôi 1 web app nội bộ dùng để định giá sản phẩm. Tên web app: Baoq's Price System Internal Used Only.
+
+Bảo mật (ưu tiên hàng đầu)
+Thiết kế sao cho dữ liệu và hệ thống định giá không bị mất hay bị hack.
+Chỉ đăng nhập được từ một số địa chỉ IP cố định để đảm bảo dữ liệu trên web không bị lấy ra ngoài.
+Làm sẵn cơ chế phân quyền để founder có thể mở public bất kỳ lúc nào, phòng trường hợp di chuyển đổi địa điểm. Chỉ account founder mới làm được.
+Tính năng
+Web app có box chat AI với chính model AI để hỏi đáp, đề xuất giá nhanh chóng; từ đó lấy feedback trực tiếp từ founder làm dữ liệu cho Pricing Engine.
+Hệ thống AI Agent Price Engine hoạt động khép kín thành 1 vòng lặp, có thể tự học từ dữ liệu giá mà doanh nghiệp thu thập được.
+Tất cả dữ liệu báo giá phải được lưu vào nhật ký cụ thể.
+Tài khoản và phân quyền
+Web app cho tạo tài khoản đăng nhập bằng email hoặc số điện thoại, và phân quyền như sau:
+
+Khối CEO (3 account được login chính vào hệ thống): có quyền xem, sửa, thêm mới, phân quyền cụ thể và xoá thành viên; phân quyền cao nhất và có thể xoá hệ thống bất cứ lúc nào.
+Khối nhân viên trưởng vận hành thu mua và xây dựng hệ thống báo giá: có quyền xem, sửa và phân quyền cho nhân viên khác, nhưng không được quyền xoá hệ thống.
+Công nghệ
+Mình chọn backend Python + PostgreSQL hiện có trong thiết kế + (Anthropic Agents SDK ???), chạy Agent trong ứng dụng BAOQ để kiểm soát công cụ, lưu trạng thái và duyệt. SDK hỗ trợ mô hình ứng dụng tự quản lý deployment, storage và approvals này.
+
+Lưu ý: trước khi triển khai bước này, tìm hiểu hai Agent của ChatGPT và Anthropic.
+
+STEP 6
+(chưa có nội dung)

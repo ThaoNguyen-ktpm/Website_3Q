@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import '@fontsource/cormorant-garamond/500.css';
+import '@fontsource/cormorant-garamond/700.css';
 import { getAuthConfig, loginWithGoogle } from '../api/auth';
 import type { AuthState } from '../hooks/useAuth';
 
