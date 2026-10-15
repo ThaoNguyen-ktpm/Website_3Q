@@ -2,8 +2,8 @@ import { Footer } from '../components/Footer';
 import { ProductCard } from '../components/ProductCard';
 import { useProducts } from '../hooks/useProducts';
 
-export function HomePage() {
-  const state = useProducts();
+export function HomePage({ onSessionExpired }: { onSessionExpired: () => void }) {
+  const state = useProducts(onSessionExpired);
 
   return (
     <>

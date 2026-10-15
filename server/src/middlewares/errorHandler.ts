@@ -15,6 +15,10 @@ export class ApiError extends Error {
 }
 
 export const errorHandler: ErrorRequestHandler = (error: unknown, _request, response, _next) => {
+  if (error instanceof SyntaxError && 'status' in error && error.status === 400) {
+    response.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Dữ liệu JSON không hợp lệ.' } });
+    return;
+  }
   const knownError = error instanceof ApiError;
   const statusCode = knownError ? error.statusCode : 500;
   const code = knownError ? error.code : 'INTERNAL_ERROR';
