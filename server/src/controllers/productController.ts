@@ -1,18 +1,17 @@
 import type { RequestHandler } from 'express';
-import { z } from 'zod';
-import { ApiError } from '../middlewares/errorHandler.js';
-import { listProducts } from '../services/productService.js';
+import { findProducts } from '../models/productModel.js';
 
-const productQuerySchema = z.object({
-  category: z.string().trim().min(1).max(191).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
-}).strict();
-
-export const getProducts: RequestHandler = async (request, response, next) => {
+export const getProducts: RequestHandler = async (_request, response, next) => {
   try {
-    const query = productQuerySchema.safeParse(request.query);
-    if (!query.success) throw new ApiError(400, 'VALIDATION_ERROR', 'Tham số lọc sản phẩm không hợp lệ.');
-    const products = await listProducts(query.data.category);
-    response.json({ products });
+    const products = await findProducts();
+    response.json({
+      products: products.map((product) => ({
+        id: product.id,
+        name: product.name,
+        priceVnd: product.priceVnd,
+        category: product.category.name,
+      })),
+    });
   } catch (error) {
     next(error);
   }
