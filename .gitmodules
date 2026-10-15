@@ -1,0 +1,6 @@
+[submodule "BossTele/vendor/claude-mem"]
+	path = BossTele/vendor/claude-mem
+	url = https://github.com/thedotmack/claude-mem.git
+[submodule "BossTele/vendor/ponytail"]
+	path = BossTele/vendor/ponytail
+	url = https://github.com/DietrichGebert/ponytail.git
