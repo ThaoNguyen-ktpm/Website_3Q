@@ -3,13 +3,22 @@
 Claude giao việc bằng đặc tả và kiểm tra kết quả. Codex viết và sửa code toàn bộ dự án `D:\Website_3Q` (website và BossTele).
 
 ## Tài liệu cho mỗi công việc
-- `TASK-xxx-spec.md`: Claude viết mục tiêu, phạm vi, yêu cầu và tiêu chí nghiệm thu.
+- `TASK-xxx-spec.md`: Claude viết mục tiêu, phạm vi, yêu cầu, tiêu chí nghiệm thu và mục **Vùng code** (xem bên dưới).
 - `TASK-xxx-result.md`: Codex viết thay đổi đã thực hiện, bằng chứng kiểm tra và giới hạn.
 - `TASK-xxx-review.md`: Claude viết phát hiện, bằng chứng kiểm tra độc lập và kết luận.
 
 Đánh số tiếp từ `TASK-009`; `TASK-001` đến `TASK-008` của BossTele được lưu tại `BossTele/tasks/`. Sửa bổ sung cùng một công việc thì cập nhật các tài liệu tương ứng, giữ lại bằng chứng cần thiết.
 
 Mỗi tài liệu ghi: mã công việc, dự án (`web` hoặc `BossTele`), người phụ trách, trạng thái, hành động gần nhất, bước tiếp theo và bằng chứng.
+
+## Mục Vùng code trong spec
+Claude lấy từ CodeGraph (`codegraph_explore`, `codegraph impact`, `codegraph affected`) để Codex bắt đầu đúng chỗ, không phải tự dò repo:
+- **Điểm vào:** file và symbol cần sửa, kèm `file:dòng`.
+- **Phạm vi ảnh hưởng:** nơi gọi và phụ thuộc cần kiểm tra lại.
+- **Test liên quan:** file test bị ảnh hưởng, gồm cả test cần thêm.
+- **Không đụng:** file hoặc vùng nằm ngoài phạm vi.
+
+Số dòng có thể lệch khi code đổi; Codex chạy lại `codegraph_explore` với tên symbol trước khi sửa.
 
 ## Trạng thái
 `proposed` → `ready` → `in_progress` → `ready_for_review` → `verified`.

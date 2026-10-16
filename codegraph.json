@@ -1,0 +1,14 @@
+{
+  "exclude": [
+    ".agents/skills/",
+    ".claude/skills/",
+    ".claude/worktrees/",
+    "BossTele/.claude/skills/",
+    "BossTele/vendor/",
+    ".taste-skill/"
+  ],
+  "deprioritize": [
+    "tasks/",
+    "BossTele/tasks/"
+  ]
+}

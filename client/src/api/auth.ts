@@ -1,4 +1,4 @@
-export type AuthUser = { id: number; email: string; role: 'ADMIN' | 'CUSTOMER' };
+export type AuthUser = { id: number; email: string; fullName: string; role: string; roleLabel: string; permissions: string[]; isPrimaryAdmin: boolean };
 
 async function authRequest(path: string, options?: RequestInit) {
   const response = await fetch(`/api/auth/${path}`, { ...options, credentials: 'include' });

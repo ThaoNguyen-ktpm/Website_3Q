@@ -71,12 +71,12 @@ model Cart {
 }
 
 model CartItem {
-  id        Int      @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   cartId    Int
   productId Int
-  quantity  Int      @db.UnsignedInt
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int     @db.UnsignedInt
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@unique([cartId, productId])
   @@index([productId])
@@ -112,4 +112,64 @@ model OrderItem {
 
   @@unique([orderId, productId])
   @@index([productId])
+}
+
+enum StaffRole {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum StaffStatus {
+  ACTIVE
+  DISABLED
+}
+
+model Staff {
+  customPermissions Boolean           @default(false)
+  permissions       StaffPermission[]
+  id                Int               @id @default(autoincrement())
+  email             String            @unique @db.VarChar(191)
+  fullName          String            @db.VarChar(120)
+  phone             String?           @db.VarChar(20)
+  role              StaffRole         @default(STAFF)
+  status            StaffStatus       @default(ACTIVE)
+  googleSub         String?           @unique @db.VarChar(191)
+  lastLoginAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model RolePermission {
+  role       StaffRole
+  permission String    @db.VarChar(64)
+  createdAt  DateTime  @default(now())
+
+  @@id([role, permission])
+}
+
+model StaffPermission {
+  staffId    Int
+  permission String   @db.VarChar(64)
+  createdAt  DateTime @default(now())
+  staff      Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@id([staffId, permission])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  actorId    Int?
+  actorEmail String?  @db.VarChar(191)
+  action     String   @db.VarChar(64)
+  targetType String?  @db.VarChar(32)
+  targetId   String?  @db.VarChar(64)
+  before     Json?
+  after      Json?
+  ip         String?  @db.VarChar(64)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([action])
 }

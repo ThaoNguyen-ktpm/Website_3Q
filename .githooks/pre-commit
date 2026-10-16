@@ -1,0 +1,13 @@
+#!/bin/sh
+if command -v gitleaks >/dev/null 2>&1; then
+    exec gitleaks git --pre-commit --staged --redact --no-banner
+fi
+if [ -n "$LOCALAPPDATA" ]; then
+    for scanner in "$LOCALAPPDATA"/Microsoft/WinGet/Packages/Gitleaks.Gitleaks_Microsoft.Winget.Source_*/gitleaks.exe "$LOCALAPPDATA"/Microsoft/WinGet/Links/gitleaks.exe; do
+        if [ -f "$scanner" ]; then
+            exec "$scanner" git --pre-commit --staged --redact --no-banner
+        fi
+    done
+fi
+echo 'Commit blocked: gitleaks is missing. Install: winget install --id Gitleaks.Gitleaks -e' >&2
+exit 1

@@ -1,12 +1,8 @@
 import 'dotenv/config';
 import bcrypt from 'bcrypt';
 import { PrismaClient, UserRole } from '@prisma/client';
+import { rolePermissions } from '../src/config/permissions.js';
 import { z } from 'zod';
-
-const seedEnv = z.object({
-  SEED_ADMIN_EMAIL: z.email().default('admin@shop.test'),
-  SEED_ADMIN_PASSWORD: z.string().min(12).refine((value) => !value.startsWith('CHANGE_ME'), 'Set a private seed password in .env'),
-}).parse(process.env);
 
 const prisma = new PrismaClient();
 
@@ -30,6 +26,25 @@ const products = [
 ] as const;
 
 async function main(): Promise<void> {
+  const adminEmails = z.array(z.string().max(191).pipe(z.email())).parse(
+    [...new Set((process.env.GOOGLE_ALLOWED_EMAILS ?? '').split(',').map(email => email.trim().toLowerCase()).filter(Boolean))]);
+  for (const email of adminEmails) {
+    await prisma.staff.upsert({ where: { email }, update: { role: 'ADMIN', status: 'ACTIVE' },
+      create: { email, fullName: email.split('@')[0], role: 'ADMIN', status: 'ACTIVE' } });
+  }
+  console.log(`Seed ADMIN hoàn tất: ${adminEmails.length} tài khoản.`);
+  for (const role of ['MANAGER', 'STAFF'] as const) {
+    await prisma.$transaction(async db => {
+      if (await db.rolePermission.count({ where: { role } }) === 0) {
+        await db.rolePermission.createMany({ data: rolePermissions[role].map(permission => ({ role, permission })) });
+      }
+    }, { isolationLevel: 'Serializable' });
+  }
+  if (process.env.SEED_SAMPLE_DATA !== 'true') return;
+  const seedEnv = z.object({
+    SEED_ADMIN_EMAIL: z.email().default('admin@shop.test'),
+    SEED_ADMIN_PASSWORD: z.string().min(12).refine(value => !value.startsWith('CHANGE_ME'), 'Set a private seed password in .env'),
+  }).parse(process.env);
   const categoryIds = new Map<string, number>();
   for (const category of categories) {
     const saved = await prisma.category.upsert({

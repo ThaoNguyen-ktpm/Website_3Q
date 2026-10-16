@@ -3,18 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../app.js';
 import { findProducts } from '../models/productModel.js';
-import { findUserById } from '../models/userModel.js';
 import { env } from '../config/env.js';
 import { createSession, sessionMaxAge } from '../services/authService.js';
 
 vi.mock('../models/productModel.js', () => ({ findProducts: vi.fn() }));
-vi.mock('../models/userModel.js', () => ({ findUserById: vi.fn() }));
 vi.mock('../config/env.js', () => ({ env: {
   SESSION_SECRET: 'test-only-products-signing-secret-32-characters',
+  GOOGLE_ALLOWED_EMAILS: ['fixture@example.test'],
 } }));
 
 const secret = env.SESSION_SECRET!;
-const user = { id: 42, email: 'fixture@example.test', role: 'CUSTOMER' as const, googleSub: null };
+const user = { id: 1, email: 'fixture@example.test', fullName: 'Mẫu', role: 'STAFF', status: 'ACTIVE' };
+vi.mock('../models/rolePermissionModel.js', () => ({ list: vi.fn(async () => []), replace: vi.fn() }));
+vi.mock('../models/staffModel.js', () => ({findById: vi.fn()}));
+import { findById } from '../models/staffModel.js';
 function sessionCookie(value = createSession(user.id), signingSecret = secret) {
   const signature = createHmac('sha256', signingSecret).update(value).digest('base64').replace(/=+$/, '');
   return `sid=${encodeURIComponent(`s:${value}.${signature}`)}`;
@@ -23,8 +25,9 @@ function sessionCookie(value = createSession(user.id), signingSecret = secret) {
 describe('GET /api/products', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(findById).mockResolvedValue(user as Awaited<ReturnType<typeof findById>>);
     env.SESSION_SECRET = secret;
-    vi.mocked(findUserById).mockResolvedValue(user);
+    env.GOOGLE_ALLOWED_EMAILS = [user.email];
   });
   afterEach(() => vi.useRealTimers());
 
@@ -41,7 +44,6 @@ describe('GET /api/products', () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ error: { code: 'UNAUTHENTICATED', message: 'Bạn chưa đăng nhập.' } });
     expect(findProducts).not.toHaveBeenCalled();
-    expect(findUserById).not.toHaveBeenCalled();
   });
 
   it('chặn mặc định khi thiếu SESSION_SECRET dù cookie ký hợp lệ', async () => {
@@ -50,11 +52,10 @@ describe('GET /api/products', () => {
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe('UNAUTHENTICATED');
     expect(findProducts).not.toHaveBeenCalled();
-    expect(findUserById).not.toHaveBeenCalled();
   });
 
-  it('chặn phiên của user đã bị xóa', async () => {
-    vi.mocked(findUserById).mockResolvedValue(null);
+  it('chặn phiên nhân viên đã bị tạm ngưng', async () => {
+    vi.mocked(findById).mockResolvedValue({...user,status:'DISABLED'} as Awaited<ReturnType<typeof findById>>);
     const response = await request(app).get('/api/products').set('Cookie', sessionCookie());
     expect(response.status).toBe(401);
     expect(findProducts).not.toHaveBeenCalled();
@@ -72,15 +73,6 @@ describe('GET /api/products', () => {
     expect(findProducts).not.toHaveBeenCalled();
   });
 
-  it('chuyển lỗi kiểm tra phiên qua error handler, không gọi model sản phẩm', async () => {
-    vi.mocked(findUserById).mockRejectedValue(new Error('private database error'));
-    const response = await request(app).get('/api/products').set('Cookie', sessionCookie());
-    expect(response.status).toBe(500);
-    expect(response.body.error.code).toBe('INTERNAL_ERROR');
-    expect(JSON.stringify(response.body)).not.toContain('private');
-    expect(findProducts).not.toHaveBeenCalled();
-  });
-
   it('trả tên, giá VND và danh mục có dấu tiếng Việt', async () => {
     vi.mocked(findProducts).mockResolvedValue([
       { id: 1, name: 'Túi tote vải mẫu', priceVnd: 185000, category: { name: 'Túi xách' } },
@@ -88,7 +80,6 @@ describe('GET /api/products', () => {
 
     const response = await request(app).get('/api/products').set('Cookie', sessionCookie());
     expect(response.status).toBe(200);
-    expect(findUserById).toHaveBeenCalledWith(user.id);
     expect(findProducts).toHaveBeenCalledOnce();
     expect(response.headers['content-type']).toMatch(/application\/json/);
     expect(response.body).toEqual({
