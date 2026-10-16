@@ -1,3 +1,8 @@
+/* Tailwind without preflight so existing site styles stay intact. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
 :root {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -97,3 +102,4 @@ body { margin: 0; }
   .site-header { align-items: flex-start; flex-direction: column; }
   .content { padding-top: 2.5rem; }
 }
+
