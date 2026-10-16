@@ -78,7 +78,42 @@ async function requestJson(fetchImpl, url, options = {}) {
   catch { throw new SearchError('invalid_response', 'API không trả JSON hợp lệ.'); }
 }
 
-function kiotRow(product) {
+function textOrNull(value) { return typeof value === 'string' ? value : null; }
+function booleanOrNull(value) { return typeof value === 'boolean' ? value : null; }
+function httpsImages(values) {
+  return [...new Set(values.filter(value => {
+    if (typeof value !== 'string') return false;
+    try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password; }
+    catch { return false; }
+  }))];
+}
+
+function kiotDetail(product, inventories) {
+  return {
+    ...Object.fromEntries(['name', 'fullName', 'categoryName', 'tradeMarkName', 'unit', 'description', 'createdDate', 'modifiedDate'].map(key => [key, textOrNull(product[key])])),
+    weight: numberOrNull(product.weight), masterProductId: numberOrNull(product.masterProductId),
+    ...Object.fromEntries(['isActive', 'allowsSale', 'hasVariants'].map(key => [key, booleanOrNull(product[key])])),
+    images: httpsImages(Array.isArray(product.images) ? product.images : []),
+    attributes: (Array.isArray(product.attributes) ? product.attributes : []).filter(Boolean).map(a => ({ name: textOrNull(a.attributeName), value: textOrNull(a.attributeValue) })),
+    inventories: inventories.map(i => ({ branchId: numberOrNull(i.branchId), branchName: textOrNull(i.branchName), onHand: numberOrNull(i.onHand), reserved: numberOrNull(i.reserved), cost: numberOrNull(i.cost) })),
+  };
+}
+
+function sapoDetail(product, variant) {
+  const images = Array.isArray(product.images) ? product.images.filter(Boolean) : [];
+  const variantImage = images.find(image => image.id === variant.image_id);
+  return {
+    productName: textOrNull(product.name), variantTitle: textOrNull(variant.title), vendor: textOrNull(product.vendor), productType: textOrNull(product.product_type),
+    tags: typeof product.tags === 'string' ? product.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+    description: textOrNull(product.content) || textOrNull(product.body_html),
+    images: httpsImages([variant.image?.src, variant.image, variantImage?.src, product.image?.src, ...images.map(image => image.src)]),
+    options: (Array.isArray(product.options) ? product.options : []).filter(Boolean).slice(0, 3).map((option, index) => ({ name: textOrNull(option.name), value: textOrNull(variant[`option${option.position || index + 1}`]) })),
+    barcode: textOrNull(variant.barcode), compareAtPrice: numberOrNull(variant.compare_at_price), weight: numberOrNull(variant.weight), weightUnit: textOrNull(variant.weight_unit), inventoryManagement: textOrNull(variant.inventory_management),
+    createdOn: textOrNull(product.created_on), modifiedOn: textOrNull(product.modified_on), publishedOn: textOrNull(product.published_on), alias: textOrNull(product.alias),
+  };
+}
+
+function kiotRow(product, detail = false) {
   if (!product || product.id === undefined || product.id === null) throw new SearchError('invalid_response', 'Sản phẩm KiotViet thiếu ID.');
   const inventories = Array.isArray(product.inventories) ? product.inventories : [];
   const quantities = inventories.map(i => numberOrNull(i.onHand));
@@ -86,10 +121,11 @@ function kiotRow(product) {
     source: 'kiotviet', productId: product.id, variantId: null, sku: product.code || '',
     name: product.fullName || product.name || '', price: numberOrNull(product.basePrice),
     onHand: quantities.length && quantities.every(q => q !== null) ? quantities.reduce((a, b) => a + b, 0) : null,
+    ...(detail ? { detail: kiotDetail(product, inventories) } : {}),
   };
 }
 
-function sapoRows(products) {
+function sapoRows(products, detail = false) {
   return products.flatMap(product => {
     if (!product || product.id === undefined || product.id === null || !Array.isArray(product.variants)) {
       throw new SearchError('invalid_response', 'Sản phẩm Sapo Web thiếu ID hoặc variants.');
@@ -100,15 +136,16 @@ function sapoRows(products) {
         source: 'sapo-web', productId: product.id, variantId: variant.id, sku: variant.sku || '',
         name: [product.name, variant.title].filter(Boolean).join(' — '),
         price: numberOrNull(variant.price), onHand: variant.inventory_management ? numberOrNull(variant.inventory_quantity) : null,
+        ...(detail ? { detail: sapoDetail(product, variant) } : {}),
       };
     });
   });
 }
 
-function createProductSearch(config, fetchImpl = fetch) {
+function createKiotAuth(config, fetchImpl) {
   let kiotToken;
   let tokenExpiresAt = 0;
-  async function kiotAuth() {
+  return async function kiotAuth() {
     if (kiotToken && Date.now() < tokenExpiresAt) return kiotToken;
     const credentials = config.kiotviet;
     const body = new URLSearchParams({ scopes: 'PublicApi.Access', grant_type: 'client_credentials', client_id: credentials.clientId, client_secret: credentials.clientSecret });
@@ -119,16 +156,20 @@ function createProductSearch(config, fetchImpl = fetch) {
     kiotToken = result.access_token;
     tokenExpiresAt = Date.now() + Math.max(0, (numberOrNull(result.expires_in) || 0) - 60) * 1000;
     return kiotToken;
-  }
+  };
+}
 
-  async function searchOne(source, { kind, query, page, maxPages, startPage }) {
+function createProductSearch(config, fetchImpl = fetch) {
+  const kiotAuth = createKiotAuth(config, fetchImpl);
+
+  async function searchOne(source, { kind, query, page, maxPages, startPage, detail }) {
     validateSource(source, config);
     if (source === 'kiotviet') {
       const headers = { Retailer: config.kiotviet.retailer, Authorization: `Bearer ${await kiotAuth()}` };
       if (kind === 'sku') {
         try {
           const result = await requestJson(fetchImpl, `https://public.kiotapi.com/products/code/${encodeURIComponent(query)}`, { headers });
-          const row = kiotRow(result);
+          const row = kiotRow(result, detail);
           if (row.sku !== query) throw new SearchError('invalid_response', 'SKU API trả về không khớp chính xác SKU được hỏi.');
           return { source, status: 'ok', items: [row], complete: true };
         } catch (error) {
@@ -141,7 +182,7 @@ function createProductSearch(config, fetchImpl = fetch) {
       const result = await requestJson(fetchImpl, url, { headers });
       if (!Array.isArray(result?.data)) throw new SearchError('invalid_response', 'KiotViet thiếu danh sách data.');
       const total = numberOrNull(result.total);
-      return { source, status: 'ok', items: result.data.map(kiotRow).filter(row => matchesName(row, query)), page, total, hasMore: total === null ? result.data.length === 100 : page * 100 < total };
+      return { source, status: 'ok', items: result.data.map(product => kiotRow(product, detail)).filter(row => matchesName(row, query)), page, total, hasMore: total === null ? result.data.length === 100 : page * 100 < total };
     }
     const origin = sapoOrigin(config.sapoWeb);
     const headers = sapoHeaders(config.sapoWeb);
@@ -154,7 +195,7 @@ function createProductSearch(config, fetchImpl = fetch) {
       url.search = new URLSearchParams(parameters);
       const result = await requestJson(fetchImpl, url, { headers });
       if (!Array.isArray(result?.products)) throw new SearchError('invalid_response', 'Sapo Web thiếu danh sách products.');
-      const rows = sapoRows(result.products);
+      const rows = sapoRows(result.products, detail);
       items.push(...rows.filter(row => kind === 'sku' ? row.sku === query : matchesName(row, query)));
       if (kind === 'name') return { source, status: 'ok', items, page, hasMore: result.products.length === 250 };
       if (result.products.length < 250) return { source, status: 'ok', items, complete: startPage === 1, pagesScanned: scanned + 1, hasMore: false, nextPage: null };
@@ -163,7 +204,7 @@ function createProductSearch(config, fetchImpl = fetch) {
   }
 
   return async function search(options) {
-    const { source = 'all', kind, query, page = 1, maxPages = 20, startPage = 1 } = options;
+    const { source = 'all', kind, query, page = 1, maxPages = 20, startPage = 1, detail = false } = options;
     if (!['name', 'sku'].includes(kind) || typeof query !== 'string' || !query.trim() || query.length > 200) {
       throw new SearchError('invalid_query', 'Cần tên hoặc SKU từ 1 đến 200 ký tự.');
     }
@@ -175,7 +216,7 @@ function createProductSearch(config, fetchImpl = fetch) {
     const sources = source === 'all' ? SOURCES : [source];
     if (sources.some(s => !SOURCES.includes(s))) throw new SearchError('invalid_source', 'Nguồn tìm kiếm không hợp lệ.');
     return Promise.all(sources.map(async selected => {
-      try { return await searchOne(selected, { kind, query: kind === 'name' ? query.trim() : query, page, maxPages, startPage }); }
+      try { return await searchOne(selected, { kind, query: kind === 'name' ? query.trim() : query, page, maxPages, startPage, detail }); }
       catch (error) {
         return { source: selected, status: 'error', code: error instanceof SearchError ? error.code : 'unexpected_error', message: error instanceof SearchError ? error.message : 'Không xử lý được phản hồi API.', items: [] };
       }
@@ -183,4 +224,48 @@ function createProductSearch(config, fetchImpl = fetch) {
   };
 }
 
-module.exports = { createProductSearch, configurationStatus, SearchError };
+/** Read complete catalogs with bounded, sequential pagination per source. */
+function createCatalogFetcher(config, fetchImpl = fetch) {
+  const kiotAuth = createKiotAuth(config, fetchImpl);
+  return async function fetchAll(source) {
+    try {
+      if (!['kiotviet', 'sapo-web'].includes(source)) throw new SearchError('invalid_source', 'Nguồn danh mục không hợp lệ.');
+      validateSource(source, config);
+      const isKiot = source === 'kiotviet';
+      const headers = isKiot
+        ? { Retailer: config.kiotviet.retailer, Authorization: `Bearer ${await kiotAuth()}` }
+        : sapoHeaders(config.sapoWeb);
+      const items = [];
+      let offset = 0;
+      for (let page = 1; page <= 200; page++) {
+        const url = new URL(isKiot ? 'https://public.kiotapi.com/products' : '/admin/products.json', isKiot ? undefined : sapoOrigin(config.sapoWeb));
+        url.search = new URLSearchParams(isKiot
+          ? { pageSize: '100', currentItem: String(offset), includeInventory: 'true', orderBy: 'createdDate', orderDirection: 'Desc' }
+          : { limit: '250', page: String(page) });
+        const result = await requestJson(fetchImpl, url, { headers });
+        const products = isKiot ? result?.data : result?.products;
+        if (!Array.isArray(products)) throw new SearchError('invalid_response', 'Nguồn không trả danh sách sản phẩm hợp lệ.');
+        if (isKiot) {
+          const total = numberOrNull(result.total);
+          if (total === null || !Number.isSafeInteger(total) || total < 0 || (!products.length && offset < total)) {
+            throw new SearchError('invalid_response', 'Phân trang KiotViet không hợp lệ hoặc thiếu dữ liệu.');
+          }
+          items.push(...products.map(product => kiotRow(product, true)));
+          offset += products.length;
+          if (offset >= total) return { source, status: 'ok', items, complete: true };
+        } else {
+          const rows = sapoRows(products, true);
+          for (const row of rows) row.detail.webUrl = typeof row.detail.alias === 'string' && /^[a-z0-9_-]+$/i.test(row.detail.alias)
+            ? new URL(`/${row.detail.alias}`, sapoOrigin(config.sapoWeb)).href : null;
+          items.push(...rows);
+          if (products.length < 250) return { source, status: 'ok', items, complete: true };
+        }
+      }
+      return { source, status: 'ok', items, complete: false };
+    } catch (error) {
+      return { source, status: 'error', code: error instanceof SearchError ? error.code : 'unexpected_error', message: error instanceof SearchError ? error.message : 'Không xử lý được phản hồi API.', items: [] };
+    }
+  };
+}
+
+module.exports = { createProductSearch, createCatalogFetcher, configurationStatus, SearchError };

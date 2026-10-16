@@ -66,7 +66,7 @@ Tra cứu chi tiết bằng CodeGraph (luôn theo code hiện tại, không cầ
 - Giữ thay đổi trong phạm vi yêu cầu, bảo toàn công việc có sẵn của người dùng.
 - Không tự chọn công nghệ hoặc tính năng lớn khi yêu cầu dự án chưa được xác định.
 - Không ghi bí mật, token hoặc mật khẩu vào code, tài liệu hay log.
-- Website chỉ dùng dữ liệu thử; không kết nối KiotViet, Sapo, cổng thanh toán hoặc dịch vụ thật. Ngoại lệ đã được Bảo duyệt (TASK-010): Google Sign-In để đăng nhập.
+- Website chỉ dùng dữ liệu thử; không kết nối KiotViet, Sapo, cổng thanh toán hoặc dịch vụ thật. Ngoại lệ đã được Bảo duyệt: Google Sign-In để đăng nhập (TASK-010); đọc sản phẩm KiotViet và Sapo Web cho trang Tìm kiếm, chỉ đọc, khóa ở `BossTele/.env` (TASK-025).
 - Ưu tiên dữ liệu thử nghiệm cho kiểm tra; thao tác tài khoản thật, gửi tin, triển khai hoặc thay đổi dữ liệu ngoài máy cần nằm trong phạm vi người dùng đã cho phép.
 - Báo cáo trung thực: phân biệt kiểm tra cục bộ, mô phỏng và hành vi đã xác minh trên hệ thống thật.
 

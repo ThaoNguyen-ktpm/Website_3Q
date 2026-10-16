@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {listStaff,listRoles,createStaff,updateStaff} from '../../api/staff';
 import {auditActions,listAuditLogs} from '../../api/audit';
+import {listCatalogProducts,syncCatalogProducts} from '../../api/catalog';
 import Icon from '../components/Icon';
 import '../styles.css';
 import {RevenueChart,OrderRing} from '../components/Charts';
@@ -8,7 +9,7 @@ import useAdminController from '../controllers/useAdminController';
 import {money,shortMoney,statusLabels,seedOrders} from '../models/storeModel';
 import PatternWaves from '../../components/PatternWaves';
 
-const nav=[['overview','grid','Tổng quan'],['products','box','Sản phẩm'],['orders','bag','Đơn hàng'],['customers','users','Khách hàng'],['team','team','Nhân viên'],['audit','clock','Nhật ký'],['settings','settings','Cài đặt']];
+const nav=[['overview','grid','Tổng quan'],['search','search','Tìm kiếm'],['products','box','Sản phẩm'],['orders','bag','Đơn hàng'],['customers','users','Khách hàng'],['team','team','Nhân viên'],['audit','clock','Nhật ký'],['settings','settings','Cài đặt']];
 const titles=Object.fromEntries(nav.map(([id,,title])=>[id,title]));
 const dateLabel=date=>date.split('-').reverse().join('/');
 const periodNames={month:'Tháng này',week:'7 ngày gần nhất',today:'Hôm nay'};
@@ -20,7 +21,7 @@ function PanelHeading({title,description,children}){return <div className="panel
 
 export default function App({user,onSignOut,signingOut,signOutError}){
  const can=key=>user.permissions.includes(key);
- const allowedNav=nav.filter(([id])=>can(({overview:'dashboard.view',products:'products.view',orders:'orders.view',customers:'customers.view',team:'staff.view',audit:'audit.view',settings:'settings.manage'})[id]));
+ const allowedNav=nav.filter(([id])=>can(({overview:'dashboard.view',search:'products.view',products:'products.view',orders:'orders.view',customers:'customers.view',team:'staff.view',audit:'audit.view',settings:'settings.manage'})[id]));
  const c=useAdminController(allowedNav[0]?.[0]||'overview');c.can=can;const [noticeOpen,setNoticeOpen]=useState(false);const [helpOpen,setHelpOpen]=useState(false);
  const validPage=titles[c.page]?c.page:allowedNav[0]?.[0];
  const allowed=allowedNav.some(([id])=>id===validPage);
@@ -37,15 +38,16 @@ export default function App({user,onSignOut,signingOut,signOutError}){
   <div className="workspace">
    <header className="topbar"><div className="breadcrumbs"><button className="icon-button mobile-menu" onClick={()=>c.setSidebarOpen(true)} aria-label="Mở menu"><Icon name="menu"/></button><span>Không gian làm việc</span><Icon name="chevron" size={13}/><strong>{titles[validPage]}</strong></div><div className="topbar-actions"><div className="store-switch store-switch-top"><span className="store-square"><img className="store-logo" src="/brand/baoq-monogram.png" alt="" width="390" height="390"/></span><div><strong>{c.store.settings.name}</strong><small>Không gian quản trị</small></div><span className="demo-dot" title="Bản mẫu"/></div><span className="topbar-divider"/><div className="notification-wrap"><button className="icon-button notification-button" aria-label="Thông báo" aria-expanded={noticeOpen} onClick={()=>setNoticeOpen(!noticeOpen)}><Icon name="bell"/><i/></button>{noticeOpen&&<div className="notification-panel"><div className="popover-title"><strong>Thông báo mẫu</strong><button className="icon-button" aria-label="Đóng thông báo" onClick={()=>setNoticeOpen(false)}><Icon name="close" size={16}/></button></div><p><Icon name="bag" size={17}/> Có 2 đơn hàng chờ xử lý.</p><p><Icon name="box" size={17}/> 2 sản phẩm sắp hết hàng.</p><a href="#orders" onClick={()=>setNoticeOpen(false)}>Xem đơn hàng <Icon name="chevron" size={14}/></a></div>}</div><Account user={user} onSignOut={onSignOut} signingOut={signingOut} signOutError={signOutError}/></div></header>
    <main>
-    {allowed?<><div className="page-title"><div><h1>{validPage==='overview'?'Tổng quan cửa hàng':titles[validPage]}</h1><p>{({overview:'Mọi hoạt động kinh doanh, trong một góc nhìn.',products:'Theo dõi hàng hóa và chăm chút từng sản phẩm.',orders:'Theo dõi và quản lý đơn hàng của cửa hàng.',customers:'Hiểu khách hàng, xây dựng kết nối dài lâu.',team:'Cùng đội ngũ vận hành cửa hàng mỗi ngày.',settings:'Thiết lập thông tin cho không gian của bạn.'})[validPage]}</p></div><div className="page-actions">{['overview','orders'].includes(validPage)?<><PeriodSelect c={c}/>{can('reports.export')&&<button className="button primary" onClick={c.exportOrders}><Icon name="download" size={16}/> Xuất báo cáo</button>}</>:validPage==='products'&&can('products.edit')?<button className="button primary" onClick={()=>c.setDrawer({type:'product',product:null})}><Icon name="plus" size={17}/> Thêm sản phẩm</button>:null}</div></div>
+    {allowed?<><div className="page-title"><div><h1>{validPage==='overview'?'Tổng quan cửa hàng':titles[validPage]}</h1><p>{({overview:'Mọi hoạt động kinh doanh, trong một góc nhìn.',search:'Tra sản phẩm trực tiếp từ KiotViet.',products:'Theo dõi hàng hóa và chăm chút từng sản phẩm.',orders:'Theo dõi và quản lý đơn hàng của cửa hàng.',customers:'Hiểu khách hàng, xây dựng kết nối dài lâu.',team:'Cùng đội ngũ vận hành cửa hàng mỗi ngày.',settings:'Thiết lập thông tin cho không gian của bạn.'})[validPage]}</p></div><div className="page-actions">{['overview','orders'].includes(validPage)?<><PeriodSelect c={c}/>{can('reports.export')&&<button className="button primary" onClick={c.exportOrders}><Icon name="download" size={16}/> Xuất báo cáo</button>}</>:validPage==='products'&&can('products.edit')?<button className="button primary" onClick={()=>c.setDrawer({type:'product',product:null})}><Icon name="plus" size={17}/> Thêm sản phẩm</button>:null}</div></div>
     {validPage==='overview'&&<Overview c={c}/>}
     {validPage==='products'&&<Products c={c}/>}
+    {validPage==='search'&&<CatalogSearch c={c}/>}
     {validPage==='orders'&&<Orders c={c}/>}
     {validPage==='customers'&&<Customers c={c}/>}
     {validPage==='team'&&<Team c={c} user={user}/>}
     {validPage==='audit'&&<AuditLogs/>}
     {validPage==='settings'&&<Settings c={c}/>}</>:<Empty label="Bạn không có quyền xem trang này" hint="Chọn một trang được phép trong menu."/>}
-    <footer className="page-footer"><span>© 2026 Maison · Giao diện quản trị</span><span><i/> {validPage==='audit'?'Nhật ký · Dữ liệu máy chủ':validPage==='team'?'Nhân viên · Dữ liệu máy chủ':'Dữ liệu minh họa'}</span></footer>
+    <footer className="page-footer"></footer>
    </main>
   </div>
   {c.drawer&&<Drawer c={c}/>}
@@ -80,7 +82,7 @@ function staffAvatar(staff){return {color:'lavender',initials:(words=>words.leng
 function Account({user,onSignOut,signingOut,signOutError}){
  const [open,setOpen]=useState(false);const ref=useRef(null);
  useEffect(()=>{if(!open)return;const close=e=>{if(e.type==='keydown'){if(e.key==='Escape'){setOpen(false);ref.current?.querySelector('button')?.focus()}}else if(!ref.current?.contains(e.target))setOpen(false)};document.addEventListener('pointerdown',close);document.addEventListener('keydown',close);return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',close)}},[open]);
- return <div className="notification-wrap account-wrap" ref={ref}><button className="account" type="button" aria-label="Hồ sơ và đăng xuất" aria-expanded={open} aria-controls="account-panel" onClick={()=>setOpen(!open)}><Avatar person={staffAvatar(user)}/><span><strong>{user.fullName}</strong><small>{user.roleLabel}</small></span><Icon name="down" size={14}/></button>{open&&<div className="notification-panel account-panel" id="account-panel"><p>{user.email}</p><button className="button" disabled={signingOut} onClick={onSignOut}>{signingOut?'Đang đăng xuất…':'Đăng xuất'}</button>{signOutError&&<p role="alert">{signOutError}</p>}</div>}</div>
+ return <div className="notification-wrap account-wrap" ref={ref}><button className="account" type="button" aria-label="Hồ sơ và đăng xuất" aria-expanded={open} aria-controls="account-panel" onClick={()=>setOpen(!open)}><Avatar person={staffAvatar(user)}/><Icon name="down" size={14}/></button>{open&&<div className="notification-panel account-panel" id="account-panel"><div className="account-card"><Avatar person={staffAvatar(user)}/><div><strong>{user.fullName}</strong><small>{user.roleLabel}</small></div></div><p className="account-email">{user.email}</p><button className="button account-signout" disabled={signingOut} onClick={onSignOut}><Icon name="logout" size={16}/>{signingOut?'Đang đăng xuất…':'Đăng xuất'}</button>{signOutError&&<p role="alert">{signOutError}</p>}</div>}</div>
 }
 function Team({c,user}){
  const [staff,setStaff]=useState([]),[roles,setRoles]=useState([]),[catalog,setCatalog]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[reload,setReload]=useState(0);
@@ -113,12 +115,111 @@ function StaffForm({c,d}){
 function Settings({c}){const [draft,setDraft]=useState(c.store.settings);const change=(field,value)=>setDraft({...draft,[field]:value});return <section className="panel settings-panel"><PanelHeading title="Thông tin cửa hàng" description="Thông tin mẫu được lưu riêng trên trình duyệt này."/><form onSubmit={e=>{e.preventDefault();c.saveSettings(draft)}}><div className="form-grid"><Field label="Tên cửa hàng"><input required maxLength={80} value={draft.name} onChange={e=>change('name',e.target.value)}/></Field><Field label="Email liên hệ"><input type="email" required value={draft.email} onChange={e=>change('email',e.target.value)}/></Field><Field label="Số điện thoại"><input required value={draft.phone} onChange={e=>change('phone',e.target.value)}/></Field><Field label="Cảnh báo khi tồn kho dưới"><input type="number" required min="1" step="1" value={draft.lowStock} onChange={e=>change('lowStock',Number(e.target.value))}/></Field><Field label="Địa chỉ" wide><input value={draft.address} onChange={e=>change('address',e.target.value)}/></Field></div><div className="form-actions"><span>Chỉ áp dụng cho bản mẫu.</span><button className="button primary" type="submit"><Icon name="check" size={17}/> Lưu thay đổi</button></div></form></section>}
 function Field({label,wide,children}){return <label className={`field ${wide?'wide':''}`}><span>{label}</span>{children}</label>}
 
+function CatalogSearch({c}){
+ const [q,setQ]=useState(''),[query,setQuery]=useState({q:'',page:1,pageSize:20});
+ const [data,setData]=useState(null),[busy,setBusy]=useState(false),[syncing,setSyncing]=useState(false),[error,setError]=useState(''),[pageDraft,setPageDraft]=useState('1');
+ const grid=useRef(null),syncRequest=useRef(null);
+ useEffect(()=>()=>syncRequest.current?.abort(),[]);
+ useEffect(()=>{
+  // Results appear only after a search; an empty query shows the prompt instead of the whole catalog.
+  if(!query.q){setData(null);setBusy(false);setError('');return;}
+  const controller=new AbortController();setBusy(true);setError('');
+  listCatalogProducts(query,controller.signal).then(result=>{
+   if(controller.signal.aborted)return;
+   setData(result);setPageDraft(String(result.page));
+  }).catch(failure=>{if(!controller.signal.aborted)setError(failure.message||'Không tải được danh mục. Vui lòng thử lại.')})
+   .finally(()=>{if(!controller.signal.aborted)setBusy(false)});
+  return ()=>controller.abort();
+ },[query]);
+ useEffect(()=>{
+  if(q.trim()===query.q)return;
+  const timer=setTimeout(()=>setQuery(previous=>({...previous,q:q.trim(),page:1})),400);
+  return ()=>clearTimeout(timer);
+ },[q,query.q]);
+ useEffect(()=>{
+  if(!data?.syncing||busy)return;
+  const timer=setTimeout(()=>setQuery(previous=>({...previous})),1500);
+  return ()=>clearTimeout(timer);
+ },[data,busy]);
+ const navigate=page=>setQuery(previous=>({...previous,page}));
+ const synchronize=async()=>{
+  if(syncRequest.current&&!syncRequest.current.signal.aborted)return;
+  const controller=new AbortController();syncRequest.current=controller;setSyncing(true);setError('');
+  try{await syncCatalogProducts(controller.signal);if(!controller.signal.aborted)setQuery(previous=>({...previous}))}
+  catch(failure){if(!controller.signal.aborted)setError(failure.message||'Không đồng bộ được danh mục. Vui lòng thử lại.')}
+  finally{if(!controller.signal.aborted){setSyncing(false);syncRequest.current=null}}
+ };
+ const number=value=>value.toLocaleString('vi-VN');
+ const syncingNow=syncing||data?.syncing;
+ return <div className="catalog-search">
+  <section className="panel catalog-controls"><div className="panel-heading catalog-heading"><h2>Tra cứu sản phẩm</h2><span aria-hidden="true">/</span><button className="catalog-reload" aria-label="Tải lại sản phẩm API" type="button" disabled={!!syncingNow} onClick={synchronize}>{syncingNow?'Đang tải lại…':'Tải lại sản phẩm API'}</button></div>
+   <form onSubmit={event=>{event.preventDefault();setQuery(previous=>({...previous,q:q.trim(),page:1}))}}>
+    <div className="catalog-query"><label className="search"><input autoFocus maxLength={200} aria-label="Tên hoặc SKU sản phẩm" placeholder="Nhập tên hoặc SKU…" value={q} onChange={event=>setQ(event.target.value)}/></label><button className="button primary" type="submit">Tìm</button></div>
+    <div className="catalog-sync-status"><span>{data?`Đồng bộ lúc ${data.syncedAt?new Date(data.syncedAt).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'—'} · ${number(data.catalogTotal??data.total)} sản phẩm`:busy?'Đang tải danh mục…':''}</span></div>
+   </form>
+  </section>
+  {error&&<div className="catalog-message" role="alert"><p>{error}</p><button className="button" disabled={busy} onClick={()=>setQuery(previous=>({...previous}))}>Thử lại</button></div>}
+  {data&&Object.entries(data.sources).filter(([,source])=>source.status==='error').map(([source,status])=><p className="catalog-warning" role="status" key={source}>{source==='kiotviet'?'KiotViet':'Sapo'}: {status.message||'Không đồng bộ được nguồn. Vui lòng thử lại.'}</p>)}
+  <div ref={grid} aria-live="polite" aria-busy={busy}>
+   {busy&&!data&&<><p role="status">Đang đồng bộ sản phẩm từ KiotViet…</p><div className="catalog-grid">{Array.from({length:10},(_,index)=><div key={index} className="catalog-skeleton"><span/><span/><span/></div>)}</div></>}
+   {data&&!data.items.length&&<Empty label="Không tìm thấy sản phẩm" hint="Thử tên hoặc SKU khác, hoặc đồng bộ lại danh mục."/>}
+   {data&&<><div className="catalog-grid">{data.items.map(item=><button className="catalog-card" key={item.key} onClick={()=>c.setDrawer({type:'catalog',item,canViewCost:!!item.kiot?.inventories?.some(inventory=>Object.hasOwn(inventory,'cost'))})}>
+    <CatalogImage src={item.image}/><div className="catalog-card-content"><strong>{item.name||'Chưa có tên'}</strong><small>{item.sku||'Chưa có SKU'}</small><b>{item.price===null?'Chưa có giá':money(item.price)}</b><div className="catalog-tags"><CatalogTrend name={item.name}/><CatalogStock quantity={item.onHand} lowStock={Number(c.store.settings.lowStock)}/></div></div>
+   </button>)}</div>
+   <div className="catalog-pagination">
+    <label>Hiển thị <select aria-label="Số dòng mỗi trang" value={query.pageSize} onChange={event=>{setQuery(previous=>({...previous,pageSize:Number(event.target.value),page:1}))}}>{[15,20,30,50,100].map(size=><option key={size} value={size}>{size} dòng</option>)}</select></label>
+    <div className="catalog-page-buttons"><button aria-label="Trang đầu" disabled={busy||data.page===1} onClick={()=>navigate(1)}>⏮</button><button aria-label="Trang trước" disabled={busy||data.page===1} onClick={()=>navigate(data.page-1)}>◀</button><form noValidate onSubmit={event=>{event.preventDefault();const page=Number(pageDraft);if(Number.isSafeInteger(page)&&page>=1)navigate(Math.min(page,data.pageCount));else setPageDraft(String(data.page))}}><input aria-label="Số trang" type="number" min="1" max={data.pageCount} value={pageDraft} onChange={event=>setPageDraft(event.target.value)}/></form><button aria-label="Trang sau" disabled={busy||data.page===data.pageCount} onClick={()=>navigate(data.page+1)}>▶</button><button aria-label="Trang cuối" disabled={busy||data.page===data.pageCount} onClick={()=>navigate(data.pageCount)}>⏭</button></div>
+    <span>{number(data.total?(data.page-1)*data.pageSize+1:0)} - {number(Math.min(data.page*data.pageSize,data.total))} trong {number(data.total)} hàng hóa</span>
+   </div></>}
+  </div>
+ </div>;
+}
+
+function CatalogImage({src}){
+ const [failed,setFailed]=useState(null),[loaded,setLoaded]=useState(null);
+ let safe=false;try{safe=new URL(src).protocol==='https:'}catch{}
+ // Eager load with a pulse until the photo arrives: lazy loading left empty boxes that looked broken while scrolling.
+ return <span className={`catalog-image${safe&&failed!==src&&loaded!==src?' is-loading':''}`}>{safe&&failed!==src?<img src={src} alt="" decoding="async" referrerPolicy="no-referrer" onLoad={()=>setLoaded(src)} onError={()=>setFailed(src)}/>:<span className="catalog-image-placeholder"><Icon name="box" size={32}/><small>Chưa có ảnh</small></span>}</span>;
+}
+// KiotViet marks hot-trend products with "!" in the product name (Bảo 2026-10-16).
+const isHotTrend=name=>typeof name==='string'&&name.includes('!');
+function CatalogTrend({name}){return isHotTrend(name)?<span className="badge shipping">Hot trend</span>:<span className="badge">Hàng thường</span>}
+function CatalogStock({quantity,lowStock}){
+ const status=quantity===null?'processing':quantity<=0?'cancelled':quantity<=lowStock?'pending':'completed';
+ return <span className={`badge ${status}`}>{quantity===null?'Không quản lý tồn':quantity<=0?'Hết hàng':quantity<=lowStock?`Sắp hết · Tồn ${quantity}`:`Còn hàng · Tồn ${quantity}`}</span>;
+}
+function CatalogDetails({d}){
+ const item=d.item,detail=item.kiot||item.sapo?{...item.sapo,...item.kiot}:item.detail||{};const [selected,setSelected]=useState(0);
+ const images=item.images||detail.images||[];
+ let webUrl=null;try{const url=new URL(item.sapo?.webUrl);if(url.protocol==='https:'&&/^[a-z0-9][a-z0-9-]*\.mysapo\.net$/i.test(url.hostname)&&!url.username&&!url.password)webUrl=url.href}catch{}
+ const date=value=>{if(!value)return null;const parsed=new Date(value);return Number.isNaN(parsed.getTime())?null:parsed.toLocaleString('vi-VN')};
+ // Sapo gives single-variant products a placeholder option "Title: Default Title"; it carries no information.
+const noDefault=value=>value!=="Default Title";
+const pairs=values=>(values||[]).filter(value=>value.name&&value.value&&noDefault(value.value)).map(value=>`${value.name}: ${value.value}`).join(' · ');
+ const fields=[['Có trên',item.sources?.map(source=>source==='kiotviet'?'KiotViet':'Sapo').join(', ')],['SKU',item.sku],['Phân loại',isHotTrend(item.name)?'Hot trend':'Hàng thường'],['Mã vạch',detail.barcode],['Danh mục / Loại',detail.categoryName||detail.productType],['Thương hiệu',detail.tradeMarkName||detail.vendor],['Đơn vị',detail.unit],['Cân nặng',detail.weight?`${detail.weight}${detail.weightUnit?` ${detail.weightUnit}`:''}`:null],['Thuộc tính',pairs(detail.attributes?.length?detail.attributes:detail.options)],['Tags',detail.tags?.join(', ')],['Biến thể',noDefault(detail.variantTitle)?detail.variantTitle:null],['Có biến thể',detail.hasVariants==null?null:detail.hasVariants?'Có':'Không'],['Sản phẩm gốc',detail.masterProductId],['Ngày tạo',date(detail.createdDate||detail.createdOn)],['Cập nhật',date(detail.modifiedDate||detail.modifiedOn)],['Ngày đăng',date(detail.publishedOn)]];
+ const plainDescription=input=>{
+  const value=(input||'').replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'').replace(/<\/(p|div|li|h[1-6])\s*>|<br\s*\/?>/gi,'\n').replace(/<[^>]*>/g,'');
+  return typeof DOMParser==='undefined'?value:new DOMParser().parseFromString(value,'text/html').body.textContent||'';
+ };
+ const descriptions=item.kiot||item.sapo?[["Mô tả",item.kiot?.description],["Mô tả web",item.sapo?.description]]:[["Mô tả",detail.description]];
+ const selling=(item.kiot||item.source==='kiotviet')?(detail.isActive===false||detail.allowsSale===false?'Ngừng bán':detail.isActive===true||detail.allowsSale===true?'Đang bán':'Chưa rõ'):detail.publishedOn?'Đang bán':'Ngừng bán';
+ return <div className="drawer-content catalog-details">
+  <div className="catalog-gallery"><CatalogImage src={images[selected]}/>{images.length>1&&<div className="catalog-thumbnails" aria-label="Chọn ảnh sản phẩm">{images.map((src,index)=><button key={src} aria-label={`Ảnh ${index+1}`} aria-pressed={selected===index} onClick={()=>setSelected(index)}><CatalogImage src={src}/></button>)}</div>}</div>
+  <div className="catalog-detail-title"><h3>{item.name}</h3>{detail.fullName&&detail.fullName!==item.name&&<p>{detail.fullName}</p>}</div>
+  <div className="catalog-numbers"><div><span>Giá bán</span><strong>{item.price===null?'Chưa có giá':money(item.price)}</strong>{detail.compareAtPrice!=null&&<del>{money(detail.compareAtPrice)}</del>}</div><div><span>Tồn tổng</span><strong>{item.onHand??'Không quản lý tồn'}</strong></div><div><span>Trạng thái</span><strong>{selling}</strong></div></div>
+  <dl className="detail-list">{fields.filter(([,value])=>value!==null&&value!==undefined&&value!=='').map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+  {webUrl&&<a href={webUrl} target="_blank" rel="noopener noreferrer">Xem trên website Sapo</a>}
+  {!!detail.inventories?.length&&<section><h3>Tồn theo chi nhánh</h3><div className="catalog-inventory-scroll" tabIndex={0} aria-label="Tồn theo chi nhánh"><table><thead><tr><th>Chi nhánh</th><th>Tồn</th><th>Đặt giữ</th>{d.canViewCost&&<th>Giá vốn</th>}</tr></thead><tbody>{detail.inventories.map((inventory,index)=><tr key={inventory.branchId??index}><td>{inventory.branchName||inventory.branchId||'Chưa có tên'}</td><td>{inventory.onHand??'—'}</td><td>{inventory.reserved??'—'}</td>{d.canViewCost&&<td>{inventory.cost==null?'—':money(inventory.cost)}</td>}</tr>)}</tbody></table></div></section>}
+  {descriptions.map(([title,value])=>{const text=plainDescription(value).trim();return text?<section key={title}><h3>{title}</h3><p className="catalog-description">{text}</p></section>:null})}
+ </div>;
+}
+
 function Drawer({c}){
  const ref=useRef(null),previousFocus=useRef(document.activeElement);
  useEffect(()=>{const previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';ref.current?.focus();return()=>{document.body.style.overflow=previousOverflow;previousFocus.current?.focus()}},[]);
- const d=c.drawer;const title={staff:d.staff?'Sửa nhân viên':'Thêm nhân viên',order:'Chi tiết đơn hàng',product:d.product?'Chỉnh sửa sản phẩm':'Thêm sản phẩm',customer:'Thông tin khách hàng'}[d.type];
+ const d=c.drawer;const title={catalog:'Chi tiết sản phẩm',staff:d.staff?'Sửa nhân viên':'Thêm nhân viên',order:'Chi tiết đơn hàng',product:d.product?'Chỉnh sửa sản phẩm':'Thêm sản phẩm',customer:'Thông tin khách hàng'}[d.type];
  const trap=e=>{if(e.key!=='Tab')return;const nodes=ref.current.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]');const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&(document.activeElement===first||document.activeElement===ref.current)){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}};
- return <div className="drawer-overlay" onClick={()=>c.setDrawer(null)}><section className="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabIndex={-1} ref={ref} onKeyDown={trap} onClick={e=>e.stopPropagation()}><div className="drawer-heading"><div><h2 id="drawer-title">{title}</h2><p>{d.type==='staff'?'Tài khoản và quyền truy cập':'Dữ liệu bản mẫu'}</p></div><button className="icon-button" aria-label="Đóng chi tiết" onClick={()=>c.setDrawer(null)}><Icon name="close"/></button></div>{d.type==='staff'?<StaffForm c={c} d={d}/>:d.type==='product'?<ProductForm c={c} product={d.product}/>:d.type==='order'?<OrderDetails order={d.order}/>:<CustomerDetails customer={d.customer}/>}</section></div>
+ return <div className="drawer-overlay" onClick={()=>c.setDrawer(null)}><section className="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabIndex={-1} ref={ref} onKeyDown={trap} onClick={e=>e.stopPropagation()}><div className="drawer-heading"><div><h2 id="drawer-title">{title}</h2><p>{d.type==='catalog'?'Dữ liệu trực tiếp · KiotViet':d.type==='staff'?'Tài khoản và quyền truy cập':'Dữ liệu bản mẫu'}</p></div><button className="icon-button" aria-label="Đóng chi tiết" onClick={()=>c.setDrawer(null)}><Icon name="close"/></button></div>{d.type==='catalog'?<CatalogDetails d={d}/>:d.type==='staff'?<StaffForm c={c} d={d}/>:d.type==='product'?<ProductForm c={c} product={d.product}/>:d.type==='order'?<OrderDetails order={d.order}/>:<CustomerDetails customer={d.customer}/>}</section></div>
 }
 function ProductForm({c,product}){const [draft,setDraft]=useState(product||{id:`SP${String(Math.max(...c.store.products.map(p=>Number(p.id.slice(2))||0),0)+1).padStart(3,'0')}`,name:'',category:'Thời trang',price:'',stock:'',sold:0,icon:'shirt',color:'lavender'});const change=(field,value)=>setDraft({...draft,[field]:value});return <form className="drawer-content" onSubmit={e=>{e.preventDefault();if(!draft.name.trim())return;c.saveProduct({...draft,name:draft.name.trim(),price:Number(draft.price),stock:Number(draft.stock)})}}><div className="product-preview"><ProductImage product={draft}/><div><strong>{draft.name||'Sản phẩm mới'}</strong><small>{draft.id}</small></div></div><div className="form-grid"><Field label="Tên sản phẩm" wide><input autoFocus required maxLength={100} value={draft.name} onChange={e=>change('name',e.target.value)}/></Field><Field label="Danh mục" wide><select value={draft.category} onChange={e=>{const category=e.target.value;setDraft({...draft,category,icon:category==='Thời trang'?'shirt':category==='Điện tử'?'headset':'bag'})}}>{['Thời trang','Phụ kiện','Điện tử'].map(x=><option key={x}>{x}</option>)}</select></Field><Field label="Giá bán (VND)"><input type="number" required min="1000" step="1000" value={draft.price} onChange={e=>change('price',e.target.value)}/></Field><Field label="Số lượng tồn kho"><input type="number" required min="0" step="1" value={draft.stock} onChange={e=>change('stock',e.target.value)}/></Field></div><p className="form-help">Bạn đang chỉnh dữ liệu mẫu. Sản phẩm được lưu trong trình duyệt, chưa gửi đến máy chủ.</p><div className="drawer-actions"><button type="button" className="button" onClick={()=>c.setDrawer(null)}>Hủy</button><button className="button primary" type="submit">Lưu sản phẩm</button></div></form>}
 function OrderDetails({order:o}){return <div className="drawer-content"><div className="detail-title"><strong>#{o.id}</strong><Badge status={o.status}/></div><dl className="detail-list"><div><dt>Ngày tạo</dt><dd>{dateLabel(o.date)}</dd></div><div><dt>Kênh bán hàng</dt><dd>{o.channel}</dd></div><div><dt>Khách hàng</dt><dd>{o.customer.name}</dd></div><div><dt>Số điện thoại mẫu</dt><dd>{o.customer.phone}</dd></div></dl><h3>Sản phẩm trong đơn</h3>{o.items.map(p=><div className="order-item" key={p.id}><ProductImage product={p} small/><div><strong>{p.name}</strong><small>{p.quantity} × {money(p.price)}</small></div><strong>{money(p.price*p.quantity)}</strong></div>)}<div className="order-total"><span>Tổng thanh toán</span><strong>{money(o.total)}</strong></div><p className="form-help">Bản này dùng để duyệt giao diện. Thay đổi trạng thái và xử lý thanh toán sẽ được nối với backend sau.</p></div>}

@@ -83,3 +83,110 @@
   .store-switch-top { padding: 4px; }
  }
 }
+
+/* Catalog reads live product data; keep these rules inside the admin surface. */
+@scope (.admin-page) {
+ .catalog-search { display: grid; gap: 28px; min-width: 0; }
+ .catalog-controls form { padding: 24px; }
+ .catalog-query { display: flex; gap: 12px; }
+ .catalog-query .search { flex: 1; max-width: none; min-width: 0; }
+ .catalog-query input { min-height: 44px; font-size: 14px; }
+ .catalog-query .button { min-width: 96px; font-size: 14px; }
+ .catalog-search button:focus-visible, .catalog-details button:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+ .catalog-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 20px; }
+ .catalog-card { display: flex; flex-direction: column; min-width: 0; padding: 0; text-align: left; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+ .catalog-card:hover, .catalog-card:focus-visible { border-color: var(--primary); }
+ .catalog-image { display: block; width: 100%; aspect-ratio: 1; background: var(--surface-2); overflow: hidden; }
+ .catalog-image img { display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity .2s; }
+ .catalog-image.is-loading { animation: catalog-pulse 1.2s ease-in-out infinite; }
+ .catalog-image.is-loading img { opacity: 0; }
+ .catalog-image-placeholder { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: var(--muted); }
+ .catalog-image-placeholder small { font-size: 12px; }
+ .catalog-card-content { display: flex; flex: 1; align-items: flex-start; flex-direction: column; gap: 10px; padding: 16px; max-width: 100%; }
+ .catalog-card-content > strong { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+ .catalog-card-content > small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+ .catalog-card-content > b { font-size: 16px; margin-top: auto; font-variant-numeric: tabular-nums; }
+ .catalog-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+ .catalog-search .badge, .catalog-details .badge { font-size: 11px; white-space: normal; line-height: 1.5; }
+ .catalog-search .badge.processing, .catalog-details .badge.processing { color: #a9d3ff; background: #19334f; }
+ .catalog-search button:disabled { opacity: .6; cursor: not-allowed; }
+ .catalog-message { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 12px 0; padding: 16px; color: #f0a8bb; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+ .catalog-warning { color: #edc585; font-size: 13px; line-height: 1.6; margin-top: 16px; }
+ .catalog-skeleton { border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: var(--surface); }
+ .catalog-skeleton span { display: block; height: 16px; background: var(--surface-2); margin-bottom: 14px; border-radius: 4px; }
+ .catalog-skeleton span:first-child { height: auto; aspect-ratio: 1; }
+ .catalog-skeleton span:last-child { width: 60%; }
+ .catalog-details { display: grid; gap: 24px; min-width: 0; }
+ .catalog-gallery { min-width: 0; }
+ .catalog-gallery > .catalog-image { border-radius: 8px; }
+ .catalog-thumbnails { display: flex; overflow-x: auto; gap: 10px; padding: 10px 3px 4px; }
+ .catalog-thumbnails button { width: 64px; flex: 0 0 64px; padding: 0; border: 2px solid transparent; border-radius: 6px; overflow: hidden; background: var(--surface); }
+ .catalog-thumbnails button[aria-pressed="true"] { border-color: var(--primary); }
+ .catalog-thumbnails .catalog-image-placeholder small { display: none; }
+ .catalog-detail-title h3 { font-size: 20px; line-height: 1.5; margin-top: 12px; overflow-wrap: anywhere; }
+ .catalog-detail-title p { color: var(--muted); font-size: 13px; line-height: 1.6; margin-top: 8px; }
+ .catalog-numbers { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+ .catalog-numbers > div { display: flex; flex-direction: column; gap: 10px; padding: 14px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+ .catalog-numbers span, .catalog-numbers del { color: var(--muted); font-size: 12px; line-height: 1.5; }
+ .catalog-numbers strong { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+ .catalog-details .detail-list { margin: 0; }
+ .catalog-details .detail-list > div { font-size: 13px; line-height: 1.6; gap: 16px; }
+ .catalog-details dd { overflow-wrap: anywhere; min-width: 0; }
+ .catalog-details section { min-width: 0; }
+ .catalog-details section h3 { font-size: 15px; margin-bottom: 14px; }
+ .catalog-inventory-scroll { overflow-x: auto; }
+ .catalog-inventory-scroll table { width: 100%; min-width: 340px; }
+ .catalog-inventory-scroll th, .catalog-inventory-scroll td { padding: 12px 10px; font-size: 12px; }
+ .catalog-description { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); font-size: 14px; line-height: 1.8; }
+ @media (max-width: 760px) {
+  .catalog-grid { gap: 14px; }
+  .catalog-controls form { padding: 18px; }
+  .catalog-card-content { padding: 12px; }
+ }
+ @media (max-width: 420px) {
+
+  .catalog-numbers { gap: 6px; }
+  .catalog-numbers > div { padding: 12px 8px; }
+ }
+ .catalog-query .search input { padding-left: 14px; width: 100%; }
+ .catalog-sync-status { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px; color: var(--muted); font-size: 13px; }
+ .catalog-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; margin-top: 24px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+ .catalog-pagination label, .catalog-page-buttons { display: flex; align-items: center; gap: 8px; }
+ .catalog-pagination select, .catalog-pagination input, .catalog-page-buttons button { min-height: 40px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--ink); padding: 8px 12px; font: inherit; }
+ .catalog-pagination select:focus-visible, .catalog-pagination input:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+ .catalog-page-buttons input { width: 64px; text-align: center; }
+ .catalog-page-buttons button { min-width: 40px; }
+ .catalog-page-buttons button:hover:not(:disabled) { border-color: var(--primary); }
+ .catalog-page-buttons form { margin: 0; }
+ @media (min-width: 420px) { .catalog-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+ @media (min-width: 760px) { .catalog-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+ @media (min-width: 1024px) { .catalog-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
+ @media (min-width: 1280px) { .catalog-grid { grid-template-columns: repeat(5,minmax(0,1fr)); } }
+
+}
+
+@keyframes catalog-pulse { 50% { opacity: .55; } }
+
+/* Account menu: the trigger shows only the avatar; name, email and role live in the panel. */
+@scope (.admin-page) {
+ .account-panel { width: 300px; padding: 16px; display: grid; gap: 14px; }
+ .account-card { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+ .account-card .avatar { height: 44px; width: 44px; font-size: 14px; flex-shrink: 0; background: #282036; color: var(--primary); }
+ .account-card div { min-width: 0; }
+ .account-card strong { display: block; font-size: 14px; line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; }
+ .account-card small { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+ .account-email { padding: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+ .account-signout { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; }
+ .account-signout:hover:not(:disabled) { border-color: #f0a8bb; color: #f0a8bb; }
+ .account-panel p[role="alert"] { padding: 0; color: #f0a8bb; }
+}
+
+/* Catalog heading: "Tra cứu sản phẩm / Tải lại sản phẩm API" on the left, reload styled as a heading link. */
+@scope (.admin-page) {
+ .catalog-heading { justify-content: flex-start; }
+ .catalog-heading h2, .catalog-heading > span, .catalog-reload { font-size: 15px; font-weight: 600; letter-spacing: -.25px; }
+ .catalog-heading > span { color: var(--muted); }
+ .catalog-reload { border: 0; background: none; padding: 0; font-family: inherit; color: var(--muted); cursor: pointer; }
+ .catalog-reload:hover:not(:disabled), .catalog-reload:focus-visible { color: var(--primary); }
+ .catalog-reload:disabled { cursor: progress; opacity: .7; }
+}

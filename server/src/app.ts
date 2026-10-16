@@ -8,6 +8,7 @@ import { env } from './config/env.js';
 import { authRouter } from './routes/authRoutes.js';
 import { healthRouter } from './routes/healthRoutes.js';
 import { productRouter } from './routes/productRoutes.js';
+import { catalogRouter } from './routes/catalogRoutes.js';
 import { errorHandler, notFound } from './middlewares/errorHandler.js';
 import { requireAuth } from './middlewares/requireAuth.js';
 
@@ -33,6 +34,7 @@ app.use(cookieParser(env.SESSION_SECRET));
 app.use('/api/auth', authRouter);
 app.use('/api/health', healthRouter);
 app.use('/api/products', requireAuth, requirePermission('products.view'), productRouter);
+app.use('/api/catalog', requireAuth, requirePermission('products.view'), catalogRouter);
 app.use('/api/staff', staffRouter);
 app.use('/api/audit-logs', auditRouter);
 app.use(notFound);

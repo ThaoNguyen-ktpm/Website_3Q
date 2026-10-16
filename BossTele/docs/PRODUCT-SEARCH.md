@@ -58,3 +58,14 @@ Kết quả JSON tách riêng từng nguồn, gồm ID sản phẩm/biến thể
 - [Sapo Web private apps](https://support.sapo.vn/ung-dung-rieng-private-apps): Basic Authentication với API key/secret và quyền chỉ đọc.
 
 Đã chạy 46 kiểm thử cục bộ. Live tìm tên “Chanel” thành công trên cả Kiot/Web, còn trang tiếp theo; không coi số dòng trang đầu là toàn bộ danh mục. Chưa triển khai Sapo POS; không dùng tài liệu Web để suy đoán POS. Xem `tasks/TASK-006-live.json` cho kết quả kiểm tra SKU Kiot thực tế. Không ghi giá hoặc sửa sản phẩm trong kiểm chứng này.
+
+## Chi tiết sản phẩm cho website (TASK-025)
+
+Website gọi trực tiếp `createProductSearch` từ server qua `GET /api/catalog/search`, dùng lại `loadConnectionConfig` với `BossTele/.env`. Chỉ đọc KiotViet và Sapo Web; không gọi Sapo POS. Instance được giữ lại để tái sử dụng token Kiot, kết quả tìm kiếm không cache.
+
+`search({ source, kind, query, page, detail: true })` thêm `detail` cho từng dòng sản phẩm. Bỏ `detail` thì cấu trúc dòng cũ được giữ nguyên. Dữ liệu chi tiết lấy từ response sản phẩm hiện có, chỉ copy các field được cho phép; giá trị thiếu là `null` hoặc mảng rỗng. Ảnh chỉ chấp nhận URL HTTPS, loại URL có tài khoản/mật khẩu và loại trùng.
+
+- Kiot: tên, danh mục, thương hiệu, đơn vị, cân nặng, mô tả, ảnh, thuộc tính, trạng thái, liên kết biến thể, ngày tạo/cập nhật và tồn theo chi nhánh (gồm giá vốn).
+- Sapo Web: tên sản phẩm/biến thể, vendor, loại, tags, mô tả, ảnh biến thể trước ảnh sản phẩm, options, barcode, giá so sánh, cân nặng, quản lý tồn, ngày tạo/cập nhật/đăng và alias.
+- Thư viện nội bộ có thể trả `detail.inventories[].cost`; API website phải xóa khóa này trước khi trả cho người thiếu quyền `products.cost`. ADMIN có quyền mặc định; MANAGER và STAFF không có mặc định.
+- Phân trang SKU Sapo dùng `startPage`/`nextPage`, giữ `warning` khi chưa quét hết; không kết luận không tồn tại chỉ từ một lượt quét bị giới hạn.
