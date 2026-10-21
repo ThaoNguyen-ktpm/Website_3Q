@@ -1,0 +1,16 @@
+{
+  "note": "Gợi ý, chưa phải chính sách. Bảng ví dụ trong kế hoạch PRICE-SYSTEM (docs/reference/price-system-plan.txt), Bảo cho gắn tạm ngày 20/10/2026 và sẽ chốt lại. Lời tính trên vốn: giá thu tối đa = giá tham chiếu ÷ (1 + profit). Rank theo giá vốn: under = giá vốn dưới mức này (đồng), null = không giới hạn. Mỗi danh mục Kiot một bảng (tên đúng như danh mục Kiot); danh mục chưa có bảng thì bot không gợi ý giá thu. founderReview: giá tham chiếu từ atLeast trở lên, hoặc tên có một trong các keywords, thì ghi cần Bảo/Nguyên duyệt. Sửa số ở đây, không cần sửa code.",
+  "categories": {
+    "Túi": [
+      { "under": 50000000, "profit": 0.30 },
+      { "under": 100000000, "profit": 0.23 },
+      { "under": 150000000, "profit": 0.15 },
+      { "under": 200000000, "profit": 0.125 },
+      { "under": null, "profit": 0.10 }
+    ]
+  },
+  "founderReview": {
+    "atLeast": 200000000,
+    "keywords": ["Birkin", "Kelly", "Constance", "Capucines", "Van Cleef", "VCA", "Alhambra", "Patek", "Audemars", "Richard Mille", "Daytona", "croc", "cá sấu"]
+  }
+}

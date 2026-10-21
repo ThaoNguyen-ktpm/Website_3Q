@@ -24,6 +24,19 @@ export const googleLogin: RequestHandler = async (request, response, next) => {
   } catch (error) { next(error); }
 };
 
+const linkSchema = z.strictObject({ code: z.string().min(16).max(100) });
+export const linkLogin: RequestHandler = async (request, response, next) => {
+  try {
+    const body = linkSchema.safeParse(request.body);
+    if (!body.success) throw new ApiError(400, 'VALIDATION_ERROR', 'Link đăng nhập không hợp lệ.');
+    const user = await auth.loginWithLink(body.data.code, request.ip);
+    response.cookie(sessionCookieName(), auth.createSession(user.id), {
+      ...sessionCookieOptions(), signed: true, maxAge: auth.sessionMaxAge,
+    });
+    response.json({ user: { ...user, isPrimaryAdmin: isPrimaryAdmin(user.email) } });
+  } catch (error) { next(error); }
+};
+
 export const getMe: RequestHandler = async (request, response, next) => {
   try {
     const user = await auth.readSession(request.signedCookies?.[sessionCookieName()]);

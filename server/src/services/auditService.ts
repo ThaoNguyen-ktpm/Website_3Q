@@ -5,7 +5,8 @@ import * as model from '../models/auditLogModel.js';
 
 export const actionLabels = {
   'auth.login': 'Đăng nhập', 'auth.login_denied': 'Đăng nhập bị từ chối', 'auth.logout': 'Đăng xuất',
-  'staff.create': 'Thêm nhân viên', 'staff.update': 'Sửa nhân viên',
+  'staff.create': 'Thêm nhân viên', 'staff.update': 'Sửa nhân viên', 'staff.login_link': 'Tạo link đăng nhập',
+  'document.upload': 'Tải lên tài liệu', 'document.delete': 'Xóa tài liệu',
 };
 type Snapshot = Record<string, unknown>;
 type AuditRecord = {

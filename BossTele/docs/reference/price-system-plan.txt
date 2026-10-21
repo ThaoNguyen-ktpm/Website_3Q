@@ -171,4 +171,4 @@ Mình chọn backend Python + PostgreSQL hiện có trong thiết kế + (Anthro
 Lưu ý: trước khi triển khai bước này, tìm hiểu hai Agent của ChatGPT và Anthropic.
 
 STEP 6
-(chưa có nội dung)
+(chưa có nội dung) áp dụng vào phần bossTele tính giá

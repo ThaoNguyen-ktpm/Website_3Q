@@ -4,3 +4,4 @@ config/connections.local.json
 !.env.example
 .claude-mem/
 node_modules/
+data/

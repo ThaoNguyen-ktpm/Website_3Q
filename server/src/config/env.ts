@@ -9,6 +9,14 @@ const envSchema = z.object({
   TRUST_PROXY: z.coerce.number().int().min(0).optional(),
   AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).max(36500).default(365),
   GOOGLE_CLIENT_ID: z.string().trim().optional(),
+  ANTHROPIC_API_KEY: z.string().trim().optional(),
+  // Local model (Ollama) used for document Q&A when no Claude key is set, e.g. http://localhost:11434.
+  LLM_BASE_URL: z.preprocess(value => value === '' ? undefined : value, z.url().refine(value => ['http:', 'https:'].includes(new URL(value).protocol)).optional()),
+  LLM_MODEL: z.string().trim().min(1).default('qwen3:8b'),
+  // Sale AI tool (D:\BaoQ-AI) proxied at /sale-ai/ (TASK-035).
+  SALE_AI_URL: z.url().default('http://127.0.0.1:4310'),
+  // Shared with the BossTele Telegram bot on this machine (npm run dev generates one per run); unset disables /internal.
+  INTERNAL_TOKEN: z.string().optional().transform(value => value && value.length >= 32 ? value : undefined),
   SESSION_SECRET: z.string().optional().transform((value) =>
     value && value.length >= 32 ? value : undefined),
   GOOGLE_ALLOWED_EMAILS: z.string().default('').transform((value) =>

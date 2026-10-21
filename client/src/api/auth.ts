@@ -18,6 +18,11 @@ export async function loginWithGoogle(credential: string): Promise<{ user: AuthU
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential }),
   });
 }
+export async function loginWithLink(code: string): Promise<{ user: AuthUser }> {
+  return authRequest('link', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
+  });
+}
 export async function getMe(signal?: AbortSignal): Promise<{ user: AuthUser | null }> {
   return authRequest('me', { signal });
 }

@@ -1,6 +1,7 @@
 export const auditActions = {
   'auth.login': 'Đăng nhập', 'auth.login_denied': 'Đăng nhập bị từ chối', 'auth.logout': 'Đăng xuất',
   'staff.create': 'Thêm nhân viên', 'staff.update': 'Sửa nhân viên',
+  'document.upload': 'Tải lên tài liệu', 'document.delete': 'Xóa tài liệu',
 };
 export type AuditItem = {
   id: number; actorId: number | null; actorEmail: string | null; action: string; actionLabel: string;

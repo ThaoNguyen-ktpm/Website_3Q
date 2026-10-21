@@ -16,6 +16,16 @@ export const createStaff: RequestHandler = async (request, response, next) => {
     response.status(201).json({ staff: { ...person, isPrimaryAdmin: isPrimaryAdmin(person.email) } });
   } catch (error) { next(error); }
 };
+export const createLoginLink: RequestHandler = async (request, response, next) => {
+  try {
+    const id = Number(request.params.id);
+    const target = await staff.getById(id);
+    if (isPrimaryAdmin(target?.email) && !isPrimaryAdmin(response.locals.user.email)) {
+      throw new ApiError(403, 'FORBIDDEN', 'Không thể tạo link cho tài khoản Admin chính.');
+    }
+    response.json(await staff.loginLink(response.locals.user, id, request.ip));
+  } catch (error) { next(error); }
+};
 export const updateStaff: RequestHandler = async (request, response, next) => {
   try {
     const id = Number(request.params.id);

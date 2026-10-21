@@ -5,6 +5,7 @@ import { verifyGoogleToken } from './googleTokenVerifier.js';
 import * as staffModel from '../models/staffModel.js';
 import { publicUser } from './staffService.js';
 import * as audit from './auditService.js';
+import { consumeLink } from './loginLinkService.js';
 
 export const sessionMaxAge = 7 * 24 * 60 * 60 * 1000;
 
@@ -50,6 +51,20 @@ export async function loginWithGoogle(credential: string, ip?: string) {
     throw error;
   });
   await audit.record({ actor: user, action: 'auth.login', ip });
+  return user;
+}
+
+/** One-time link from the Nhân viên page (laptops on the shop wifi, where Google sign-in is not available). */
+export async function loginWithLink(code: string, ip?: string) {
+  if (!env.SESSION_SECRET) throw new ApiError(503, 'AUTH_NOT_CONFIGURED', 'Đăng nhập chưa được cấu hình.');
+  const staffId = consumeLink(code);
+  const staff = staffId ? await staffModel.findById(staffId) : null;
+  if (!staff || staff.status !== 'ACTIVE') {
+    await audit.record({ actor: { id: staff?.id, email: staff?.email }, action: 'auth.login_denied', after: { reason: staff ? 'disabled' : 'invalid_link' }, ip });
+    throw new ApiError(401, 'INVALID_LOGIN_LINK', 'Link đăng nhập không hợp lệ, đã dùng hoặc đã hết hạn. Nhờ quản lý gửi link mới.');
+  }
+  const user = await publicUser(await staffModel.update(staff.id, { lastLoginAt: new Date() }));
+  await audit.record({ actor: user, action: 'auth.login', after: { method: 'link' }, ip });
   return user;
 }
 

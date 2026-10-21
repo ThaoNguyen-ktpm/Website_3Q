@@ -54,6 +54,7 @@ Chỉ ghi cấp thư mục. Khi thêm, xóa hoặc đổi vai trò một thư m�
   - `src/three/`: mô hình 3D túi Birkin (three.js).
 - `BossTele/`: công cụ Node >= 22 riêng (tìm sản phẩm, chat, định giá, bộ lọc Telegram). `lib/` logic, `test/` test, `docs/` tài liệu. `vendor/` là submodule, không sửa.
 - `tasks/`: spec, result, review từ `TASK-009`. `BossTele/tasks/`: lưu trữ `TASK-001` đến `TASK-008`.
+- `server/data/`: PDF gốc, chỉ mục tài liệu JSON và cache mô hình embedding cục bộ; không đưa vào Git.
 - `PRODUCT.md`, `DESIGN.md`: mô tả sản phẩm và hệ thống thiết kế giao diện.
 - `.agents/skills/` (cũng là `.claude/skills/`): skill cho agent, không phải code dự án; đã loại khỏi index CodeGraph qua `codegraph.json`.
 
@@ -66,7 +67,7 @@ Tra cứu chi tiết bằng CodeGraph (luôn theo code hiện tại, không cầ
 - Giữ thay đổi trong phạm vi yêu cầu, bảo toàn công việc có sẵn của người dùng.
 - Không tự chọn công nghệ hoặc tính năng lớn khi yêu cầu dự án chưa được xác định.
 - Không ghi bí mật, token hoặc mật khẩu vào code, tài liệu hay log.
-- Website chỉ dùng dữ liệu thử; không kết nối KiotViet, Sapo, cổng thanh toán hoặc dịch vụ thật. Ngoại lệ đã được Bảo duyệt: Google Sign-In để đăng nhập (TASK-010); đọc sản phẩm KiotViet và Sapo Web cho trang Tìm kiếm, chỉ đọc, khóa ở `BossTele/.env` (TASK-025).
+- Website chỉ dùng dữ liệu thử; không kết nối KiotViet, Sapo, cổng thanh toán hoặc dịch vụ thật. Ngoại lệ đã được Bảo duyệt: Google Sign-In để đăng nhập (TASK-010); đọc sản phẩm KiotViet và Sapo Web cho trang Tìm kiếm, chỉ đọc, khóa ở `BossTele/.env` (TASK-025); gọi Anthropic API cho hỏi đáp tài liệu (TASK-027); nhúng tool Sale AI (`D:\BaoQ-AI`, nghe 127.0.0.1:4310) ở trang Sale AI qua `/sale-ai/` trên chính server web, chỉ người đăng nhập có quyền `sale.manage`, mọi ghi giá KiotViet/Sapo chỉ đi qua các bước xem trước, cập nhật, khôi phục và lịch sử của chính Sale AI (TASK-035); nội dung đoạn tài liệu được gửi tới Anthropic.
 - Ưu tiên dữ liệu thử nghiệm cho kiểm tra; thao tác tài khoản thật, gửi tin, triển khai hoặc thay đổi dữ liệu ngoài máy cần nằm trong phạm vi người dùng đã cho phép.
 - Báo cáo trung thực: phân biệt kiểm tra cục bộ, mô phỏng và hành vi đã xác minh trên hệ thống thật.
 

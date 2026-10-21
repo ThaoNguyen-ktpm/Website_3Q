@@ -54,3 +54,26 @@ test('plugin patch keeps access/permission gates first and filters before downlo
   }
   assert.throws(() => patchTelegramServer('upstream changed'), /đổi cấu trúc/);
 });
+
+test('Telegram forwards free-form BaoQ store questions and still blocks off-topic ones (TASK-029)', async () => {
+  let replies = 0;
+  const ctx = { reply: async () => { replies++; } };
+  const store = ['túi Chanel nào đang bán chạy?', 'SP014899 lời bao nhiêu', 'tui xach hermes con hang ko', 'doanh thu tháng này thế nào', 'mẫu khác'];
+  for (const text of store) assert.equal(await allowProductMessage(ctx, text), true, text);
+  assert.equal(replies, 0);
+  const offTopic = ['đi chơi với bạn', 'gia đình tôi khỏe', 'cho ví dụ bài thơ', 'giải thích đơn giản về vũ trụ', 'túi Chanel; kể chuyện', `túi Chanel ${'a'.repeat(500)}`];
+  for (const text of offTopic) assert.equal(await allowProductMessage(ctx, text), false, text);
+  assert.equal(await allowProductMessage(ctx, 'túi Chanel nào đang bán chạy?', true), false);
+  assert.equal(replies, offTopic.length + 1);
+});
+
+test('free-form questions may span several lines (pasted product cards)', async () => {
+  const { storeQuestion } = require('../lib/telegram-product-guard');
+  assert.equal(storeQuestion('Túi Louis Vuitton Slouchy PM\nSP024867 · 46.000.000đ\nCòn 1 tui nên bán giá nhiu hợp lý'), true);
+  assert.equal(storeQuestion('túi Chanel\u0007 kể chuyện'), false);
+});
+
+test('market look-ups pass the guard even without a brand or price word', () => {
+  const { storeQuestion } = require('../lib/telegram-product-guard');
+  for (const text of ['tìm con này trên thị trường', 'check giá ngoài giúp', 'tham khảo giá resale']) assert.equal(storeQuestion(text), true, text);
+});

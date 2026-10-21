@@ -9,6 +9,8 @@ Ngày tiếp nhận: 2026-10-14. Phạm vi: tài liệu nền tảng cho BossTel
 - Tài liệu này mô tả định hướng và các quyết định còn thiếu, chưa phải bộ công thức giá đã được chốt. Quy tắc triển khai chỉ có hiệu lực khi được người dùng xác nhận trong đặc tả công việc tương ứng.
 - Không tự áp dụng quy tắc từ dự án khác. Nếu nối với hệ thống BaoQ đã tồn tại, đọc chính sách hiện hành của hệ thống đó và đối chiếu xung đột trước.
 
+- 2026-10-20: Bảo gửi lại kế hoạch, bổ sung STEP 6 "áp dụng vào phần bossTele tính giá" (đã cập nhật bản gốc). Đặc tả: `tasks/TASK-040-spec.md` ở gốc Website_3Q (giá chốt đề xuất trên Telegram, chỉ đọc, chờ Bảo chốt bảng rank).
+
 ## Mục tiêu theo kế hoạch
 Xây dựng hệ thống nội bộ hỗ trợ founder báo giá, đề xuất giá thu/giá bán, quản lý giảm giá theo tuổi tồn kho và lưu kiến thức định giá thành dữ liệu có thể kiểm chứng. Ưu tiên bảo mật, giải thích được căn cứ và phân quyền duyệt. AI đưa ra đề xuất; mọi quyền tự động phải có phạm vi và chính sách rõ ràng.
 

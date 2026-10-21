@@ -6,7 +6,7 @@ import { createSession } from '../services/authService.js';
 import * as model from '../models/staffModel.js';
 import * as service from '../services/staffService.js';
 import * as permissionModel from '../models/rolePermissionModel.js';
-import { allPermissions, rolePermissions } from '../config/permissions.js';
+import { allPermissions, hiddenPermissions, rolePermissions } from '../config/permissions.js';
 import * as auditModel from '../models/auditLogModel.js';
 vi.mock('../models/auditLogModel.js', () => ({ create: vi.fn(async () => ({})), list: vi.fn(), deleteBefore: vi.fn() }));
 
@@ -85,7 +85,7 @@ describe('Staff API and permissions',()=>{
   expect(response.status).toBe(200);expect(response.body.staff[0].roleLabel).toBe('Admin');
   expect(JSON.stringify(response.body)).not.toContain('googleSub');
   const options=await request(app).get('/api/staff/roles').set('Cookie',cookie());
-  expect(options.body.roles.map((role: { role: string })=>role.role)).toEqual(['ADMIN','MANAGER','STAFF']);expect(options.body.catalog).toHaveLength(allPermissions.length);
+  expect(options.body.roles.map((role: { role: string })=>role.role)).toEqual(['ADMIN','MANAGER','STAFF']);expect(options.body.catalog.map((item: { key: string }) => item.key)).toEqual(allPermissions.filter(key => !hiddenPermissions.includes(key)));
   expect((await post()).status).toBe(403);expect((await patch({status:'DISABLED'})).status).toBe(403);
  });
  it('creates with normalized email/name and safe response',async()=>{

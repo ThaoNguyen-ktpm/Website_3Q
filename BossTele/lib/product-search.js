@@ -92,6 +92,8 @@ function kiotDetail(product, inventories) {
   return {
     ...Object.fromEntries(['name', 'fullName', 'categoryName', 'tradeMarkName', 'unit', 'description', 'createdDate', 'modifiedDate'].map(key => [key, textOrNull(product[key])])),
     weight: numberOrNull(product.weight), masterProductId: numberOrNull(product.masterProductId),
+    // Sale AI (TASK-036) reads these from the shared catalog: category for its field mapping, tax to block price writes.
+    categoryId: numberOrNull(product.categoryId), taxPresent: Boolean(product.saleTax || product.productTaxs?.length || product.taxRate),
     ...Object.fromEntries(['isActive', 'allowsSale', 'hasVariants'].map(key => [key, booleanOrNull(product[key])])),
     images: httpsImages(Array.isArray(product.images) ? product.images : []),
     attributes: (Array.isArray(product.attributes) ? product.attributes : []).filter(Boolean).map(a => ({ name: textOrNull(a.attributeName), value: textOrNull(a.attributeValue) })),

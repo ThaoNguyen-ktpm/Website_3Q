@@ -17,6 +17,9 @@ export async function listRoles(signal?: AbortSignal): Promise<{ roles: StaffRol
 export async function createStaff(draft: StaffDraft): Promise<{ staff: Staff }> {
   return request('', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) });
 }
+export async function createLoginLink(id: number): Promise<{ url: string; expiresAt: string }> {
+  return request(`/${id}/login-link`, { method: 'POST' });
+}
 export async function updateStaff(id: number, draft: Omit<StaffDraft, 'email'>): Promise<{ staff: Staff }> {
   return request(`/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) });
 }

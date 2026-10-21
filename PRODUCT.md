@@ -33,6 +33,9 @@ Dùng trên máy tính và điện thoại của nhân viên. Truy cập chỉ s
 Logo thương hiệu; video nền đăng nhập `client/public/login-background.mp4`. Chưa có ảnh sản phẩm thật, đánh giá hay số liệu kinh doanh dùng được trên web.
 
 ## Product Principles
+
+Tài liệu nội bộ (TASK-027): trong admin, mở **Tài liệu** để hỏi đáp PDF đã tải lên. Admin có quyền tải lên/xóa; Quản lý mặc định chỉ xem và hỏi. PDF phải có chữ (không OCR), tối đa 20 MB. PDF, chỉ mục và embedding được lưu ở `server/data/`; lần đầu cần mạng để tải `Xenova/multilingual-e5-small` vào cache máy. Bảo tự điền `ANTHROPIC_API_KEY` trong `server/.env` để bật trả lời bằng Claude. Câu hỏi và tối đa 6 đoạn tài liệu liên quan được gửi tới Anthropic; giao diện hiển thị nguồn tên/trang để đối chiếu, không lưu lịch sử hỏi đáp. Chỉ chạy một tiến trình server dùng kho JSON này.
+
 - Bảo là người quyết định cuối; không tự đặt chính sách khi còn mơ hồ.
 - Không ghi bí mật, token, mật khẩu vào code hay tài liệu.
 

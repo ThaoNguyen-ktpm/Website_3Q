@@ -43,3 +43,17 @@ test('detail also reaches exact SKU paths without adding endpoints', async () =>
   assert.equal(calls.length, 2);
   assert.ok(calls[1].endsWith('/products/code/SKU'));
 });
+
+test('Kiot detail keeps categoryId and whether Kiot reports any tax (shared with Sale AI)', async () => {
+  const { createCatalogFetcher } = require('../lib/product-search');
+  const page = products => ({ ok: true, status: 200, json: async () => ({ total: products.length, data: products }) });
+  const calls = [];
+  const fetchImpl = async url => {
+    calls.push(String(url));
+    if (String(url).includes('/connect/token')) return { ok: true, status: 200, json: async () => ({ access_token: 't', expires_in: 3600 }) };
+    return page([{ id: 1, code: 'SP1', name: 'A', basePrice: 1, categoryId: 7, taxRate: 10, inventories: [] }, { id: 2, code: 'SP2', name: 'B', basePrice: 1, inventories: [] }]);
+  };
+  const config = { kiotviet: { retailer: 'r', clientId: 'c', clientSecret: 's', baseUrl: 'https://public.kiotapi.com', tokenUrl: 'https://id.kiotviet.vn/connect/token' } };
+  const result = await createCatalogFetcher(config, fetchImpl)('kiotviet');
+  assert.deepEqual(result.items.map(item => [item.detail.categoryId, item.detail.taxPresent]), [[7, true], [null, false]]);
+});

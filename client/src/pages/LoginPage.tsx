@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import '@fontsource/cormorant-garamond/500.css';
 import '@fontsource/cormorant-garamond/700.css';
-import { getAuthConfig, loginWithGoogle } from '../api/auth';
+import { getAuthConfig, loginWithGoogle, loginWithLink } from '../api/auth';
 import type { AuthState } from '../hooks/useAuth';
 
 type GoogleId = {
@@ -28,9 +28,26 @@ export function LoginPage({ auth }: { auth: AuthState }) {
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
+  // Bảo 2026-10-20: laptops on the shop wifi open the site by IP, where Google sign-in is refused; they use a one-time
+  // link (?ma=…) made on the Nhân viên page. Read once, removed from the address bar, used once (StrictMode runs effects twice).
+  const [linkCode] = useState(() => new URLSearchParams(window.location.search).get('ma'));
+  const linkUsed = useRef(false);
+  const lan = !['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
 
   useEffect(() => {
-    if (loading || user) return;
+    if (!linkCode || loading || user || linkUsed.current) return;
+    linkUsed.current = true;
+    window.history.replaceState(window.history.state, '', window.location.pathname);
+    setPending(true);
+    setError('');
+    loginWithLink(linkCode)
+      .then(({ user }) => { setUser(user); navigate(destination, { replace: true }); })
+      .catch((error: unknown) => setError(error instanceof Error ? error.message : 'Không thể đăng nhập.'))
+      .finally(() => setPending(false));
+  }, [linkCode, loading, user, setUser, navigate, destination]);
+
+  useEffect(() => {
+    if (loading || user || linkCode || lan) return;
     const controller = new AbortController();
     let script: HTMLScriptElement | undefined;
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -89,7 +106,7 @@ export function LoginPage({ auth }: { auth: AuthState }) {
       script?.remove();
       button.current?.replaceChildren();
     };
-  }, [loading, user, setUser, navigate, destination]);
+  }, [loading, user, setUser, navigate, destination, linkCode, lan]);
 
   if (loading) return <p role="status">Đang kiểm tra đăng nhập…</p>;
   if (user) return <Navigate to={destination} replace />;
@@ -104,7 +121,8 @@ export function LoginPage({ auth }: { auth: AuthState }) {
         <h1 id="login-title" className="login-title">Đăng nhập</h1>
         <p className="login-subtitle">Chỉ dành cho tài khoản đã được cấp quyền.</p>
         <div className="login-google" ref={button} inert={pending} aria-busy={pending} />
-        {!ready && !error && <p className="login-status" role="status">Đang tải đăng nhập…</p>}
+        {lan && !linkCode && <p className="login-status">Máy trong wifi của shop: mở link đăng nhập do quản lý gửi (mục Nhân viên → Link đăng nhập).</p>}
+        {!ready && !error && !lan && !linkCode && <p className="login-status" role="status">Đang tải đăng nhập…</p>}
         {pending && <p className="login-status" role="status">Đang xác minh…</p>}
         {(error || auth.error) && <p className="login-error" role="alert">{error || auth.error}</p>}
         <p className="login-terms">Bằng việc tiếp tục, bạn đồng ý với điều khoản của BaoQ Luxury.</p>

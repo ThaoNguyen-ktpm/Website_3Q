@@ -91,4 +91,24 @@ describe('merged catalog store', () => {
     time = 60000; fail = true; await store.sync();
     expect((await store.products(query(), false)).syncedAt).toBe(initial.syncedAt);
   });
+  it('serves the saved snapshot at once, refreshes in the background and saves the new catalog', async () => {
+    let finish!: () => void;
+    const fetchAll = vi.fn(() => new Promise<CatalogResult>(resolve => { finish = () => resolve(ok('kiotviet', [row('kiotviet', 'NEW')])); }));
+    const save = vi.fn();
+    const store = createCatalogStore({ sources: ['kiotviet'], fetchAll, now: () => 700000, snapshot: {
+      load: () => ({ rows: { kiotviet: [row('kiotviet', 'OLD')] }, complete: ['kiotviet'], syncedAt: '2026-10-19T00:00:00.000Z' }), save } });
+    const first = await store.products(query(), false);
+    expect(first.items.map(item => item.sku)).toEqual(['OLD']);
+    expect(first.syncedAt).toBe('2026-10-19T00:00:00.000Z');
+    expect(first.syncing).toBe(true);
+    finish(); await store.sync();
+    expect((await store.products(query(), false)).items.map(item => item.sku)).toEqual(['NEW']);
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ complete: ['kiotviet'], rows: expect.objectContaining({ kiotviet: [expect.objectContaining({ sku: 'NEW' })] }) }));
+  });
+  it('ignores a broken or incomplete snapshot and syncs normally', async () => {
+    for (const load of [() => { throw new Error('bad json'); }, () => ({ rows: { kiotviet: [row('kiotviet', 'OLD')] }, complete: [], syncedAt: null })]) {
+      const store = createCatalogStore({ sources: ['kiotviet'], fetchAll: async source => ok(source, [row(source, 'NEW')]), snapshot: { load: load as never, save: () => {} } });
+      expect((await store.products(query(), false)).items.map(item => item.sku)).toEqual(['NEW']);
+    }
+  });
 });

@@ -15,6 +15,10 @@ import { requireAuth } from './middlewares/requireAuth.js';
 import { staffRouter } from './routes/staffRoutes.js';
 import { auditRouter } from './routes/auditRoutes.js';
 import { requirePermission } from './middlewares/requirePermission.js';
+import { documentRouter } from './routes/documentRoutes.js';
+import { assistantRouter } from './routes/assistantRoutes.js';
+import { internalRouter } from './routes/internalRoutes.js';
+import { saleAiRouter } from './routes/saleAiRoutes.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -29,13 +33,23 @@ app.use(helmet({
 app.use(cors({ origin: env.APP_ORIGIN, credentials: true }));
 app.use('/api', apiLimiter, requireSameOrigin);
 app.use('/api/auth/google', authLimiter);
+app.use('/api/auth/link', authLimiter);
+// Before express.json: Sale AI request bodies are streamed through untouched.
+// The admin page frames /sale-ai/: its errors (not signed in, Sale AI starting) must show in the frame, not as Chrome's "content is blocked".
+// Same origin only; proxied Sale AI pages replace this with their own CSP.
+app.use('/sale-ai', (_request, response, next) => { response.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'self'"); next(); },
+  cookieParser(env.SESSION_SECRET), requireAuth, requirePermission('sale.manage'), requireSameOrigin, saleAiRouter);
 app.use(express.json());
 app.use(cookieParser(env.SESSION_SECRET));
+// Outside /api: never proxied to the browser; loopback + INTERNAL_TOKEN only.
+app.use('/internal', internalRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/health', healthRouter);
 app.use('/api/products', requireAuth, requirePermission('products.view'), productRouter);
 app.use('/api/catalog', requireAuth, requirePermission('products.view'), catalogRouter);
 app.use('/api/staff', staffRouter);
 app.use('/api/audit-logs', auditRouter);
+app.use('/api/documents', documentRouter);
+app.use('/api/assistant', assistantRouter);
 app.use(notFound);
 app.use(errorHandler);
