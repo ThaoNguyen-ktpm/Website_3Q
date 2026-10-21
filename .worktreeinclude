@@ -1,0 +1,4 @@
+# Bảo 2026-10-21: Claude Code copies these local files into every new worktree, so a session there can run the
+# server and real tests. They stay gitignored; only this list is in Git. Add a new local secret file here when one appears.
+server/.env
+BossTele/.env
