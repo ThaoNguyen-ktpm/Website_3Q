@@ -39,9 +39,3 @@ test('catalog rejects bad arguments', () => {
   assert.throws(() => parseArgs(['--drop']), /không hợp lệ/);
   assert.equal(parseArgs(['--limit', '500']).limit, 30);
 });
-
-test('staff chats (BOSSTELE_HIDE_COST=1) never get the cost', () => {
-  process.env.BOSSTELE_HIDE_COST = '1';
-  try { assert.equal(searchCatalog(snapshot, parseArgs(['--q', 'chanel', '--limit', '1'])).items[0].cost, null); }
-  finally { delete process.env.BOSSTELE_HIDE_COST; }
-});

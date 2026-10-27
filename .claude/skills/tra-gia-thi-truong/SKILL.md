@@ -18,7 +18,8 @@ Làm 5–10 lượt WebSearch theo nhóm nguồn cố định dưới đây, m�
 - Sàn secondhand có xác thực: fashionphile.com, therealreal.com, vestiairecollective.com, rebag.com, yoogiscloset.com, annsfabulousfinds.com, madisonavenuecouture.com, mineandyours.com.
 - Đã bán thật: eBay Sold, mở bằng WebFetch `https://www.ebay.com/sch/i.html?_nkw=<từ khoá nối bằng +>&LH_Sold=1&LH_Complete=1` (giá xanh = đã bán, đỏ = hết hạn không bán, bỏ đỏ); trang đã bán của Fashionphile/The RealReal; nhà đấu giá (Sotheby's, Christie's, Heritage).
 - Nhật: brandoff, komehyo, g-rare (Ginzo), rakuma/mercari (chỉ khi rõ màu và mẫu).
-- Việt Nam: chotot.com, shopee.vn, facebook.com (bài công khai, nhóm mua bán hàng hiệu), shop hàng hiệu secondhand trong nước. Chỉ lấy tin có giá ghi rõ.
+- Việt Nam: shop hàng hiệu secondhand, ký gửi trong nước giống BaoQ (web .vn/.com.vn, fanpage Facebook, Instagram), chotot.com, shopee.vn, nhóm mua bán hàng hiệu trên Facebook (bài công khai). Tìm tiếng Việt kiểu "<hãng> <mẫu> <size> giá", thêm "secondhand", "like new", "authentic" hoặc "ký gửi". Ghi tên shop. Chỉ lấy tin có giá ghi rõ.
+- Bảo hỏi riêng sàn/shop Việt Nam ("sàn Việt Nam", "các shop giống tui", "trong nước"): nhóm Việt Nam làm trước và kỹ hơn (3–5 lượt), các nhóm khác chỉ 1–2 lượt; tin nguồn ưu tiên tin Việt Nam.
 - Mạng xã hội (Instagram, TikTok, Facebook): chỉ dùng khi bài công khai có giá cụ thể; ghi là "tin rao trên mạng xã hội, chưa xác thực".
 Khi kết quả tìm kiếm có giá nhưng chưa chắc, mở trang bằng WebFetch để xác nhận giá, tình trạng, còn bán hay đã bán. Trang chặn bot hoặc giá hiện bằng JavaScript (Shopee, Mercari, đôi khi Vestiaire) thì dùng giá trong đoạn trích tìm kiếm và ghi "(theo trích đoạn)". Ưu tiên tin cùng size, màu, phần cứng, chất liệu; tin khác chỉ dùng khi thiếu và phải ghi chú.
 
@@ -70,4 +71,5 @@ Tin 3, so với shop:
 <Thấp hơn thị trường | Hợp lý | Cao hơn thị trường>: <chênh lệch % so với trung bình>. <1 câu lý do>
 Lưu ý: giá quốc tế chưa gồm ship, thuế về VN.
 ```
+Tin của Bảo chưa nêu món nào (không có tên mẫu, SKU hay sản phẩm trong kho, ví dụ chỉ hỏi "bạn tra được sàn Việt Nam không"): không tra; trả một tin ngắn: tra được, các nguồn sẽ tìm (Việt Nam trước nếu Bảo hỏi Việt Nam), và nhờ Bảo gửi tên món hoặc SKU.
 Không tìm được giá nào: một tin ngắn nêu mẫu đã chuẩn hoá, các nơi đã tìm và "Không tìm thấy giá thị trường đáng tin cho mẫu này".

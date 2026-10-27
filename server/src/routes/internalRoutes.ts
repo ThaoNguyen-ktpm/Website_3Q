@@ -4,8 +4,6 @@ import { env } from '../config/env.js';
 import type { Permission } from '../config/permissions.js';
 import { quickAnswer } from '../services/assistant/graph.js';
 import { catalogStore } from '../services/catalogStore.js';
-import * as staffModel from '../models/staffModel.js';
-import { permissionsFor } from '../services/permissionService.js';
 
 // Bảo 2026-10-19 (TASK-032): the BossTele Telegram bot is used only by Bảo (admin), so it reads products with cost.
 const botPermissions: Permission[] = ['products.view', 'products.cost'];
@@ -21,19 +19,8 @@ internalRouter.use((request, response, next) => {
   next();
 });
 internalRouter.post('/assistant', async (request, response, next) => {
-  // Bảo 2026-10-20: staff on the bot (not Bảo) get no cost or profit.
-  const permissions = request.get('x-bosstele-staff') === '1' ? botPermissions.filter(key => key !== 'products.cost') : botPermissions;
-  try { response.json({ answer: await quickAnswer(request.body, permissions) }); }
+  try { response.json({ answer: await quickAnswer(request.body, botPermissions) }); }
   catch (error) { next(error); }
-});
-
-// Bảo 2026-10-20: BossTele asks what the website allows the staff member linked to a Telegram account; null = no active account.
-internalRouter.post('/staff-permissions', async (request, response, next) => {
-  try {
-    const email = typeof request.body?.email === 'string' ? request.body.email.trim().toLowerCase() : '';
-    const staff = email && email.length <= 191 ? await staffModel.findByEmail(email) : null;
-    response.json(staff?.status === 'ACTIVE' ? { role: staff.role, permissions: await permissionsFor(staff) } : { role: null, permissions: null });
-  } catch (error) { next(error); }
 });
 
 // Sale AI's "Tải lại sản phẩm từ Kiot" (TASK-036): one KiotViet download, shared by the website catalog and Sale AI.

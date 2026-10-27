@@ -62,7 +62,7 @@ function createSalePricer({ saleDir = defaults.saleDir, catalogFile = defaults.c
       const result = pricing.calculate(product, day);
       return { sku, name: product.name, day, type: result.type, ageDays: result.ageDays, m: result.m, p0: product.p0,
         price: result.price, allowance: result.allowance, net: result.net, currentPrice: product.currentPrice,
-        stock: product.stock, cost: row && process.env.BOSSTELE_HIDE_COST !== '1' ? cost(row) : null, status: result.status, reasons: result.reasons, p0Source: saved?.p0 ? 'sale-ai' : 'kiot-now' };
+        stock: product.stock, cost: row ? cost(row) : null, status: result.status, reasons: result.reasons, p0Source: saved?.p0 ? 'sale-ai' : 'kiot-now' };
     });
     return { day, policy: sale.policy, formulaPolicy: pricing.POLICY, saleLoadedAt: sale.loadedAt, rows };
   };

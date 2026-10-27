@@ -31,13 +31,6 @@ function createAccess(file = FILE, now = Date.now) {
       write(data);
       return code;
     },
-    /** Website staff email linked to a Telegram id (permissions follow that login), or null. */
-    emailFor: id => read().links?.[String(id)] ?? null,
-    link(id, email) {
-      const data = read();
-      data.links = { ...(data.links ?? {}), [String(id)]: String(email).trim().toLowerCase() };
-      write(data);
-    },
     /** Adds the code's sender to allowFrom; returns who was added, or null for an unknown or expired code. */
     approve(code) {
       const data = read(), entry = data.pending?.[String(code).trim().toUpperCase()];
@@ -53,20 +46,13 @@ function createAccess(file = FILE, now = Date.now) {
 if (require.main === module) {
   const [command, code] = process.argv.slice(2);
   const access = createAccess();
-  const email = process.argv[4];
   if (command === 'approve' && code) {
     const entry = access.approve(code);
     if (!entry) { console.error('Mã không đúng hoặc đã hết hạn (1 giờ).'); process.exitCode = 1; }
-    else {
-      if (email) access.link(entry.senderId, email);
-      console.log(`Đã cho phép ${entry.name || 'người dùng'}${entry.username ? ` (@${entry.username})` : ''}, id ${entry.senderId}${email ? `, theo quyền web của ${email}` : ''}.`);
-    }
-  } else if (command === 'link' && code && email) {
-    access.link(code, email);
-    console.log(`Telegram ${code} theo quyền web của ${email}.`);
+    else console.log(`Đã cho phép ${entry.name || 'người dùng'}${entry.username ? ` (@${entry.username})` : ''}, id ${entry.senderId}.`);
   } else if (command === 'pending') {
     console.log(JSON.stringify(JSON.parse(fs.readFileSync(FILE, 'utf8')).pending ?? {}, null, 2));
-  } else console.error('Dùng: node lib/telegram-access.js approve <MÃ> [email nhân viên] | link <telegram id> <email nhân viên> | pending');
+  } else console.error('Dùng: node lib/telegram-access.js approve <MÃ> | pending');
 }
 
 module.exports = { createAccess };

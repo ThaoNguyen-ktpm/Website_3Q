@@ -31,7 +31,7 @@ function ProductCard({ product }) {
 const suggestions = ['SP000094 còn hàng không?', 'Hàng hot trend có những món nào?', 'Thêm nhân viên ở đâu?'];
 const timestamp = () => new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-export default function AssistantWidget({ state, setState, page }) {
+export default function AssistantWidget({ state, setState, page, telegram = false }) {
   const [draft, setDraft] = useState('');
   const [pending, setPending] = useState(false);
   const input = useRef(null), launcher = useRef(null), transcript = useRef(null), request = useRef(null);
@@ -90,7 +90,8 @@ export default function AssistantWidget({ state, setState, page }) {
         <button type="submit" aria-label="Gửi câu hỏi" disabled={pending || !draft.trim()}><Icon name="arrow" size={20}/></button>
       </form>
     </section>}
-    {!state.open && <a className="assistant-telegram" href="https://web.telegram.org/k/#@BaoQ_bot" target="_blank" rel="noopener noreferrer" aria-label="Hỏi BossTele trên Telegram" title="Hỏi BossTele trên Telegram">
+    {/* Bảo 2026-10-21: only Admin accounts get the way into BossTele (the bot gives full rights). */}
+    {telegram && !state.open && <a className="assistant-telegram" href="https://web.telegram.org/k/#@BaoQ_bot" target="_blank" rel="noopener noreferrer" aria-label="Hỏi BossTele trên Telegram" title="Hỏi BossTele trên Telegram">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.5 3.5-19 7.3 6.6 2.4 2.5 7.3 3.6-4.6 4.8 3.6Z"/><path d="m9.1 13.2 8.4-6.2"/></svg>
     </a>}
     <button ref={launcher} type="button" className="assistant-launcher" aria-label={state.open ? 'Đóng trợ lý' : 'Mở trợ lý'} aria-expanded={state.open} onClick={() => state.open ? close() : setState(current => ({ ...current, open: true }))}>

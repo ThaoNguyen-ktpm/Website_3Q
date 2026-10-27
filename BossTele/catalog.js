@@ -55,8 +55,7 @@ function searchCatalog(snapshot, options) {
     items: items.slice(options.offset, options.offset + options.limit).map(row => ({
       sku: row.sku, name: row.name, price: priced(row.price) || null, onHand: row.onHand, hot: String(row.name).includes('!'),
       brand: row.detail?.tradeMarkName ?? null, category: row.detail?.categoryName ?? null,
-      // Bảo 2026-10-20: staff chats run with BOSSTELE_HIDE_COST=1, so their answers never see cost (Claude cannot unset it: only "node catalog.js" is allowed).
-      cost: process.env.BOSSTELE_HIDE_COST === '1' ? null : cost(row),
+      cost: cost(row),
       // Dates and held quantity for the drafts: sold items' modified ≈ sale date, reserved = kept for a customer (đặt hàng).
       created: row.detail?.createdDate?.slice(0, 10) ?? null, modified: row.detail?.modifiedDate?.slice(0, 10) ?? null,
       reserved: (row.detail?.inventories ?? []).reduce((sum, inventory) => sum + (Number(inventory.reserved) || 0), 0),

@@ -18,7 +18,7 @@ const { createSalePricer } = require('./sale-price');
 const { createMemory } = require('./lib/boss-memory');
 const { createPriceFeedback } = require('./lib/price-feedback');
 const { createAccess } = require('./lib/telegram-access');
-const { draftRequest, withoutSources } = require('./lib/listing-draft');
+const { draftRequest, buyRequest, withoutSources } = require('./lib/listing-draft');
 const { withBuyPrice, withLotPrices } = require('./lib/buy-price');
 const { marketIntent, marketPrompt, splitReply, exchangeRates, askMarket } = require('./lib/market-lookup');
 
@@ -84,20 +84,20 @@ const SYSTEM = [
   'Không chia nhóm, không nhận xét, không gợi ý khi không được hỏi. Câu hỏi khác (lời bao nhiêu, so sánh...) trả lời tối đa 3 câu ngắn.',
   'Người hỏi hay gõ sai chính tả hoặc không dấu (chanl, hermess, tui xach, con hag): tự hiểu đúng ý rồi tra, đầu câu trả lời ghi ngắn đã hiểu là gì nếu có sửa.',
   'Trong câu trả lời khác, khi nhắc sản phẩm cụ thể thì ghi SKU: bot tự gửi thẻ ảnh cho các SKU đó.',
+  // Bảo 2026-10-21: ask back instead of guessing when the answer would be wrong without it.
+  'Hỏi số lượng (bao nhiêu cái, mấy món, số lượng, đếm): trả một câu có con số, không ghi dòng SKU, không liệt kê sản phẩm.',
+  'Thiếu thông tin mà đoán sẽ dễ trả lời sai (không rõ món nào, hỏi giá chốt mà chưa có SKU, "con này" mà trong chat chưa có món nào, câu có hai nghĩa) thì hỏi lại đúng 1 câu ngắn, có thể kèm 2-3 lựa chọn, không tra hay đoán trước. Thiếu thứ đã có mặc định (số món, sắp xếp, còn hàng) hoặc chỉ sai chính tả thì cứ trả lời, không hỏi lại.',
   'Bảo có sổ ghi nhớ (ở cuối hướng dẫn này): luôn làm theo. Khi Bảo dặn một thói quen, quy ước hay sự thật cần nhớ lâu dài (không phải câu tra cứu thường), thêm dòng cuối dạng "GHI NHỚ: <nội dung ngắn>", mỗi điều một dòng.',
   'Hỏi giá sale, quyền sale, giảm được bao nhiêu: chạy node sale-price.js <SKU...> (công thức tool Sale AI, chỉ đọc). price là giá sale P_M, allowance là quyền sale tối đa, net là giá thấp nhất sau quyền sale, m là mốc M. Không gọi các số này là giá chốt.',
 ].join(' ');
 
-const STAFF_RULE = 'Người đang hỏi là nhân viên, không phải Bảo: không nói giá vốn, tiền lời, % lời hay giá thu; chỉ giá bán và mức được bớt.';
-function askClaude(question, { sessionId, resume, notes = [], context = '', staff = false }, timeoutMs = 180_000) {
-  const base = staff ? `${SYSTEM} ${STAFF_RULE}` : SYSTEM;
-  const system = notes.length ? `${base}\n\nSổ ghi nhớ của Bảo:\n${notes.map(note => `- ${note}`).join('\n')}` : base;
+function askClaude(question, { sessionId, resume, notes = [], context = '' }, timeoutMs = 180_000) {
+  const system = notes.length ? `${SYSTEM}\n\nSổ ghi nhớ của Bảo:\n${notes.map(note => `- ${note}`).join('\n')}` : SYSTEM;
   // Claude only sees its own turns in its session; the recent chat also has answers the bot gave by code (cards, sale prices).
   const prompt = context ? `Cuộc trò chuyện gần đây (gồm cả câu bot tự trả lời bằng code):\n${context}\n\nCâu hỏi hiện tại: ${question}` : question;
   return new Promise((resolve, reject) => {
     // Variables inherited from a parent Claude session would make this a child session of it.
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^CLAUDE_?CODE/i.test(key)));
-    if (staff) env.BOSSTELE_HIDE_COST = '1'; // catalog.js and sale-price.js leave cost out
     const child = spawn('claude', ['-p', '--output-format', 'text', resume ? '--resume' : '--session-id', sessionId,
       '--append-system-prompt', system, '--allowedTools', 'Bash(node catalog.js:*)', 'Bash(node sale-price.js:*)', 'Bash(node search-products.js:*)'],
     { cwd: __dirname, env, windowsHide: true });
@@ -134,6 +134,10 @@ function saleCaption(product, row, date) {
 }
 // Bảo 2026-10-20 (TASK-040): "giá chốt" is a short exchange: facts card → customer's offer → one-line suggestion → Bảo's feedback.
 // The pricing formula comes later (PRICE-SYSTEM); the suggestion is Claude's judgment on the facts and Bảo's past feedback.
+// Bảo 2026-10-21: "bao nhiêu túi", "mấy cái", "số lượng" want the number only; "giá bao nhiêu" is not a count.
+const countIntent = text => /\b(bao nhieu|may)\s+(cai|mon|chiec|con|san pham|sp|tui|vi|doi|mau)\b|\bso luong\b|\bdem\b|\btong so\b/.test(fold(text));
+// "nên thu giá bao nhiêu", "giá thu", "thu vào 45tr được không" — not "doanh thu", "thứ 2", "thứ mấy" (folded "thu").
+const buyIntent = text => /\bnen thu\b|\bgia thu\b|\bthu mua\b|(?<!doanh )\bthu (?:vao |lai )?(?:duoc )?(?:gia )?(?:bao nhieu|nhieu|nhiu|bn\b|\d+(?:[.,]\d+)?\s*(?:tr|trieu|cu)(?![a-z]))/.test(fold(text));
 const closeIntent = text => /\bgia chot\b|\bchot gia\b|\bkhach tra\b|\bchot duoc\b|\bchot bao nhieu\b/.test(fold(text));
 const tr = value => `${(value / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}tr`;
 const percent = (part, base) => `${(Math.round(part / base * 1000) / 10).toLocaleString('vi-VN')}%`;
@@ -148,11 +152,10 @@ function parseMoney(text) {
   return match ? Math.round(Number(match[1].replace(',', '.')) * 1e6) : null;
 }
 const listPrice = (product, row) => (product.price > 0 ? product.price : row?.currentPrice) || null;
-function closeCaption(product, row, staff = false) {
+function closeCaption(product, row) {
   const price = listPrice(product, row);
   const lines = [product.name, `${product.sku} · ${held(product)}`];
-  if (staff) lines.push(`Đang bán ${price ? tr(price) : 'chưa có giá'}`);
-  else lines.push(row?.cost && price ? `Đang bán ${tr(price)} · Vốn ${tr(row.cost)} · Lời ${tr(price - row.cost)} (${percent(price - row.cost, row.cost)})`
+  lines.push(row?.cost && price ? `Đang bán ${tr(price)} · Vốn ${tr(row.cost)} · Lời ${tr(price - row.cost)} (${percent(price - row.cost, row.cost)})`
     : `Đang bán ${price ? tr(price) : 'chưa có giá'} · Chưa có giá vốn`);
   if (row?.status === 'simulated') {
     const sale = row.price < price ? `Sale AI hôm nay ${tr(row.price)}${row.allowance > 0 ? `, thấp nhất ${tr(row.net)}` : ''}`
@@ -161,10 +164,9 @@ function closeCaption(product, row, staff = false) {
   } else if (row) lines.push(`Sale AI chưa tính được: ${(row.reasons ?? []).join('; ') || 'không rõ lý do'}`);
   return lines.join('\n');
 }
-function offerLine({ product, row }, offer, staff = false) {
+function offerLine({ product, row }, offer) {
   const price = listPrice(product, row), parts = [];
-  if (staff) { if (row?.status === 'simulated' && offer < row.net) parts.push(`dưới mức Sale AI cho bớt (${tr(row.net)})`); }
-  else if (row?.cost) parts.push(offer >= row.cost ? `lời ${tr(offer - row.cost)} (${percent(offer - row.cost, row.cost)})` : `lỗ ${tr(row.cost - offer)} so với vốn`);
+  if (row?.cost) parts.push(offer >= row.cost ? `lời ${tr(offer - row.cost)} (${percent(offer - row.cost, row.cost)})` : `lỗ ${tr(row.cost - offer)} so với vốn`);
   if (price) parts.push(offer < price ? `thấp hơn giá bán ${tr(price - offer)}` : 'bằng hoặc cao hơn giá bán');
   return `${tr(offer)}: ${parts.join(', ') || 'chưa có vốn và giá bán để so'}`;
 }
@@ -183,11 +185,11 @@ function card(product) {
 
 /** The web assistant's code-only answer (server /internal/assistant), or null so Claude answers instead. */
 function webQuick({ url = process.env.BOSSTELE_WEB_URL || 'http://127.0.0.1:4000', token = process.env.INTERNAL_TOKEN } = {}) {
-  return async (messages, { staff = false } = {}) => {
+  return async messages => {
     if (!token) return null;
     try {
       const response = await fetch(`${url}/internal/assistant`, {
-        method: 'POST', headers: { 'content-type': 'application/json', 'x-internal-token': token, ...(staff ? { 'x-bosstele-staff': '1' } : {}) },
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-internal-token': token },
         body: JSON.stringify({ messages }), signal: AbortSignal.timeout(15_000),
       });
       return response.ok ? (await response.json()).answer ?? null : null;
@@ -195,21 +197,8 @@ function webQuick({ url = process.env.BOSSTELE_WEB_URL || 'http://127.0.0.1:4000
   };
 }
 
-function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, quick: webLookup = async () => null, salePrices = null, memory = null, market = null, rates = async () => null, now = Date.now, feedback = null, thinkMs = 2000, pair = null, fileUrl = null, draft = null, albumMs = 1500, stockGap = null, permissionsFor = null }) {
+function createBot({ api, allowFrom, newSession, ask = askClaude, quick = async () => null, salePrices = null, memory = null, market = null, rates = async () => null, now = Date.now, feedback = null, thinkMs = 2000, pair = null, fileUrl = null, draft = null, albumMs = 1500, stockGap = null }) {
   const sessions = new Map(), conversations = new Map(), histories = new Map(), closingStates = new Map();
-  // Bảo 2026-10-20: everyone but the owner is staff (no cost, profit or purchase rates). Without an owner (tests) nobody is.
-  // shortcut: one flag for the update being handled; fine while the polling loop handles one message at a time.
-  let staff = false;
-  const ownerId = () => (typeof owner === 'function' ? owner() : owner) || null;
-  // Bảo 2026-10-20: a Telegram account linked to a website login follows that login ("Xem giá vốn" = sees cost and profit);
-  // an unlinked one falls back to owner vs staff. permissionsFor: id → permissions[], null (no active account), undefined (not linked).
-  async function isStaff(id) {
-    let permissions;
-    try { permissions = await permissionsFor?.(id); } catch { permissions = null; }
-    if (permissions !== undefined) return !permissions?.includes('products.cost');
-    return !!ownerId() && String(id) !== String(ownerId());
-  }
-  const quick = messages => webLookup(messages, { staff });
   // An open "giá chốt" exchange is saved with the chat, so "Chưa đúng" still works after the bot restarts.
   const closing = {
     get: chatId => closingStates.get(chatId),
@@ -337,12 +326,12 @@ function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, 
     if (!sku) return null;
     return (await quick([{ role: 'user', content: sku }]))?.products?.find(item => item.sku === sku) ?? null;
   }
-  async function closeStart(chatId, text, from = {}) {
+  async function closeStart(chatId, text) {
     const product = await closeProduct(chatId, text);
     if (!product) return false;
     let row = null;
     try { row = salePrices ? (await salePrices([product.sku])).rows[0] ?? null : null; } catch { /* the card still has price and stock */ }
-    const state = { product, row, step: 'offer', staff, requester: from.username ? `@${from.username}` : from.first_name ?? String(from.id ?? '') }, caption = closeCaption(product, row, staff);
+    const state = { product, row, step: 'offer' }, caption = closeCaption(product, row);
     closing.set(chatId, state);
     remember(chatId, 'assistant', caption);
     await sendCard(chatId, product, caption);
@@ -353,23 +342,20 @@ function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, 
     return true;
   }
   async function closeSuggest(chatId, state, offer) {
-    const line = offerLine(state, offer, state.staff), past = feedback?.similar(state.product) ?? [];
+    const line = offerLine(state, offer), past = feedback?.similar(state.product) ?? [];
     const prompt = [
       'Bảo đang chốt giá với khách. Dữ kiện đã tính sẵn, không tính thêm số khác, không chạy công cụ:',
-      closeCaption(state.product, state.row, state.staff), `Khách trả ${line}`,
+      closeCaption(state.product, state.row), `Khách trả ${line}`,
       past.length ? `Góp ý trước của Bảo cho mẫu này:\n${past.map(entry => `- ${entry.sku}: khách trả ${entry.offer ? tr(entry.offer) : '?'}, bot gợi ý "${entry.suggestion ?? ''}", Bảo ${entry.verdict === 'ok' ? 'thấy hợp lý' : `chốt ${entry.finalPrice ? tr(entry.finalPrice) : '?'} vì ${entry.reason ?? ''}`}`).join('\n')}` : 'Chưa có góp ý trước cho mẫu này.',
       'Trả lời đúng 1 dòng, tối đa 25 chữ: nhận định ngắn, rồi "→" và gợi ý (chốt được, hoặc trả ngược khoảng bao nhiêu tr). Ví dụ: Túi mới (M0), chưa vào đợt sale → nên giữ giá, trả ngược 61–62tr. Không markdown.',
     ].join('\n');
     const stop = thinking(chatId);
     let suggestion = null;
-    try { suggestion = (await ask(prompt, { sessionId: randomUUID(), resume: false, notes: memory?.notes() ?? [], staff: state.staff })).split('\n').map(part => part.trim()).find(Boolean) ?? null; }
+    try { suggestion = (await ask(prompt, { sessionId: randomUUID(), resume: false, notes: memory?.notes() ?? [] })).split('\n').map(part => part.trim()).find(Boolean) ?? null; }
     catch { /* the offer line still helps */ }
     finally { await stop(); }
     Object.assign(state, { step: 'verdict', offer, suggestion });
-    // Case 11: staff offering under cost — they are not told the cost, Bảo is told and decides.
-    const underCost = state.staff && state.row?.cost && offer < state.row.cost && ownerId();
-    if (underCost) await send(ownerId(), `⚠ ${state.requester} đang chốt ${state.product.sku} (${state.product.name}): khách trả ${tr(offer)}, dưới vốn ${tr(state.row.cost - offer)}. Cần anh duyệt.`).catch(() => {});
-    const reply = `${line}\n${suggestion ?? 'Chưa có gợi ý (Claude chưa trả lời).'}${underCost ? '\nGiá này cần anh Bảo duyệt, bot đã báo anh Bảo.' : ''}`;
+    const reply = `${line}\n${suggestion ?? 'Chưa có gợi ý (Claude chưa trả lời).'}`;
     remember(chatId, 'assistant', reply);
     await send(chatId, reply, keyboard([['Hợp lý', 'Chưa đúng']]));
   }
@@ -414,13 +400,13 @@ function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, 
     const key = `${chatId}:${message.media_group_id}`;
     let album = albums.get(key);
     if (!album) {
-      album = { messages: [], staff };
+      album = { messages: [] };
       albums.set(key, album);
-      setTimeout(() => { albums.delete(key); photoAnswer(chatId, album.messages, album.staff).catch(error => console.error('BossTele bot: lỗi xử lý album:', error.message)); }, albumMs);
+      setTimeout(() => { albums.delete(key); photoAnswer(chatId, album.messages).catch(error => console.error('BossTele bot: lỗi xử lý album:', error.message)); }, albumMs);
     }
     album.messages.push(message);
   }
-  async function photoAnswer(chatId, messages, isStaff = staff) {
+  async function photoAnswer(chatId, messages) {
     load(chatId);
     const caption = messages.map(item => item.caption).find(Boolean) ?? '';
     let request;
@@ -429,19 +415,35 @@ function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, 
     await send(chatId, `Đang soạn nháp ${request.label}, khoảng 1–3 phút…`);
     const stop = thinking(chatId);
     let reply;
-    try { reply = withoutSources(await draft(request.prompt, { image: await Promise.all(messages.map(item => fileUrl(item.photo.at(-1).file_id))), system: request.system, bash: request.bash, staff: isStaff })); }
+    try { reply = withoutSources(await draft(request.prompt, { image: await Promise.all(messages.map(item => fileUrl(item.photo.at(-1).file_id))), system: request.system, bash: request.bash })); }
     catch { reply = 'Chưa soạn được nháp, bạn thử lại sau nhé.'; }
     finally { await stop(); }
     if (request.lot) {
-      try { reply = withLotPrices(reply, undefined, isStaff); }
+      try { reply = withLotPrices(reply); }
       catch (error) { console.error('BossTele bot: chưa tính được gợi ý giá thu cả lô:', error.message); }
     } else if (request.skill === 'baoq-up-kiot') {
-      try { reply = withBuyPrice(reply, /\bthu\b/.test(fold(caption)) ? parseMoney(caption) : null, undefined, isStaff); }
+      try { reply = withBuyPrice(reply, /\bthu\b/.test(fold(caption)) ? parseMoney(caption) : null); }
       catch (error) { console.error('BossTele bot: chưa tính được gợi ý giá thu:', error.message); }
     }
     reply = `${reply}\n\n(Bản nháp — chưa ghi lên đâu cả. Thấy đúng thì chép vào ${request.skill === 'baoq-up-kiot' ? 'Kiot' : 'trang quản trị web'}.)`;
     remember(chatId, 'assistant', reply);
     await send(chatId, reply);
+  }
+  // A text question about the purchase price: Claude finds the reference price, code computes the hint (lib/buy-price.js).
+  async function buyAnswer(chatId, text) {
+    const request = buyRequest(text, new Date(now()));
+    await send(chatId, 'Đang tra giá thu, khoảng 1–3 phút…');
+    const stop = thinking(chatId);
+    let reply;
+    try { reply = withoutSources(await draft(request.prompt, { system: request.system, bash: request.bash })); }
+    catch { reply = 'Chưa tra được giá thu, bạn thử lại sau nhé.'; }
+    finally { await stop(); }
+    // Only an amount right after "thu" is what Bảo would pay ("Chanel 22" is a model, not 22 triệu).
+    const paid = /\bthu (?:vao )?(\d.*)/.exec(fold(text))?.[1];
+    try { reply = withBuyPrice(reply, paid ? parseMoney(paid) : null); }
+    catch (error) { console.error('BossTele bot: chưa tính được gợi ý giá thu:', error.message); }
+    remember(chatId, 'assistant', reply);
+    return send(chatId, reply);
   }
   async function handleUpdate(update) {
     const message = update.message;
@@ -456,7 +458,6 @@ function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, 
       return;
     }
     const chatId = message.chat.id, text = message.text;
-    staff = await isStaff(message.from?.id);
     if (typeof text !== 'string') {
       if (message.photo?.length && draft && fileUrl) return message.media_group_id ? collectAlbum(chatId, message) : photoAnswer(chatId, [message]);
       return send(chatId, `${REJECT}\nBot chỉ nhận tin nhắn chữ hoặc ảnh sản phẩm.`);
@@ -480,13 +481,19 @@ function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, 
       remember(chatId, 'assistant', report);
       return send(chatId, report, { link_preview_options: { is_disabled: true } });
     }
-    if (closeIntent(text) && await closeStart(chatId, text, message.from)) return;
+    if (closeIntent(text) && await closeStart(chatId, text)) return;
+    if (draft && buyIntent(text)) return buyAnswer(chatId, text);
     // Before the sale and web look-ups: a pasted card with "trên thị trường" would otherwise just get the card back.
     if (market && marketIntent(text)) return marketAnswer(chatId, text);
     if (salePrices && saleIntent(text) && await saleAnswer(chatId, text)) return;
     const answer = await quick(histories.get(chatId).slice(-10));
     // The web lookup found nothing; Claude can still search more broadly or answer from its own knowledge.
     if (answer?.reply && !/^Không tìm thấy sản phẩm/.test(answer.reply)) {
+      if (countIntent(text)) {
+        const count = answer.reply.replace(/\s*\(hiện \d+ món[^)]*\)/, '').replace(/:\s*$/, '.');
+        remember(chatId, 'assistant', count);
+        return send(chatId, count);
+      }
       remember(chatId, 'assistant', answer.reply);
       return sendAnswer(chatId, answer);
     }
@@ -501,7 +508,7 @@ function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, 
     let reply;
     const stop = thinking(chatId);
     try {
-      reply = await ask(text, { sessionId: conversation.sessionId, resume: conversation.started, notes: memory?.notes() ?? [], context, staff });
+      reply = await ask(text, { sessionId: conversation.sessionId, resume: conversation.started, notes: memory?.notes() ?? [], context });
       conversation.started = true;
     } catch {
       conversations.delete(chatId); // a half-created session id cannot be reused with --session-id
@@ -513,7 +520,7 @@ function createBot({ api, allowFrom, owner = null, newSession, ask = askClaude, 
     remember(chatId, 'assistant', reply);
     // The "SKU:" line only feeds the photo cards; the chat shows the headline and the cards.
     await send(chatId, reply.split('\n').filter(line => !/^SKU:/i.test(line.trim())).join('\n').trim() || reply);
-    return sendMentioned(chatId, reply);
+    if (!countIntent(text)) await sendMentioned(chatId, reply);
   }
   return { handleUpdate };
 }
@@ -544,22 +551,7 @@ async function main() {
     const snapshot = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'server', 'data', 'catalog-cache.json'), 'utf8'));
     return stockGapText(stockGaps(snapshot.rows?.kiotviet ?? [], sapo.items), { syncedAt: snapshot.syncedAt });
   };
-  // Permissions of the linked website login, asked from the web server (same INTERNAL_TOKEN as the quick answers); cached 5 minutes.
-  const permissionCache = new Map();
-  const permissionsFor = async id => {
-    const email = access.emailFor(id);
-    if (!email) return undefined;
-    const cached = permissionCache.get(email);
-    if (cached && Date.now() - cached.at < 5 * 60 * 1000) return cached.permissions;
-    const response = await fetch(`${process.env.BOSSTELE_WEB_URL || 'http://127.0.0.1:4000'}/internal/staff-permissions`, {
-      method: 'POST', headers: { 'content-type': 'application/json', 'x-internal-token': process.env.INTERNAL_TOKEN ?? '' },
-      body: JSON.stringify({ email }), signal: AbortSignal.timeout(10_000) });
-    if (!response.ok) throw new Error(`web trả ${response.status}`);
-    const { permissions } = await response.json();
-    permissionCache.set(email, { at: Date.now(), permissions });
-    return permissions;
-  };
-  const bot = createBot({ api, allowFrom: access.allowFrom, owner: access.owner, permissionsFor, pair: access.pairingCode, newSession, quick: webQuick(), salePrices: createSalePricer(), memory: createMemory(), market: askMarket, rates: exchangeRates, feedback: createPriceFeedback(),
+  const bot = createBot({ api, allowFrom: access.allowFrom, pair: access.pairingCode, newSession, quick: webQuick(), salePrices: createSalePricer(), memory: createMemory(), market: askMarket, rates: exchangeRates, feedback: createPriceFeedback(),
     // The download URL holds the bot token: it is only fetched here (imageBlock), never shown to Claude.
     stockGap,
     fileUrl: async fileId => `https://api.telegram.org/file/bot${token}/${(await api('getFile', { file_id: fileId })).file_path}`, draft: askMarket });

@@ -101,27 +101,6 @@ test('"Chưa đúng" still works after the bot restarts in the middle of a closi
   assert.equal(texts.at(-1), 'Anh chốt bao nhiêu, vì sao?');
 });
 
-test('staff never see cost or profit, and an offer under cost from staff is sent to Bảo (cases 11, 12)', async () => {
-  const messages = [], asked = [];
-  const bot = createBot({ api: async (method, body) => { if (method === 'sendMessage') messages.push([String(body.chat_id), body.text]); }, allowFrom: ['7', '8'], owner: '7', newSession: () => null,
-    quick: async (items, options) => items.at(-1).content === product.sku ? { reply: 'x', products: [product], staff: options?.staff } : null,
-    salePrices: async () => ({ day: '2026-10-20', rows: [{ ...saleRow, allowance: 3250000, net: 61750000 }] }),
-    ask: async (prompt, options) => { asked.push({ prompt, staff: options.staff }); return 'Túi mới → trả ngược 62tr'; } });
-  const say = (from, text) => bot.handleUpdate({ message: { chat: { id: Number(from), type: 'private' }, from: { id: Number(from), username: from === '8' ? 'daylataoooo' : 'bao' }, text } });
-  await say('8', 'SP024640 giá chốt');
-  await say('8', '49tr');
-  const staffTexts = messages.filter(([chat]) => chat === '8').map(([, text]) => text).join('\n');
-  assert.doesNotMatch(staffTexts, /Vốn|Lời|lời|lỗ|51,5tr/);
-  assert.match(staffTexts, /49tr: dưới mức Sale AI cho bớt \(61,75tr\), thấp hơn giá bán 16tr/);
-  assert.match(staffTexts, /cần anh Bảo duyệt, bot đã báo anh Bảo/);
-  assert.equal(asked[0].staff, true);
-  assert.doesNotMatch(asked[0].prompt, /Vốn|51,5tr/);
-  assert.deepEqual(messages.filter(([chat]) => chat === '7').map(([, text]) => text),
-    ['⚠ @daylataoooo đang chốt SP024640 (Túi Chanel Vanity with Chain Small Đen GHW): khách trả 49tr, dưới vốn 2,5tr. Cần anh duyệt.']);
-  await say('7', 'SP024640 giá chốt');
-  assert.match(messages.filter(([chat]) => chat === '7').map(([, text]) => text).join('\n'), /Vốn 51,5tr · Lời 13,5tr/);
-});
-
 test('a product a customer has a deposit on shows as held, not for sale (case 10)', async () => {
   const captions = [];
   const held = { ...product, reserved: 1 };
@@ -129,15 +108,4 @@ test('a product a customer has a deposit on shows as held, not for sale (case 10
     quick: async () => ({ reply: 'Có 1 sản phẩm phù hợp:', products: [held] }), ask: async () => assert.fail('no Claude') });
   await bot.handleUpdate({ message: { chat: { id: 1, type: 'private' }, from: { id: 7 }, text: 'túi chanel vanity' } });
   assert.match(captions.at(-1), /Đang giữ cho khách \(đã cọc\)/);
-});
-
-test('a Telegram account linked to a website login follows it: Admin sees cost, an account without "Xem giá vốn" does not', async () => {
-  const sent = [];
-  const perms = { 9: ['products.view', 'products.cost'], 10: ['products.view'] };
-  const bot = createBot({ api: async (method, body) => { if (method === 'sendMessage') sent.push([String(body.chat_id), body.text]); }, allowFrom: ['7', '9', '10'], owner: '7', newSession: () => null,
-    permissionsFor: async id => perms[id], quick: async items => items.at(-1).content === product.sku ? { reply: 'x', products: [product] } : null,
-    salePrices: async () => ({ day: '2026-10-20', rows: [saleRow] }), ask: async () => 'ok' });
-  for (const id of [9, 10]) await bot.handleUpdate({ message: { chat: { id, type: 'private' }, from: { id }, text: 'SP024640 giá chốt' } });
-  assert.match(sent.find(([chat]) => chat === '9')[1], /Vốn 51,5tr/);
-  assert.doesNotMatch(sent.filter(([chat]) => chat === '10').map(([, text]) => text).join('\n'), /Vốn|Lời/);
 });

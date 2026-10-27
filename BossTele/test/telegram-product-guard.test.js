@@ -77,3 +77,13 @@ test('market look-ups pass the guard even without a brand or price word', () => 
   const { storeQuestion } = require('../lib/telegram-product-guard');
   for (const text of ['tìm con này trên thị trường', 'check giá ngoài giúp', 'tham khảo giá resale']) assert.equal(storeQuestion(text), true, text);
 });
+
+test('asking about Vietnamese shops and luxury resale is in scope (Bảo 2026-10-21)', () => {
+  const { storeQuestion } = require('../lib/telegram-product-guard');
+  const { marketIntent } = require('../lib/market-lookup');
+  for (const text of ['bạn có thể tra sàn việt nam của các shop giống tui', 'tra con Vanity trên sàn Việt Nam', 'các shop khác bán Vanity giá nhiêu'])
+    assert.equal(storeQuestion(text) && marketIntent(text), true, text);
+  assert.equal(storeQuestion('đồ hiệu secondhand ở VN giá sao'), true);
+  // "sẵn" folds to "san": only the accented "sàn" means a marketplace.
+  for (const text of ['túi Chanel có sẵn không', 'sản phẩm mới']) assert.equal(marketIntent(text), false, text);
+});

@@ -15,6 +15,8 @@ saleAiRouter.use((request, response) => {
   // address, so send the website's own host; requireSameOrigin has already checked Origin against APP_ORIGIN.
   const { cookie: _cookie, ...headers } = request.headers;
   headers.host = new URL(env.APP_ORIGIN).host;
+  // Bảo 2026-10-21: Sale AI refuses requests without this token, so 127.0.0.1:4310 cannot be opened directly.
+  if (env.INTERNAL_TOKEN) headers['x-sale-ai-token'] = env.INTERNAL_TOKEN; else delete headers['x-sale-ai-token'];
   // Opened by the shop wifi IP (Bảo 2026-10-20): Sale AI only accepts a localhost Host, so the Origin already checked by
   // requireSameOrigin is presented as the website's own.
   if (headers.origin && allowedOrigin(headers.origin)) headers.origin = new URL(env.APP_ORIGIN).origin;

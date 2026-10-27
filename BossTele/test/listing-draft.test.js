@@ -29,6 +29,26 @@ test('the caption picks the skill: Kiot by default, "web" for the website, shoes
   assert.throws(() => draftRequest('', new Date(), fs.mkdtempSync(path.join(os.tmpdir(), 'none-'))), /chưa có skill baoq-up-kiot/);
 });
 
+test('a text question "nên thu giá bao nhiêu" gets the reference price and the purchase hint, no photo needed', async () => {
+  const sent = [], calls = [];
+  const bot = createBot({ api: async (method, body) => { if (method === 'sendMessage') sent.push(body.text); }, allowFrom: ['7'], newSession: () => null,
+    ask: async () => assert.fail('no chat Claude'), quick: async () => assert.fail('no web lookup'),
+    draft: async (prompt, options) => { calls.push({ prompt, ...options }); return 'Tên: Túi Chanel Vanity\nDanh mục: Túi\nTình trạng: chưa rõ (tính như LN 95%)\n'
+      + 'Giá thị trường (Kiot): 59000000-65000000, giữa 62000000, 3 món: SP1, SP2, SP3\n\nSources:\n- [a](https://a.test)'; } });
+  const say = text => bot.handleUpdate({ message: { chat: { id: 1, type: 'private' }, from: { id: 7 }, text } });
+  await say('túi Chanel Vanity nên thu giá bao nhiêu');
+  assert.match(calls[0].prompt, /không có ảnh: túi Chanel Vanity nên thu giá bao nhiêu/);
+  assert.match(calls[0].system, /^CHẾ ĐỘ CHỈ TRA GIÁ/);
+  assert.match(calls[0].bash[0], /catalog\.js:\*$/);
+  assert.equal(calls[0].image, undefined);
+  assert.equal(sent[0], 'Đang tra giá thu, khoảng 1–3 phút…');
+  assert.match(sent[1], /Giá thị trường \(Kiot\): 59tr–65tr, giữa 62tr\nGiá thu tối đa: 47,6tr \(lời 30% trên vốn\)/);
+  assert.doesNotMatch(sent[1], /Sources|Giá thu 22tr/);
+  // An amount right after "thu" is checked against the hint; a model number ("22") is not an amount.
+  await say('Chanel 22 thu vào 50tr được không');
+  assert.match(sent.at(-1), /Giá thu 50tr: cao hơn mức gợi ý 2,4tr/);
+});
+
 test('the Sources list after a web search is dropped', () => {
   const { withoutSources } = require('../lib/listing-draft');
   assert.equal(withoutSources('Tên: Túi\nHỏi Bảo:\n1. Size?\n\nSources:\n- [a](https://a.test)'), 'Tên: Túi\nHỏi Bảo:\n1. Size?');

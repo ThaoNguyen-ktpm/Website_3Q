@@ -13,9 +13,12 @@ vi.mock('../middlewares/requireAuth.js', () => ({ requireAuth: (req: any, res: a
 
 // A stand-in Sale AI that echoes what it received.
 let seen: { method?: string; url?: string; cookie?: string; host?: string; origin?: string; body: string }[] = [];
+// x-sale-ai-token seen by Sale AI: the website's INTERNAL_TOKEN, never one sent by the browser.
+const tokens: (string | string[] | undefined)[] = [];
 const upstream = http.createServer((req, res) => {
   let body = '';
   req.on('data', chunk => { body += chunk; }).on('end', () => {
+    tokens.push(req.headers['x-sale-ai-token']);
     seen.push({ method: req.method, url: req.url, cookie: req.headers.cookie, host: req.headers.host, ...(req.headers.origin ? { origin: req.headers.origin } : {}), body });
     res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Security-Policy': "frame-ancestors http://localhost:5173" });
     res.end(JSON.stringify({ ok: true }));
@@ -83,4 +86,13 @@ it('redirects to the trailing slash and reports when Sale AI is down', async () 
   expect(page.text).toContain('http-equiv="refresh" content="5"');
   const signedOut = await request(app).get('/sale-ai/');
   expect([signedOut.status, signedOut.headers['content-security-policy']]).toEqual([401, "default-src 'none'; frame-ancestors 'self'"]);
+});
+
+it('sends the website token to Sale AI and never a token from the browser', async () => {
+  tokens.length = 0;
+  env.INTERNAL_TOKEN = 'k'.repeat(40);
+  await sale('/sale-ai/api/status').set('x-sale-ai-token', 'forged').set('Host', 'localhost:5173');
+  env.INTERNAL_TOKEN = undefined;
+  await sale('/sale-ai/api/status').set('x-sale-ai-token', 'forged').set('Host', 'localhost:5173');
+  expect(tokens).toEqual(['k'.repeat(40), undefined]);
 });

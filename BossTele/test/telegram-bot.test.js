@@ -229,3 +229,16 @@ test('a restarted bot continues the saved conversation', async () => {
   await make().handleUpdate({ message: { chat: { id: 1, type: 'private' }, from: { id: 7 }, text: 'mẫu khác' } });
   assert.deepEqual(seen.at(-1), ['túi chanel', 'Có 10 sản phẩm', 'mẫu khác']);
 });
+
+test('count questions get the number only; product questions keep the photo cards', async () => {
+  const texts = [], photos = [];
+  const api = async (method, body) => { if (method === 'sendMessage') texts.push(body.text); if (method === 'sendPhoto') photos.push(body.photo); };
+  const quick = async () => ({ reply: 'Có 233 sản phẩm Chanel phù hợp (hiện 10 món mới nhất):', products: [{ sku: 'SP1', name: 'Túi', image: 'https://img.test/1.jpg' }] });
+  const bot = createBot({ api, allowFrom: ['7'], newSession: () => null, quick, ask: async () => assert.fail('no Claude') });
+  const say = text => bot.handleUpdate({ message: { chat: { id: 1, type: 'private' }, from: { id: 7 }, text } });
+  await say('có bao nhiêu túi Chanel');
+  await say('chanel mấy cái');
+  assert.deepEqual([texts, photos], [['Có 233 sản phẩm Chanel phù hợp.', 'Có 233 sản phẩm Chanel phù hợp.'], []]);
+  await say('túi Chanel giá bao nhiêu');
+  assert.deepEqual(photos, ['https://img.test/1.jpg']);
+});

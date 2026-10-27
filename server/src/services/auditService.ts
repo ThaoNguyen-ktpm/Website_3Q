@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ApiError } from '../middlewares/errorHandler.js';
 import * as model from '../models/auditLogModel.js';
+import { permissionLabels } from '../config/permissions.js';
 
 export const actionLabels = {
   'auth.login': 'Đăng nhập', 'auth.login_denied': 'Đăng nhập bị từ chối', 'auth.logout': 'Đăng xuất',
@@ -45,7 +46,8 @@ export async function list(query: unknown) {
   if (!parsed.success) throw new ApiError(400, 'VALIDATION_ERROR', 'Bộ lọc nhật ký không hợp lệ.');
   const { action, actorId, page, pageSize } = parsed.data;
   const result = await model.list({ ...(action ? { action } : {}), ...(actorId ? { actorId } : {}) }, page, pageSize);
-  return { ...result, items: result.items.map(item => ({ ...item, actionLabel: actionLabels[item.action as keyof typeof actionLabels] ?? item.action })) };
+  // permissionLabels: the page shows permission names in Vietnamese instead of keys.
+  return { ...result, permissionLabels, items: result.items.map(item => ({ ...item, actionLabel: actionLabels[item.action as keyof typeof actionLabels] ?? item.action })) };
 }
 export async function purgeOlderThan(days: number) {
   if (!Number.isInteger(days) || days <= 0) throw new Error('Thời hạn lưu nhật ký không hợp lệ.');

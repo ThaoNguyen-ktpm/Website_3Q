@@ -13,8 +13,9 @@ const fold = text => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ
 
 // "thị trường", "check giá ngoài", "giá tham khảo", "trên mạng/google", "giá retail", resale site names.
 // "giá hãng" only with accents: folded it is "giá hàng", which is any price question.
-const marketIntent = text => /thi truong|\bgia (ben )?ngoai\b|\bben ngoai\b|\bgia tham khao\b|\btham khao gia\b|\btren (mang|google|web)\b|\bgia (retail|boutique|store)\b|\bmarket\b|\bresale\b|fashionphile|vestiaire|rebag|realreal|\bebay\b/
-  .test(fold(String(text ?? ''))) || /giá (ở |tại |của |bên )?hãng/u.test(String(text ?? '').normalize('NFC').toLowerCase());
+// Bảo 2026-10-21: "tra sàn Việt Nam", "các shop giống tui" — other shops' prices; "sàn" only with accents ("sẵn" folds to "san").
+const marketIntent = text => /\bcac shop\b|\bshop (khac|giong|viet nam|vn|trong nuoc)\b|thi truong|\bgia (ben )?ngoai\b|\bben ngoai\b|\bgia tham khao\b|\btham khao gia\b|\btren (mang|google|web)\b|\bgia (retail|boutique|store)\b|\bmarket\b|\bresale\b|fashionphile|vestiaire|rebag|realreal|\bebay\b/
+  .test(fold(String(text ?? ''))) || /giá (ở |tại |của |bên )?hãng|(?:^|[^\p{L}])sàn(?=$|[^\p{L}])/u.test(String(text ?? '').normalize('NFC').toLowerCase());
 
 const guide = () => fs.readFileSync(SKILL, 'utf8').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim();
 const ddmmyyyy = date => date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' });
@@ -70,7 +71,7 @@ async function imageBlock(url, fetchImpl = fetch) {
  * The photo goes in the message itself (stream-json), so no file tool is needed.
  */
 // bash: exact read-only commands Claude may run besides the web (the photo draft searches the shop catalog), e.g. 'node D:/…/catalog.js:*'.
-async function askMarket(prompt, { image = null, timeoutMs = 300_000, system = guide(), bash = [], staff = false } = {}) {
+async function askMarket(prompt, { image = null, timeoutMs = 300_000, system = guide(), bash = [] } = {}) {
   const content = [{ type: 'text', text: prompt }];
   // One photo, or several (an album: the photo drafts send every photo).
   const urls = (Array.isArray(image) ? image : [image]).filter(Boolean);
@@ -81,7 +82,6 @@ async function askMarket(prompt, { image = null, timeoutMs = 300_000, system = g
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'bosstele-market-'));
   return new Promise((resolve, reject) => {
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^CLAUDE_?CODE/i.test(key)));
-    if (staff) env.BOSSTELE_HIDE_COST = '1'; // catalog.js leaves cost out for staff
     const child = spawn('claude', ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--no-session-persistence',
       '--setting-sources', 'project', '--strict-mcp-config', '--tools', bash.length ? 'WebSearch,WebFetch,Bash' : 'WebSearch,WebFetch',
       '--allowedTools', 'WebSearch', 'WebFetch', ...bash.map(command => `Bash(${command})`),

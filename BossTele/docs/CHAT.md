@@ -44,10 +44,11 @@ Ghép nối người dùng mới (Bảo 20/10/2026): `access.json` để `dmPoli
 | 6 | Hàng hiếm, giá trị cao | Từ 200tr hoặc tên có từ khóa (Birkin, Kelly, VCA, Patek…) thì ghi cần Bảo/Nguyên duyệt | `price-tiers.json` → `founderReview` |
 | 7 | Danh mục khác túi | Mỗi danh mục Kiot một bảng lời; chưa có bảng thì không gợi ý giá thu | `price-tiers.json` → `categories` |
 | 8 | Lô nhiều món | Album ảnh = một món nhiều góc; album có chữ "lô"/"mỗi ảnh" = mỗi ảnh một món, có giá thu từng món và tổng | `collectAlbum`, `withLotPrices` |
+| 8b | Hỏi giá thu bằng chữ, không ảnh (21/10/2026) | "túi Chanel Vanity nên thu giá bao nhiêu", "thu vào 45tr được không": tra giá tham chiếu như khi gửi ảnh rồi gợi ý giá thu; số ngay sau "thu" là giá Bảo định trả | `buyIntent`, `buyRequest`, `withBuyPrice` |
 | 9 | Web còn bán nhưng Kiot hết/đang giữ | Nhắn "lệch kho"; 9 giờ sáng tự báo Bảo nếu có. Chỉ đọc Sapo, không sửa web | `lib/stock-gap.js` |
 | 10 | Khách đã cọc giữ | Kiot đặt hàng (`reserved`) → báo "Đang giữ cho khách (đã cọc)" trên bot và trợ lý web | `held()`, `tools.ts` |
-| 11 | Nhân viên chốt dưới vốn | Nhân viên không thấy vốn; bot nhắn Bảo "… dưới vốn X. Cần anh duyệt." | `closeSuggest` |
-| 12 | Nhân viên thấy giá vốn | Mọi người trừ chủ (`owner` trong access.json, mặc định id đầu tiên) không thấy vốn, lời, % lời | `staff`, `BOSSTELE_HIDE_COST`, header `x-bosstele-staff` |
+
+Phân quyền trong bot (11, 12) đã gỡ ngày 21/10/2026 theo Bảo: ai vào được bot đều dùng toàn quyền; chỉ tài khoản Admin trên web thấy nút Telegram, và người lạ vẫn phải được Bảo duyệt mã ghép nối.
 
 Chưa làm: giá bán thật theo hóa đơn Kiot (trường hợp 3 đầy đủ), kiểm định hàng giả (1), tách hàng ký gửi (5).
 

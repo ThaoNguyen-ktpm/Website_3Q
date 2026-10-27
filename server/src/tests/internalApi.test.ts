@@ -6,8 +6,6 @@ import { catalogStore } from '../services/catalogStore.js';
 
 const token = 'x'.repeat(40);
 vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:5173', INTERNAL_TOKEN: 'x'.repeat(40) } }));
-vi.mock('../models/staffModel.js', () => ({ findByEmail: vi.fn(async (email: string) => email === 'admin@example.test' ? { role: 'ADMIN', status: 'ACTIVE', customPermissions: false, permissions: [] } : null) }));
-vi.mock('../models/rolePermissionModel.js', () => ({ list: vi.fn(async () => []) }));
 vi.mock('../services/assistant/graph.js', () => ({ quickAnswer: vi.fn(), chat: vi.fn() }));
 vi.mock('../services/catalogStore.js', () => ({ catalogStore: { sync: vi.fn(), rawRows: vi.fn() } }));
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(quickAnswer).mockResolvedValue({ reply: 'Có 1 sản phẩm phù hợp:', offTopic: false, sources: [], products: [] }); });
@@ -19,11 +17,6 @@ it('answers the local bot with the shared token and admin product permissions', 
   expect(result.headers['cache-control']).toBe('no-store');
   expect(result.body.answer.reply).toBe('Có 1 sản phẩm phù hợp:');
   expect(quickAnswer).toHaveBeenCalledWith(body, ['products.view', 'products.cost']);
-});
-
-it('answers staff on the bot without cost (Bảo 2026-10-20)', async () => {
-  await request(app).post('/internal/assistant').set('X-Internal-Token', token).set('X-Bosstele-Staff', '1').send(body);
-  expect(quickAnswer).toHaveBeenCalledWith(body, ['products.view']);
 });
 
 it('hides the route without the right token', async () => {
@@ -55,12 +48,4 @@ it('reports a failed or incomplete sync instead of handing Sale AI partial data'
   const result = await request(app).post('/internal/catalog/sync').set('X-Internal-Token', token);
   expect([result.status, result.body.error.code]).toEqual([502, 'CATALOG_SYNC_FAILED']);
   expect((await request(app).post('/internal/catalog/sync')).status).toBe(404);
-});
-
-it('tells BossTele the website permissions of a linked staff email (Bảo 2026-10-20)', async () => {
-  const admin = await request(app).post('/internal/staff-permissions').set('X-Internal-Token', token).send({ email: ' Admin@Example.test ' });
-  expect(admin.body.permissions).toContain('products.cost');
-  const unknown = await request(app).post('/internal/staff-permissions').set('X-Internal-Token', token).send({ email: 'x@example.test' });
-  expect(unknown.body).toEqual({ role: null, permissions: null });
-  expect((await request(app).post('/internal/staff-permissions').send({ email: 'admin@example.test' })).status).toBe(404);
 });
