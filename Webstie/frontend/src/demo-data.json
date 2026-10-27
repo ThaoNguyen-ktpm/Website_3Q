@@ -1,0 +1,279 @@
+{
+  "snapshot_at": "2026-10-19T09:00:00Z",
+  "summary": {
+    "revenue": 190000000,
+    "cogs": 130500000,
+    "operating": 32000000,
+    "total_cost": 162500000,
+    "result": 27500000,
+    "groups": {
+      "channel": [
+        {
+          "label": "Cửa hàng",
+          "amount": 105000000,
+          "percent": 55.2632
+        },
+        {
+          "label": "Online",
+          "amount": 65000000,
+          "percent": 34.2105
+        },
+        {
+          "label": "Đối tác",
+          "amount": 20000000,
+          "percent": 10.5263
+        }
+      ],
+      "sale": [
+        {
+          "label": "An",
+          "amount": 70000000,
+          "percent": 36.8421
+        },
+        {
+          "label": "Bình",
+          "amount": 65000000,
+          "percent": 34.2105
+        },
+        {
+          "label": "Chi",
+          "amount": 55000000,
+          "percent": 28.9474
+        }
+      ]
+    },
+    "categories": [
+      {
+        "category": "Giá vốn",
+        "amount": 130500000
+      },
+      {
+        "id": "DEMO-C01",
+        "category": "Mặt bằng",
+        "amount": 12000000,
+        "source": "demo:accounting",
+        "original_id": "DEMO-C01",
+        "business_at": "2026-10-10T10:00:00+07:00",
+        "synced_at": "2026-10-19T09:00:00Z"
+      },
+      {
+        "id": "DEMO-C02",
+        "category": "Nhân sự",
+        "amount": 15000000,
+        "source": "demo:accounting",
+        "original_id": "DEMO-C02",
+        "business_at": "2026-10-10T10:00:00+07:00",
+        "synced_at": "2026-10-19T09:00:00Z"
+      },
+      {
+        "id": "DEMO-C03",
+        "category": "Marketing",
+        "amount": 5000000,
+        "source": "demo:accounting",
+        "original_id": "DEMO-C03",
+        "business_at": "2026-10-10T10:00:00+07:00",
+        "synced_at": "2026-10-19T09:00:00Z"
+      }
+    ],
+    "inventory_value": 111000000,
+    "warning_count": 2,
+    "aging_count": 2,
+    "aging_value": 42000000
+  },
+  "transactions": [
+    {
+      "id": "DEMO-S001",
+      "source": "demo:sapo",
+      "original_id": "S001",
+      "business_at": "2026-10-02T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z",
+      "channel": "Cửa hàng",
+      "sale": "An",
+      "amount": 45000000,
+      "cost": 30000000,
+      "sku": "D001",
+      "kind": "sale"
+    },
+    {
+      "id": "DEMO-S002",
+      "source": "demo:sapo",
+      "original_id": "S002",
+      "business_at": "2026-10-04T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z",
+      "channel": "Online",
+      "sale": "Bình",
+      "amount": 30000000,
+      "cost": 21000000,
+      "sku": "D002",
+      "kind": "sale"
+    },
+    {
+      "id": "DEMO-S003",
+      "source": "demo:sapo",
+      "original_id": "S003",
+      "business_at": "2026-10-06T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z",
+      "channel": "Cửa hàng",
+      "sale": "An",
+      "amount": 25000000,
+      "cost": 17000000,
+      "sku": "D003",
+      "kind": "sale"
+    },
+    {
+      "id": "DEMO-S004",
+      "source": "demo:sapo",
+      "original_id": "S004",
+      "business_at": "2026-10-08T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z",
+      "channel": "Đối tác",
+      "sale": "Chi",
+      "amount": 20000000,
+      "cost": 14000000,
+      "sku": "D004",
+      "kind": "sale"
+    },
+    {
+      "id": "DEMO-S005",
+      "source": "demo:sapo",
+      "original_id": "S005",
+      "business_at": "2026-10-12T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z",
+      "channel": "Online",
+      "sale": "Bình",
+      "amount": 40000000,
+      "cost": 28000000,
+      "sku": "D005",
+      "kind": "sale"
+    },
+    {
+      "id": "DEMO-S006",
+      "source": "demo:sapo",
+      "original_id": "S006",
+      "business_at": "2026-10-15T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z",
+      "channel": "Cửa hàng",
+      "sale": "Chi",
+      "amount": 35000000,
+      "cost": 24000000,
+      "sku": "D006",
+      "kind": "sale"
+    },
+    {
+      "id": "DEMO-S007",
+      "source": "demo:sapo",
+      "original_id": "S007",
+      "business_at": "2026-10-16T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z",
+      "channel": "Online",
+      "sale": "Bình",
+      "amount": -5000000,
+      "cost": -3500000,
+      "sku": "D002",
+      "kind": "refund"
+    }
+  ],
+  "inventory": [
+    {
+      "id": "DEMO-I1",
+      "sku": "D101",
+      "name": "Túi da • mẫu A",
+      "age_days": 25,
+      "value": 24000000,
+      "source": "demo:price-system",
+      "original_id": "I1",
+      "business_at": "2026-10-19T09:00:00Z",
+      "synced_at": "2026-10-19T09:00:00Z"
+    },
+    {
+      "id": "DEMO-I2",
+      "sku": "D102",
+      "name": "Đồng hồ • mẫu B",
+      "age_days": 72,
+      "value": 45000000,
+      "source": "demo:price-system",
+      "original_id": "I2",
+      "business_at": "2026-10-19T09:00:00Z",
+      "synced_at": "2026-10-19T09:00:00Z"
+    },
+    {
+      "id": "DEMO-I3",
+      "sku": "D103",
+      "name": "Túi da • mẫu C",
+      "age_days": 115,
+      "value": 30000000,
+      "source": "demo:price-system",
+      "original_id": "I3",
+      "business_at": "2026-10-19T09:00:00Z",
+      "synced_at": "2026-10-19T09:00:00Z"
+    },
+    {
+      "id": "DEMO-I4",
+      "sku": "D104",
+      "name": "Phụ kiện • mẫu D",
+      "age_days": 182,
+      "value": 12000000,
+      "source": "demo:price-system",
+      "original_id": "I4",
+      "business_at": "2026-10-19T09:00:00Z",
+      "synced_at": "2026-10-19T09:00:00Z"
+    }
+  ],
+  "costs": [
+    {
+      "id": "DEMO-C01",
+      "category": "Mặt bằng",
+      "amount": 12000000,
+      "source": "demo:accounting",
+      "original_id": "DEMO-C01",
+      "business_at": "2026-10-10T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z"
+    },
+    {
+      "id": "DEMO-C02",
+      "category": "Nhân sự",
+      "amount": 15000000,
+      "source": "demo:accounting",
+      "original_id": "DEMO-C02",
+      "business_at": "2026-10-10T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z"
+    },
+    {
+      "id": "DEMO-C03",
+      "category": "Marketing",
+      "amount": 5000000,
+      "source": "demo:accounting",
+      "original_id": "DEMO-C03",
+      "business_at": "2026-10-10T10:00:00+07:00",
+      "synced_at": "2026-10-19T09:00:00Z"
+    }
+  ],
+  "errors": [
+    {
+      "id": "DEMO-E01",
+      "issue": "Thiếu mã đối chiếu thu tiền",
+      "record": "DEMO-S002",
+      "severity": "Cần kiểm tra",
+      "source": "demo:accounting",
+      "money_impact": 30000000,
+      "repair_steps": "Đối chiếu ID nguồn và chứng từ; chuyển người có thẩm quyền kiểm tra. Không khớp bằng tiền/tên.",
+      "completion": "Có chứng từ đúng khóa và xác nhận được duyệt; demo không tự đánh dấu hoàn tất.",
+      "original_id": "DEMO-E01",
+      "business_at": "2026-10-19T09:00:00Z",
+      "synced_at": "2026-10-19T09:00:00Z"
+    },
+    {
+      "id": "DEMO-E02",
+      "issue": "Tồn trên 180 ngày",
+      "record": "DEMO-I4",
+      "severity": "Ưu tiên",
+      "source": "demo:price-system",
+      "money_impact": 12000000,
+      "repair_steps": "Đối chiếu ID nguồn và chứng từ; chuyển người có thẩm quyền kiểm tra. Không khớp bằng tiền/tên.",
+      "completion": "Có chứng từ đúng khóa và xác nhận được duyệt; demo không tự đánh dấu hoàn tất.",
+      "original_id": "DEMO-E02",
+      "business_at": "2026-10-19T09:00:00Z",
+      "synced_at": "2026-10-19T09:00:00Z"
+    }
+  ]
+}

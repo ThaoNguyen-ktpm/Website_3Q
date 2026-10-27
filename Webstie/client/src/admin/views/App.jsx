@@ -222,7 +222,7 @@ function SaleAi(){
   <div className="sale-ai-bar">
    <div className="sale-ai-tabs" role="group" aria-label="Màn hình Sale AI">{[['results','Bảng giá sale'],['history','Lịch sử']].map(([id,label])=><button key={id} type="button" className={`button ${view===id?'primary':''}`} aria-pressed={view===id} onClick={()=>{setView(id);setAttempt(n=>n+1)}}>{id==='history'&&<Icon name="clock" size={16}/>}{label}</button>)}</div>
   </div>
-  {status==='down'?<div className="catalog-message" role="alert"><p>Sale AI chưa chạy. Chạy <code>npm run dev</code> tại D:\Website_3Q (tự bật Sale AI) hoặc mở shortcut BAOQ AI, rồi bấm Thử lại.</p><button className="button" onClick={()=>setAttempt(n=>n+1)}>Thử lại</button></div>
+  {status==='down'?<div className="catalog-message" role="alert"><p>Sale AI chưa chạy. Chạy <code>npm run dev</code> tại D:\Website_3Q\Webstie (tự bật Sale AI) hoặc mở shortcut BAOQ AI, rồi bấm Thử lại.</p><button className="button" onClick={()=>setAttempt(n=>n+1)}>Thử lại</button></div>
    :status==='ok'?<iframe ref={frame} key={`${embedSrc}#${attempt}`} className="sale-ai-frame" title="Sale AI" src={embedSrc} style={{height}}/>:<p className="catalog-sync-status">Đang kết nối Sale AI…</p>}
  </section>;
 }

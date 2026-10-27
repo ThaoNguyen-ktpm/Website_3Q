@@ -30,7 +30,7 @@ saleAiRouter.use((request, response) => {
     // The framed page (right after npm run dev, Sale AI still starting) retries by itself every 5 seconds.
     if (request.method === 'GET' && request.accepts(['json', 'html']) === 'html') return response.status(503).type('html').set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'")
       .send('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="5"><body style="font:15px system-ui;color:#a29fbd;background:#14131e;padding:24px">Sale AI đang khởi động hoặc chưa chạy, tự thử lại sau 5 giây…</body>');
-    response.status(503).json({ error: { code: 'SALE_AI_DOWN', message: 'Sale AI chưa chạy. Chạy npm run dev tại D:\\Website_3Q để bật.' } });
+    response.status(503).json({ error: { code: 'SALE_AI_DOWN', message: 'Sale AI chưa chạy. Chạy npm run dev tại D:\\Website_3Q\\Webstie để bật.' } });
   });
   request.pipe(upstream);
 });

@@ -66,7 +66,7 @@ function searchCatalog(snapshot, options) {
 if (require.main === module) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    if (!fs.existsSync(SNAPSHOT)) throw new Error('Chưa có danh mục: chạy web (npm run dev tại D:/Website_3Q) để đồng bộ KiotViet.');
+    if (!fs.existsSync(SNAPSHOT)) throw new Error('Chưa có danh mục: chạy web (npm run dev tại D:/Website_3Q/Webstie) để đồng bộ KiotViet.');
     console.log(JSON.stringify(searchCatalog(JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8')), options)));
   } catch (error) {
     console.error(error.message);

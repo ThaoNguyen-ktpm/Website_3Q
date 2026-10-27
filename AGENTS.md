@@ -1,12 +1,12 @@
 # Hướng dẫn Codex — Website_3Q
 
-Áp dụng cho toàn bộ `D:\Website_3Q`: website (`server/`, `client/`) và BossTele (`BossTele/`). Khi làm trong `BossTele/`, đọc thêm `BossTele/AGENTS.md`.
+Áp dụng cho toàn bộ `D:\Website_3Q`: website (`Webstie/server/`, `Webstie/client/`) và BossTele (`Webstie/BossTele/`); mã chạy nằm trong `Webstie/` từ 27/10/2026. Khi làm trong `Webstie/BossTele/`, đọc thêm `Webstie/BossTele/AGENTS.md`.
 
 ## Ponytail dùng chung
 - Khi làm công việc code, đọc `.agents/skills/ponytail/SKILL.md` và áp dụng mức `full` mặc định, trừ khi người dùng chọn mức khác hoặc tắt trong phiên.
 - Các skill review/audit chỉ đọc và báo cáo; không tự sửa code khi người dùng chỉ yêu cầu kiểm tra.
 - Ponytail bổ sung cách làm gọn, không thay đổi phân vai bên dưới. Trả lời và viết báo cáo bằng tiếng Việt, trừ khi người dùng yêu cầu khác.
-- Hướng dẫn cài và gọi skill: `BossTele/docs/PONYTAIL.md`.
+- Hướng dẫn cài và gọi skill: `Webstie/BossTele/docs/PONYTAIL.md`.
 
 ## Trung thực và kiểm chứng
 Ưu tiên đúng, rõ và minh bạch hơn là nghe có vẻ tự tin. Luôn tách: điều đã xác nhận, điều chưa biết, điều đang suy luận.
@@ -37,23 +37,24 @@
 - Dùng trạng thái `ready_for_review` khi bàn giao cho Claude; chỉ ghi `verified` khi có kết quả kiểm tra độc lập. Nếu chưa review, nói rõ code đã hoàn tất nhưng chưa được Claude kiểm tra.
 
 ## Kiểm tra
-- Website: `npm run build` và `npm test` tại `D:\Website_3Q`.
+- Website: `npm run build` và `npm test` tại `D:\Website_3Q\Webstie`.
 - BossTele: `npm test` tại `D:\Website_3Q\BossTele`.
 
 ## Bản đồ repo
 Chỉ ghi cấp thư mục. Khi thêm, xóa hoặc đổi vai trò một thư mục dưới đây, cập nhật mục này trong cùng thay đổi.
 
-- `server/`: API Express + Prisma (TypeScript), test bằng Vitest + supertest.
+- `Webstie/`: thư mục chính của ứng dụng (từ 27/10/2026); `npm run dev`, `npm run build`, `npm test` chạy tại đây. `Webstie/frontend/`: bản giao diện mẫu dùng làm thiết kế.
+- `Webstie/server/`: API Express + Prisma (TypeScript), test bằng Vitest + supertest.
   - `src/routes/` → `src/controllers/` → `src/services/` → `src/models/` (truy cập Prisma).
   - `src/middlewares/`: xác thực, phân quyền, giới hạn tần suất, kiểm tra cùng nguồn, xử lý lỗi.
   - `src/config/`: biến môi trường, quyền, cookie phiên, admin chính.
   - `src/tests/`: test API. `prisma/`: schema, migrations, seed.
-- `client/`: React + Vite + Tailwind (TypeScript).
+- `Webstie/client/`: React + Vite + Tailwind (TypeScript).
   - `src/pages/`: các trang; `src/admin/`: khu quản trị (models, controllers, views, components).
   - `src/api/`: gọi API server; `src/hooks/`, `src/components/`: dùng chung.
   - `src/three/`: mô hình 3D túi Birkin (three.js).
-- `BossTele/`: công cụ Node >= 22 riêng (tìm sản phẩm, chat, định giá, bộ lọc Telegram). `lib/` logic, `test/` test, `docs/` tài liệu. `vendor/` là submodule, không sửa.
-- `tasks/`: spec, result, review từ `TASK-009`. `BossTele/tasks/`: lưu trữ `TASK-001` đến `TASK-008`.
+- `Webstie/BossTele/`: công cụ Node >= 22 riêng (tìm sản phẩm, chat, định giá, bộ lọc Telegram). `lib/` logic, `test/` test, `docs/` tài liệu. `vendor/` là submodule, không sửa.
+- `tasks/`: spec, result, review từ `TASK-009`. `Webstie/BossTele/tasks/`: lưu trữ `TASK-001` đến `TASK-008`.
 - `server/data/`: PDF gốc, chỉ mục tài liệu JSON và cache mô hình embedding cục bộ; không đưa vào Git.
 - `PRODUCT.md`, `DESIGN.md`: mô tả sản phẩm và hệ thống thiết kế giao diện.
 - `.agents/skills/` (cũng là `.claude/skills/`): skill cho agent, không phải code dự án; đã loại khỏi index CodeGraph qua `codegraph.json`.

@@ -9,4 +9,4 @@ dist/
 *.db-wal
 coverage/
 *.tsbuildinfo
-server/data/
+Webstie/server/data/
