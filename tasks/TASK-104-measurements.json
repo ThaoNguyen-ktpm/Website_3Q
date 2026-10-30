@@ -1,0 +1,40 @@
+{
+  "fixture": true,
+  "count": 4474,
+  "dataDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task104-measure-R3Z0dg",
+  "authSession": "unauthenticated; real /api/auth/me returns 401",
+  "phases": {
+    "run": {
+      "ms": 803.3328999999976,
+      "authSamples": 6,
+      "authMaxMs": 574.373599999999
+    },
+    "prepare": {
+      "ms": 70.07370000000083,
+      "authSamples": 5,
+      "authMaxMs": 33.73949999999968
+    },
+    "commit": {
+      "ms": 1120.2377000000015,
+      "authSamples": 87,
+      "authMaxMs": 9.377699999997276
+    }
+  },
+  "bytesAfterRefreshAndRun": 13768638,
+  "timings": [
+    {
+      "kind": "prepare",
+      "totalMs": 56.36569999999847,
+      "saveMs": 25.575299999996787,
+      "publishMs": 1.4583999999995285
+    },
+    {
+      "kind": "commit",
+      "totalMs": 1100.0717000000004,
+      "saveMs": 338.37930000000415,
+      "publishMs": 29.923100000003615
+    }
+  ],
+  "batchWrites": false,
+  "bytesAfterCommit": 19821776
+}

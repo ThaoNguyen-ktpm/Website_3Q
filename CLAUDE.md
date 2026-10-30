@@ -1,6 +1,6 @@
 # Hướng dẫn Claude — Website_3Q
 
-Áp dụng cho toàn bộ `D:\Website_3Q`: website (`Webstie/server/`, `Webstie/client/`) và BossTele (`Webstie/BossTele/`); mã chạy nằm trong `Webstie/` từ 27/10/2026. Đọc `AGENTS.md` và `tasks/README.md` trước khi làm việc. Khi công việc chạm vào `BossTele/`, đọc thêm `BossTele/CLAUDE.md`.
+Áp dụng cho toàn bộ `D:\Website_3Q`: website (`Webstie/server/`, `Webstie/frontend/`) và BossTele (`Webstie/BossTele/`); mã chạy nằm trong `Webstie/` từ 27/10/2026. Đọc `AGENTS.md` và `tasks/README.md` trước khi làm việc. Khi công việc chạm vào `BossTele/`, đọc thêm `BossTele/CLAUDE.md`.
 
 ## Ponytail dùng chung
 @.agents/skills/ponytail/SKILL.md
@@ -47,3 +47,11 @@
 - Ghi review vào `tasks/TASK-xxx-review.md`: phạm vi đã xem, bằng chứng, lỗi theo mức độ, file/dòng liên quan và kết luận.
 - Nếu có lỗi, ghi `changes_requested` và bàn giao lại cho Codex sửa. Sau đó kiểm tra lại thay đổi và nguy cơ hồi quy liên quan.
 - Chỉ kết luận `verified` khi tiêu chí nghiệm thu đã được kiểm chứng. Với phần không chạy được, ghi rõ `blocked` hoặc giới hạn kiểm tra; không gọi mô phỏng là xác minh tích hợp thật.
+
+## Sale AI sau TASK-104
+
+Sale AI là lõi JS trong máy chủ Express (`Webstie/server/src/sale-ai/`), API và giao diện cũ ở `/sale-ai/`, sau đăng nhập, `sale.manage` và same-origin. Không bật tiến trình Sale AI riêng. Kho mới ở `Webstie/server/data/sale-ai/` (gitignored), không nhập dữ liệu cũ.
+
+Test lõi: `node --test *.test.js` tại `Webstie/server/src/sale-ai/test`, hoặc `npm run test:sale-ai` tại server. `npm test` server chạy Vitest riêng rồi test lõi; không để Vitest quét node:test. Build chép JS và public vào dist.
+
+Đánh số task phải tính cả `D:\BaoQ-AI\tasks` cũ; không tái sử dụng số đã có ở đó. Kho cũ giữ nguyên để lưu trữ. TASK-104 chưa cho phép kiểm thử ghi/khôi phục thật và không bật batch sản xuất. Đọc result/review để biết phần chưa xác minh trên máy đang chạy.

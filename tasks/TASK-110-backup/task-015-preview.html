@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TASK-015 — Kiểm tra mô phỏng</title></head>
+<body style="margin:0"><div id="fixture-controls"><strong>Mô phỏng cục bộ TASK-015 · Không gọi API/DB thật</strong> <label>Vai trò thử <select id="fixture-role"></select></label> <label>Dữ liệu thử <select id="fixture-state"><option value="normal">Bình thường</option><option value="empty">Rỗng</option><option value="error">Lỗi máy chủ</option></select></label></div><div id="root" class="admin-page"></div>
+<script type="module">
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import App from './src/admin/views/App.jsx';
+import {roleNames,catalog,roleLabels,rolePermissions} from '/@fs/D:/Website_3Q/Webstie/server/src/config/permissions.ts';
+let roles=roleNames.map(role=>({role,label:roleLabels[role],editable:role!=='ADMIN',permissions:rolePermissions[role].map(key=>catalog.find(p=>p.key===key))}));
+if (!import.meta.env.DEV) throw new Error('Chỉ dùng cho kiểm tra dev.');
+const owner={id:1,email:'owner@example.test',fullName:'Chủ cửa hàng mẫu',phone:null,role:'ADMIN',roleLabel:roleLabels.ADMIN,status:'ACTIVE',lastLoginAt:'2026-10-16T03:00:00Z'};
+let staff=[owner,{...owner,id:2,email:'sales@example.test',fullName:'Nhân viên bán hàng mẫu',role:'STAFF',roleLabel:roleLabels.STAFF,lastLoginAt:null}];
+const roleSelect=document.querySelector('#fixture-role'),stateSelect=document.querySelector('#fixture-state');
+for(const role of roles){const option=document.createElement('option');option.value=role.role;option.textContent=role.label;roleSelect.append(option)}
+// This dedicated fixture intercepts every fetch; it never forwards a request to a real API.
+window.fetch=async(path,options={})=>{
+ await new Promise(resolve=>setTimeout(resolve,150));
+ const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
+ if(stateSelect.value==='error')return reply({error:{message:'Lỗi máy chủ mô phỏng. Hãy thử lại.'}},500);
+ if(String(path).startsWith('/api/staff/roles/')&&options.method==='PUT'){const role=path.split('/')[4],keys=JSON.parse(options.body).permissions;const saved={...roles.find(r=>r.role===role),permissions:catalog.filter(p=>keys.includes(p.key))};roles=roles.map(r=>r.role===role?saved:r);return reply({role:saved})}
+ if(path==='/api/staff/roles')return reply({roles,catalog});
+ if(path==='/api/staff'&&!options.method)return reply({staff:stateSelect.value==='empty'?[]:staff});
+ if(path==='/api/staff'&&options.method==='POST'){
+  const draft=JSON.parse(options.body);
+  if(staff.some(person=>person.email===draft.email.trim().toLowerCase()))return reply({error:{message:'Email này đã có trong danh sách nhân viên.'}},409);
+  const saved={...draft,id:Math.max(...staff.map(person=>person.id))+1,email:draft.email.trim().toLowerCase(),fullName:draft.fullName.trim(),roleLabel:roleLabels[draft.role],lastLoginAt:null};staff=[...staff,saved];return reply({staff:saved},201);
+ }
+ if(String(path).startsWith('/api/staff/')&&options.method==='PATCH'){
+  const id=Number(path.split('/').pop()),draft=JSON.parse(options.body),saved={...staff.find(person=>person.id===id),...draft,roleLabel:roleLabels[draft.role]};staff=staff.map(person=>person.id===id?saved:person);return reply({staff:saved});
+ }
+ return reply({error:{message:'Fixture chặn yêu cầu ngoài phạm vi.'}},404);
+};
+const root=createRoot(document.querySelector('#root'));
+function render(){const role=roleSelect.value;root.render(React.createElement(App,{key:role+stateSelect.value,user:{...owner,role,roleLabel:roleLabels[role],permissions:rolePermissions[role]},onRefreshUser:async()=>{},onSignOut:()=>alert('Đăng xuất mô phỏng'),signingOut:false,signOutError:''}))}
+roleSelect.addEventListener('change',render);stateSelect.addEventListener('change',render);render();
+</script></body></html>

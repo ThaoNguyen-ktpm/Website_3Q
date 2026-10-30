@@ -1,34 +1,34 @@
-// TASK-037: every "Chọn tất cả → Cập nhật Kiot + Sapo" situation, end to end: the website (/sale-ai/ proxy with login,
-// permission and same-origin checks) → the real Sale AI server in fixture mode → fake Kiot and Sapo. Nothing real is written.
+// TASK-037: every "Chọn tất cả → Cập nhật Kiot + Sapo" situation, end to end: the website (/sale-ai/ with login,
+// permission and same-origin checks) → the embedded Sale AI handler in fixture mode → fake Kiot and Sapo. Nothing real is written.
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { pathToFileURL } from 'node:url';
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { app } from '../app.js';
-import { env } from '../config/env.js';
+import { getSaleAi } from '../sale-ai/runtime.js';
+vi.mock('../sale-ai/runtime.js', () => ({getSaleAi: vi.fn()}));
 
-vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:5173', SALE_AI_URL: 'http://127.0.0.1:1' } }));
+vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:8787' } }));
 vi.mock('../middlewares/requireAuth.js', () => ({ requireAuth: (req: any, res: any, next: any) => {
   if (!req.get('X-Test-User')) return res.status(401).json({ error: { message: 'Bạn chưa đăng nhập.' } });
   res.locals.user = { id: 1, permissions: ['sale.manage'] }; next();
 } }));
 
-const saleAiDir = process.env.BAOQ_AI_DIR || 'D:/BaoQ-AI';
+const saleAiDir = new URL('../sale-ai/', import.meta.url);
 // Slow (real Sale AI journal on disk): run with SALE_AI_E2E=1 npx vitest run src/tests/saleAiUpdateAll.test.ts
-const available = process.env.SALE_AI_E2E === '1' && existsSync(`${saleAiDir}/server.js`);
+const available = process.env.SALE_AI_E2E === '1' && existsSync(new URL('core.js',saleAiDir));
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // kiotLot: one bulk Kiot write of a lot (TASK-102, 50 products); kiotUpdate: one product (restore, old engine).
 type Hooks = { kiotLot?: (codes: string[], call: number) => Promise<void> | void; kiotUpdate?: (code: string, call: number) => Promise<void> | void; sapoUpdate?: (sku: string) => Promise<void> | void };
 async function start(count: number, { p0 = 35e6, sapoMissing = [] as string[], hooks = {} as Hooks, extra = [] as { code: string; price: number }[] } = {}) {
-  const { createApp } = await import(pathToFileURL(`${saleAiDir}/server.js`).href);
-  const { normalizeProduct } = await import(pathToFileURL(`${saleAiDir}/lib/kiot.js`).href);
-  const { SplitStore } = await import(pathToFileURL(`${saleAiDir}/lib/split-store.js`).href);
-  // Real Sale AI stores in a temp folder: same save cost as production, nothing touches D:BaoQ-AIdata.
+  const { createSaleAi } = await import('../sale-ai/core.js');
+  const { normalizeProduct } = await import('../sale-ai/lib/kiot.js');
+  const { SplitStore } = await import('../sale-ai/lib/split-store.js');
+  // Real Sale AI stores in a temp folder: same save cost as production, no legacy store is touched.
   const dir = mkdtempSync(join(tmpdir(), 'sale-ai-e2e-'));
   const raw = [...Array.from({ length: count }, (_, n) => ({ code: `SP${String(n + 1).padStart(6, '0')}`, price: p0 })), ...extra];
   const kiot = raw.map((item, n) => normalizeProduct({ id: n + 1, code: item.code, name: `Túi ${n + 1}`, basePrice: item.price, createdDate: '2026-09-01T09:00:00',
@@ -38,7 +38,7 @@ async function start(count: number, { p0 = 35e6, sapoMissing = [] as string[], h
   const writes = { kiot: [] as string[], sapo: [] as string[] };
   // Kiot lists products by modification time; every change here (ours or a hand edit) goes through edit().
   const modified = new Map<number, number>();
-  const edit = (product: any, fields: object) => { Object.assign(product, fields); modified.set(product.id, Date.parse('2026-10-19T03:00:00Z')); };
+  const edit = (product: any, fields: object) => { Object.assign(product, fields); modified.set(product.id, Date.parse('2026-11-16T03:00:00Z')); };
   const client: any = {
     all: async () => structuredClone(kiot),
     product: async (id: number) => structuredClone(kiot.find((p: any) => p.id === id)),
@@ -79,12 +79,10 @@ async function start(count: number, { p0 = 35e6, sapoMissing = [] as string[], h
     },
   };
   const timings: any[] = [];
-  const sale = await createApp({ store: new SplitStore(join(dir, 'state.json')), liveStore: new SplitStore(join(dir, 'kiot-state.json')), sapoStore: new SplitStore(join(dir, 'sapo-state.json'), { kind: 'sapo' }), client, sapoClient, source: { load: async () => [] },
-    fixture: true, batchWrites: true, clock: () => new Date('2026-10-19T03:00:00Z') });
+  const sale = await createSaleAi({ store: new SplitStore(join(dir, 'state.json')), liveStore: new SplitStore(join(dir, 'kiot-state.json')), sapoStore: new SplitStore(join(dir, 'sapo-state.json'), { kind: 'sapo' }), client, sapoClient, source: { load: async () => [] },
+    fixture: true, batchWrites: true, clock: () => new Date('2026-11-16T03:00:00Z') });
   sale.live.timingSink = (t: any) => { timings.push(t); };
-  await new Promise<void>(resolve => sale.server.listen(0, '127.0.0.1', resolve));
-  env.SALE_AI_URL = `http://127.0.0.1:${(sale.server.address() as AddressInfo).port}`;
-  servers.push(sale.server);
+  vi.mocked(getSaleAi).mockReturnValue(sale);
   return { sale, kiot, sapos, writes, timings, edit, get kiotCalls() { return kiotCalls; }, get kiotLots() { return kiotLots; } };
 }
 const servers: http.Server[] = [];
@@ -94,7 +92,7 @@ afterEach(async () => { await Promise.all(servers.splice(0).map(server => new Pr
 // Host as Vite's proxy sends it (rewritten to the API address), not the browser's.
 const get = (path: string) => request(app).get(`/sale-ai${path}${path.includes('?') ? '&' : '?'}dataset=real`).set('X-Test-User', '1').set('Host', '127.0.0.1:4000');
 const post = (path: string, body: object = {}) => request(app).post(`/sale-ai${path}?dataset=real`).set('X-Test-User', '1').set('Host', '127.0.0.1:4000')
-  .set('Origin', 'http://localhost:5173').send({ ...body, dataset: 'real' });
+  .set('Origin', 'http://localhost:8787').send({ ...body, dataset: 'real' });
 async function loadTable({ sapoIndex = true } = {}) {
   expect((await post('/api/kiot/refresh')).status).toBe(200);
   if (sapoIndex) expect((await post('/api/sapo/refresh')).status).toBe(200);
@@ -123,12 +121,12 @@ describe.skipIf(!available)('Sale AI "cập nhật toàn bộ" through the websi
     console.log('S1', { count: selection.codes.length, commitMs: Math.round(t?.totalMs), saveMs: Math.round(t?.saveMs), publishMs: Math.round(t?.publishMs) }, summary(result.body));
     expect(result.body.outcome).toBe('success');
     expect(f.writes.kiot.length).toBe(Number(process.env.S1_COUNT || 50));
-    expect(f.kiot.every((p: any) => p.currentPrice === 33_400_000)).toBe(true); // P0 35tr, start 01/10 + 15 days (TASK-039) → 19/10 is M2 = 35 - 1.6
+    expect(f.kiot.every((p: any) => p.currentPrice === 33_400_000)).toBe(true); // TASK-105 batch: 01/11 is M1; 16/11 is M2 = 35 - 1.6
     expect(f.sapos.every(p => p.variants[0].price === 33_400_000)).toBe(true);
   });
 
   // Commit time grows faster than the product count (journal saved before every request): 100 → 9,7 s, 200 → 31,6 s, 300 → 50,4 s.
-  it('2. scale: selecting and checking 4.500 products goes through the proxy in one request each', async () => {
+  it('2. scale: selecting and checking 4.500 products goes through the embedded router in one request each', async () => {
     const f = await start(4500);
     const started = Date.now();
     const { selection, prepare } = await selectAllAndPrepare();
@@ -222,7 +220,7 @@ describe.skipIf(!available)('Sale AI "cập nhật toàn bộ" through the websi
     await new Promise(resolve => web.once('listening', resolve));
     const body = JSON.stringify({ id: prepare.body.id, confirmed: true, dataset: 'real' });
     const aborted = http.request({ host: '127.0.0.1', port: (web.address() as AddressInfo).port, method: 'POST', path: '/sale-ai/api/kiot/commit?dataset=real',
-      headers: { 'X-Test-User': '1', Host: '127.0.0.1:4000', Origin: 'http://localhost:5173', 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } });
+      headers: { 'X-Test-User': '1', Host: '127.0.0.1:4000', Origin: 'http://localhost:8787', 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } });
     aborted.on('error', () => {});
     aborted.end(body);
     await sleep(150);

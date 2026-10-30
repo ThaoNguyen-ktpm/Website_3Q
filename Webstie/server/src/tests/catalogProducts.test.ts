@@ -3,7 +3,7 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { app } from '../app.js';
 import { ApiError } from '../middlewares/errorHandler.js';
-vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:5173', SESSION_SECRET: 'catalog-test-secret-at-least-32-characters' } }));
+vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:8787', SESSION_SECRET: 'catalog-test-secret-at-least-32-characters' } }));
 const actor = vi.hoisted(() => ({ loggedIn: true, permissions: ['products.view'] as string[] }));
 vi.mock('../middlewares/requireAuth.js', () => ({ requireAuth: (_req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (!actor.loggedIn) { res.status(401).json({ error: { code: 'UNAUTHENTICATED' } }); return; }
@@ -12,7 +12,7 @@ vi.mock('../middlewares/requireAuth.js', () => ({ requireAuth: (_req: express.Re
 const store = vi.hoisted(() => ({ products: vi.fn(), forceSync: vi.fn() }));
 vi.mock('../services/catalogStore.js', async importOriginal => ({ ...await importOriginal<typeof import('../services/catalogStore.js')>(), catalogStore: store }));
 beforeEach(() => { actor.loggedIn = true; actor.permissions = ['products.view']; vi.clearAllMocks(); });
-const sync = () => request(app).post('/api/catalog/sync').set('Origin', 'http://localhost:5173');
+const sync = () => request(app).post('/api/catalog/sync').set('Origin', 'http://localhost:8787');
 
 describe('merged catalog HTTP boundary', () => {
   it('requires authentication and products.view on both endpoints', async () => {

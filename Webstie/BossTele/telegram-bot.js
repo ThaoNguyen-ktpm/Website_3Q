@@ -15,6 +15,7 @@ const { parseCommand, REJECT } = require('./lib/chat-commands');
 const { storeQuestion } = require('./lib/telegram-product-guard');
 const { render } = require('./chat');
 const { createSalePricer } = require('./sale-price');
+const { extractSkus, matchingSkus, skuChoice } = require('./lib/sku');
 const { createMemory } = require('./lib/boss-memory');
 const { createPriceFeedback } = require('./lib/price-feedback');
 const { createAccess } = require('./lib/telegram-access');
@@ -143,7 +144,8 @@ const tr = value => `${(value / 1e6).toLocaleString('vi-VN', { maximumFractionDi
 const percent = (part, base) => `${(Math.round(part / base * 1000) / 10).toLocaleString('vi-VN')}%`;
 /** "58tr", "58,5 triệu", "58tr5", "58.000.000", or a bare 1–999 (triệu); SKUs and percentages are ignored. */
 function parseMoney(text) {
-  const t = fold(text).replace(/\bsp\d+\b/g, ' ');
+  const t = fold(extractSkus(text).sort((a, b) => b.length - a.length)
+    .reduce((rest, sku) => rest.replace(new RegExp(sku, 'gi'), ' '), text));
   let match = t.match(/(\d+(?:[.,]\d+)?)\s*(?:trieu|tr)(?![a-z])\s*(\d{1,3}(?![\d%]))?/);
   if (match) return Math.round(Number(match[1].replace(',', '.')) * 1e6 + (match[2] ? Number(match[2]) * 10 ** (6 - match[2].length) : 0));
   match = t.match(/\d{1,3}(?:[.,]\d{3}){2,}|\d{7,}/);
@@ -253,14 +255,23 @@ function createBot({ api, allowFrom, newSession, ask = askClaude, quick = async 
     for (const product of answer.products ?? []) await sendCard(chatId, product);
   }
   // Find the products like a normal look-up (words other than "sale"), then price them with the Sale AI formula.
+  async function skuProduct(sku) {
+    const answer = await quick([{ role: 'user', content: sku }]);
+    const candidates = matchingSkus(answer?.products ?? [], sku);
+    return { product: candidates.length === 1 ? candidates[0] : null,
+      choice: candidates.length > 1 ? skuChoice(candidates) : !candidates.length && answer?.reply?.startsWith('Có nhiều sản phẩm cùng mã gốc.') ? answer.reply : null };
+  }
   async function saleAnswer(chatId, text) {
     // SKUs win (a pasted card has one); otherwise search with the words other than "sale".
-    const skus = [...new Set((text.match(/\bSP\d{4,}\b/gi) ?? []).map(sku => sku.toUpperCase()))].slice(0, 10);
+    const skus = [...new Set(extractSkus(text))].slice(0, 10);
     const lookups = skus.length ? skus : [text.replace(saleWords, ' ').replace(/\s+/g, ' ').trim() || text];
     const products = [];
     for (const lookup of lookups) {
-      for (const product of (await quick([{ role: 'user', content: lookup }]))?.products ?? []) {
-        if ((!skus.length || product.sku === lookup) && !products.some(item => item.sku === product.sku)) products.push(product);
+      const resolved = skus.length ? await skuProduct(lookup) : null;
+      if (resolved?.choice) { await send(chatId, resolved.choice); return true; }
+      const items = resolved ? (resolved.product ? [resolved.product] : []) : (await quick([{ role: 'user', content: lookup }]))?.products ?? [];
+      for (const product of items) {
+        if (!products.some(item => item.sku === product.sku)) products.push(product);
       }
     }
     if (!products.length) return false;
@@ -276,8 +287,9 @@ function createBot({ api, allowFrom, newSession, ask = askClaude, quick = async 
   // "tìm con này trên thị trường": Claude searches the web (skill tra-gia-thi-truong) with the shop's listing; 1–3 minutes, so typing is kept alive.
   async function marketAnswer(chatId, text) {
     const products = [];
-    for (const sku of [...new Set((text.match(/\bSP\d{4,}\b/gi) ?? []).map(sku => sku.toUpperCase()))].slice(0, 3)) {
-      const product = (await quick([{ role: 'user', content: sku }]))?.products?.find(item => item.sku === sku);
+    for (const sku of [...new Set(extractSkus(text))].slice(0, 3)) {
+      const { product, choice } = await skuProduct(sku);
+      if (choice) return send(chatId, choice);
       if (product) products.push(product);
     }
     await send(chatId, 'Đang tra giá thị trường, khoảng 1–3 phút…');
@@ -293,8 +305,9 @@ function createBot({ api, allowFrom, newSession, ask = askClaude, quick = async 
   }
   // Same cards as web answers for the first 10 SKUs Claude mentions, looked up through the web server.
   async function sendMentioned(chatId, reply) {
-    for (const sku of [...new Set(reply.match(/\bSP\d{4,}\b/g) ?? [])].slice(0, 10)) {
-      const product = (await quick([{ role: 'user', content: sku }]))?.products?.find(item => item.sku === sku);
+    for (const sku of [...new Set(extractSkus(reply))].slice(0, 10)) {
+      const { product, choice } = await skuProduct(sku);
+      if (choice) { await send(chatId, choice); continue; }
       if (product) await sendCard(chatId, product);
     }
   }
@@ -321,13 +334,15 @@ function createBot({ api, allowFrom, newSession, ask = askClaude, quick = async 
   const askOffer = (chatId, buttons) => send(chatId, 'Khách trả bao nhiêu? Gõ số, ví dụ 58tr.', keyboard([buttons]));
   // The SKU in the question, else the last SKU of the chat ("thế giá chốt nên là nhiu" right after a card).
   async function closeProduct(chatId, text) {
-    const sku = text.match(/\bSP\d{4,}\b/i)?.[0]?.toUpperCase()
-      ?? [...(histories.get(chatId) ?? [])].reverse().map(turn => turn.content.match(/\bSP\d{4,}\b/)?.[0]).find(Boolean);
+    const sku = extractSkus(text)[0]
+      ?? [...(histories.get(chatId) ?? [])].reverse().filter(turn => turn.role === 'user').map(turn => extractSkus(turn.content).at(-1)).find(Boolean);
     if (!sku) return null;
-    return (await quick([{ role: 'user', content: sku }]))?.products?.find(item => item.sku === sku) ?? null;
+    return skuProduct(sku);
   }
   async function closeStart(chatId, text) {
-    const product = await closeProduct(chatId, text);
+    const resolved = await closeProduct(chatId, text);
+    if (resolved?.choice) { await send(chatId, resolved.choice); return true; }
+    const product = resolved?.product;
     if (!product) return false;
     let row = null;
     try { row = salePrices ? (await salePrices([product.sku])).rows[0] ?? null : null; } catch { /* the card still has price and stock */ }

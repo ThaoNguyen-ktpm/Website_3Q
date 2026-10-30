@@ -148,3 +148,228 @@ dialog.rec-dialog[open]{animation:app-dlg-in var(--dur-3) var(--ease-out)}
 /* Tables scroll sideways instead of breaking IDs and amounts mid-value */
 .table-scroll td,.table-scroll th{white-space:nowrap}
 @media (max-width:699px){.band.slim .slim-actions{flex-direction:column;align-items:stretch}.band.slim .slim-actions .ghost-btn{justify-content:center}}
+
+/* Bảo 2026-10-27: real sign-in page, light and calm (replaces the old video page). */
+.login-dialog{position:fixed;inset:0;margin:auto;width:min(400px,calc(100% - 32px));padding:0;border:0;border-radius:var(--r-lg);background:transparent;overflow:visible}
+.login-dialog::backdrop{background:rgba(20,16,10,.55)}
+.login-dialog[open]{animation:login-in .18s var(--ease-out)}
+@keyframes login-in{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){.login-dialog[open],.login-spin{animation:none}}
+.login-close{position:absolute;top:6px;right:6px;z-index:1;color:var(--champagne-light)}
+.login-close:hover{color:#fff}
+.header-login{color:var(--champagne-light)}
+.header-login:hover{color:#fff}
+.login-card{overflow:hidden;background:var(--paper);border-radius:var(--r-lg);box-shadow:var(--shadow-sheet);text-align:center}
+.login-band{height:184px;background:var(--espresso);border-bottom:1px solid var(--champagne)}
+.login-band img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 47%}
+.login-body{display:grid;gap:14px;padding:28px 32px 32px}
+.login-kicker{margin:0;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--walnut)}
+.login-card h1{margin:-6px 0 0;font-family:var(--serif);font-weight:400;font-size:32px;line-height:1.15;color:var(--ink)}
+.login-lede{margin:0;color:var(--muted);font-size:14px}
+.login-google{min-height:44px;display:flex;justify-content:center}
+.login-status{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin:0;color:var(--muted);font-size:13px}
+.login-spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--walnut);border-radius:50%;animation:login-spin .8s linear infinite}
+@keyframes login-spin{to{transform:rotate(360deg)}}
+.login-or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}
+.login-or::before,.login-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.login-note{margin:0;padding:12px 14px;border-radius:var(--r-md);background:var(--mist);color:var(--muted);font-size:13px;line-height:1.5;text-align:left}
+.login-note strong{color:var(--ink);font-weight:600}
+.login-error{margin:0;padding:10px 14px;border-radius:var(--r-md);background:var(--danger-bg);color:var(--danger);font-size:13px;line-height:1.5;text-align:left}
+@media (max-width:420px){.login-band{height:150px}.login-body{padding:24px 20px 24px}}
+.header-user{display:inline-flex;align-items:center;gap:var(--s2,8px);color:var(--on-dark-muted);font-size:13px}
+.header-user button{min-height:36px;padding:0 12px;border:1px solid var(--line-dark);border-radius:var(--r-sm);background:none;color:#fff;font:inherit;cursor:pointer}
+.header-user button:hover{border-color:var(--champagne-light)}
+@media (max-width:699px){.header-user .user-name{display:none}.header-user button{min-height:44px}}
+
+/* Bảo 2026-10-27: real pages (Price System, Nhân viên, Nhật ký) in the Webstie look. */
+.ws-stack{display:grid;gap:var(--s4);align-content:start}
+.ws-searchbar{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center}
+.ws-input{flex:1 1 240px;min-width:0;min-height:44px;padding:0 var(--s3);border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;font:inherit;font-size:15px;color:var(--ink)}
+.ws-input:focus{outline:0;border-color:var(--walnut);box-shadow:0 0 0 3px rgba(104,69,45,.15)}
+.ws-narrow{flex:0 1 160px}
+.ws-muted{margin:0;color:var(--muted);font-size:14px}
+.ws-sub{display:block;color:var(--muted);font-size:12px}
+.ws-note{margin:0;padding:var(--s3) var(--s4);border-radius:var(--r-md);background:var(--caution-bg);color:var(--caution);font-size:14px}
+.ws-msg{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s4);border-radius:var(--r-md);background:var(--danger-bg);color:var(--danger)}
+.ws-msg p{margin:0}
+.ws-error{display:block;margin:0;color:var(--danger);font-size:13px}
+.ws-empty{padding:var(--s7) var(--s4);text-align:center;border:1px dashed var(--line);border-radius:14px;color:var(--muted)}
+.ws-empty strong{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.ws-empty p{margin:0}
+.ws-table{padding:var(--s2) var(--s4)}
+.ws-nowrap{white-space:nowrap}
+.ws-details{font-size:13px;line-height:1.5;color:var(--muted)}
+.ws-person{display:flex;align-items:center;gap:var(--s3)}
+.ws-person small{display:block;color:var(--muted);font-size:12px}
+.ws-avatar{display:inline-grid;place-items:center;width:34px;height:34px;flex-shrink:0;border-radius:50%;background:#efe7dc;color:#5a3a20;font-size:12px;font-weight:600}
+.ws-actions{display:inline-flex;flex-wrap:wrap;gap:var(--s2)}
+.btn-sm{min-height:36px;padding:0 var(--s3);font-size:13px}
+.ws-link{display:block;margin-top:var(--s2);min-height:36px;font-size:12px}
+.ws-frame{display:block;width:100%;border:1px solid var(--line);border-radius:14px;background:#fff}
+.ws-form{display:grid;gap:var(--s4)}
+.ws-perms{margin:0;padding:var(--s4);border:1px solid var(--line);border-radius:var(--r-md);display:grid;gap:0}
+.ws-perms legend{padding:0 6px;font-weight:600;font-size:14px}
+.ws-perms .btn{justify-self:start;margin-top:var(--s3)}
+.ws-form-actions{display:flex;gap:var(--s3);justify-content:flex-end;padding-top:var(--s2);border-top:1px solid var(--line)}
+.pill{display:inline-flex;align-items:center;min-height:24px;padding:0 10px;border-radius:999px;background:var(--mist);color:var(--ink);font-size:12px;white-space:nowrap}
+.pill.is-ok{background:var(--ok-bg);color:var(--ok)}
+.pill.is-caution{background:var(--caution-bg);color:var(--caution)}
+.pill.is-danger{background:var(--danger-bg);color:var(--danger)}
+.pill.is-warm{background:#efe7dc;color:#5a3a20}
+.ps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--s4)}
+.ps-card{display:grid;gap:4px;align-content:start;padding:var(--s3);text-align:left;background:var(--paper);border:1px solid var(--card-border);border-radius:14px;cursor:pointer;transition:border-color var(--dur-1) var(--ease-std),transform var(--dur-1) var(--ease-std)}
+.ps-card:hover{border-color:var(--walnut);transform:translateY(-1px)}
+.ps-card strong{font-size:14px;line-height:1.35;color:var(--ink)}
+.ps-card small{color:var(--muted);font-size:12px}
+.ps-card b{font-size:15px;color:var(--walnut)}
+.ps-card.is-skeleton{cursor:default}
+.ps-card.is-skeleton>span:not(.ps-img){height:12px;border-radius:6px;background:var(--mist)}
+.ps-img{display:grid;place-items:center;aspect-ratio:1;margin-bottom:var(--s2);border-radius:10px;background:var(--mist);overflow:hidden;color:var(--muted);font-size:12px}
+.ps-img img{width:100%;height:100%;object-fit:cover}
+.ps-img.is-loading{animation:ps-pulse 1.2s ease-in-out infinite}
+@keyframes ps-pulse{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.ps-img.is-loading{animation:none}}
+.ps-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.ps-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3);margin-top:var(--s4);color:var(--muted);font-size:14px}
+.ps-pager label{display:inline-flex;align-items:center;gap:var(--s2)}
+.ps-pages{display:inline-flex;align-items:center;gap:4px}
+.ps-pages button{min-width:36px;min-height:36px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);color:var(--ink)}
+.ps-pages button:disabled{opacity:.4}
+.ps-pages input{width:56px;min-height:36px;text-align:center;border:1px solid var(--line);border-radius:var(--r-sm)}
+.ps-detail{display:grid;gap:var(--s4)}
+.ps-gallery .ps-img{margin:0}
+.ps-thumbs{display:flex;gap:6px;overflow-x:auto;margin-top:var(--s2)}
+.ps-thumbs button{width:56px;flex-shrink:0;padding:0;border:2px solid transparent;border-radius:8px;background:none}
+.ps-thumbs button[aria-pressed="true"]{border-color:var(--walnut)}
+.ps-thumbs .ps-img{margin:0;border-radius:6px}
+.ps-numbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}
+.ps-numbers div{display:grid;gap:2px;padding:var(--s3);border-radius:var(--r-md);background:var(--mist)}
+.ps-numbers span{color:var(--muted);font-size:12px}
+.ps-numbers strong{font-size:15px}
+.ps-numbers del{color:var(--muted);font-size:12px}
+.ps-description{margin:0;white-space:pre-line;font-size:14px;line-height:1.6}
+
+/* Bảo 2026-10-27: Điều hành, Price System and Chính sách span the full window width. */
+.wrap-wide,.ops-layout{max-width:none}
+
+/* Bảo 2026-10-27: no visible scrollbars on the page, the menu and side panels (they still scroll). */
+html,body,.level,.sheet-body,.dialog{scrollbar-width:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar,.level::-webkit-scrollbar,.sheet-body::-webkit-scrollbar,.dialog::-webkit-scrollbar{display:none}
+
+/* Bảo 2026-10-27: header logo = the shop site's wordmark (D:/HTML assets/baoq-wordmark-bright-4k.png), same 200x46 crop. */
+.brand{padding:5px var(--s3)}
+.wordmark-img{display:block;width:200px;height:46px;object-fit:cover;object-position:center;filter:brightness(0) invert(1)}
+@media (max-width:699px){.site-header .brand{padding:12px var(--s2)}.wordmark-img{width:138px;height:32px}}
+
+/* Bảo 2026-10-27, design v3: slimmer work band, signed-in home tiles, account button, sidebar tags. */
+.band.slim{padding:calc(var(--header-h) + 10px) 0 20px}
+.band.slim .slim-top{margin-bottom:4px}
+.slim-title{font-size:28px}
+.hello{padding:calc(var(--header-h) + var(--s6)) 0 72px}
+.hello-date{margin:0;color:var(--on-dark-muted);font-size:14px}
+.hello-date::first-letter{text-transform:uppercase}
+.hello h1{margin:6px 0 0;font-size:40px}
+.app-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s4);margin-top:-44px;margin-bottom:var(--s2);position:relative;z-index:1}
+.app-tile{display:grid;gap:6px;align-content:start;min-height:156px;padding:20px;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(20,16,10,.06);color:var(--ink);text-decoration:none;transition:border-color var(--dur-1) var(--ease-std),transform var(--dur-1) var(--ease-std)}
+a.app-tile:hover{border-color:var(--walnut);transform:translateY(-1px)}
+.tile-ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:#efe7dc;color:var(--walnut)}
+.tile-ico svg{width:20px;height:20px}
+.app-tile strong{margin-top:6px;font-size:17px}
+.tile-text{color:var(--muted);font-size:13px}
+.tile-tag{margin-top:auto;padding-top:6px;font-size:12px;font-weight:600;color:var(--walnut)}
+.tile-tag.is-real::before{content:"● ";color:var(--ok)}
+.app-tile.is-soon{background:var(--mist);box-shadow:none}.app-tile.is-soon .tile-tag{color:var(--muted)}
+@media (max-width:1099px){.app-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:599px){.app-tiles{grid-template-columns:minmax(0,1fr)}.hello h1{font-size:30px}.app-tile{min-height:0}}
+@media (prefers-reduced-motion:reduce){a.app-tile:hover{transform:none}}
+.live{margin-left:auto;padding:1px 6px;border-radius:999px;background:var(--ok-bg);color:var(--ok);font-size:10px;font-weight:700;letter-spacing:.04em}
+.side-fold{margin:0 0 var(--s5)}
+.side-fold summary{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 var(--s3);border-radius:var(--r-sm);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;list-style:none}
+.side-fold summary::-webkit-details-marker{display:none}
+.side-fold summary::before{content:"▸";font-size:11px}.side-fold[open] summary::before{content:"▾"}
+.side-fold summary:hover{background:var(--mist)}
+.side-fold ul{margin:0}
+.acct{position:relative}
+.acct summary{display:flex;align-items:center;gap:8px;min-height:44px;color:#fff;font-size:13px;cursor:pointer;list-style:none}
+.acct summary::-webkit-details-marker{display:none}
+.acct-av{width:32px;height:32px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;background:var(--champagne-light);color:var(--espresso);font-weight:700;font-size:12px}
+.acct-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:60;min-width:230px;display:grid;gap:4px;padding:14px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-sheet)}
+.acct-menu small{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.acct-menu .btn{margin-top:8px}
+@media (max-width:699px){.acct-name{display:none}}
+.ws-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+.ws-chips span{padding:5px 12px;border-radius:999px;background:var(--paper);border:1px solid var(--line);font-size:13px;color:var(--muted)}
+@media (min-width:1100px){.ops-layout{grid-template-columns:252px minmax(0,1fr)}}
+.side-link > span:not(.live){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:599px){.app-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}.app-tile{padding:14px;gap:4px}.tile-text{display:none}.app-tile strong{font-size:15px;margin-top:2px}.tile-tag{font-size:11px}}
+
+/* Bảo 2026-10-27: paste-the-link box in the sign-in popup (temporary). */
+.login-link{display:grid;gap:6px;text-align:left}
+.login-link label{font-size:13px;font-weight:600;color:var(--ink)}
+.login-link div{display:flex;gap:8px}
+.login-link input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-sm);font:inherit;font-size:15px;background:#fff;color:var(--ink)}
+.login-link input:focus{outline:0;border-color:var(--walnut);box-shadow:0 0 0 3px rgba(104,69,45,.15)}
+.login-link .btn{padding:0 18px}
+.login-link small{color:var(--muted);font-size:12px;line-height:1.5}
+
+/* Bảo 2026-10-27: signed-out band in the sign-in popup style (kicker, serif title, one line, Đăng nhập). */
+.public-hello{padding:calc(var(--header-h) + var(--s7)) 0 var(--s8)}
+.public-kicker{margin:0;font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--champagne-light)}
+.public-kicker span{letter-spacing:.04em;text-transform:none;font-weight:500;color:var(--on-dark-muted)}
+.public-hello h1{margin:10px 0 0;font-size:44px}
+@media (max-width:699px){.public-hello{padding:calc(var(--header-h) + var(--s4)) 0 var(--s6)}.public-hello h1{font-size:32px}}
+
+/* Bảo 2026-10-27: signed-out page shows the shop details. */
+.shop-info{padding-block:var(--s7) var(--s9)}
+.shop-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s4)}
+.shop-card{display:grid;gap:6px;align-content:start;padding:20px;background:var(--paper);border:1px solid var(--line);border-radius:14px}
+.shop-label{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--walnut)}
+.shop-card p{margin:4px 0 0;font-size:16px;font-weight:500;color:var(--ink)}
+.shop-card small{color:var(--muted);font-size:13px;line-height:1.5}
+.shop-card a{color:inherit}
+.shop-card .text-link{margin-top:6px;justify-self:start;font-size:14px;font-weight:600;color:var(--walnut)}
+.shop-social{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:13px;font-weight:600}
+.shop-social a{color:var(--walnut)}
+@media (max-width:1099px){.shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:599px){.shop-grid{grid-template-columns:minmax(0,1fr)}.shop-info{padding-block:var(--s5) var(--s7)}}
+
+/* Bảo 2026-10-27: Trợ lý BaoQ + BossTele (Admin) buttons, walnut palette. */
+.ast{position:fixed;right:24px;bottom:max(24px,env(safe-area-inset-bottom));z-index:45;display:grid;justify-items:end;gap:12px}
+.ast-fab{display:grid;place-items:center;width:48px;height:48px;border:1px solid var(--line-dark);border-radius:50%;background:var(--espresso);color:var(--champagne-light);box-shadow:0 8px 24px rgba(20,16,10,.28);cursor:pointer}
+.ast-fab:hover{color:#fff;border-color:var(--champagne-light)}
+.ast-panel{display:flex;flex-direction:column;width:min(380px,calc(100vw - 32px));height:min(540px,calc(100dvh - 120px));overflow:hidden;background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-sheet)}
+.ast-head{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 12px 20px;background:var(--espresso);color:#fff}
+.ast-head h2{margin:0;font:400 20px/1.2 var(--serif)}
+.ast-icon{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:8px;background:none;color:var(--champagne-light);cursor:pointer}
+.ast-icon:hover{color:#fff}
+.ast-log{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:18px 16px;background:var(--page,#f7f5f1)}
+.ast-msg{width:fit-content;max-width:90%;margin:0 0 14px;padding:10px 14px;border-radius:12px 12px 12px 3px;background:var(--paper);border:1px solid var(--line);color:var(--ink);overflow-wrap:anywhere}
+.ast-msg.from-user{margin-left:auto;border-radius:12px 12px 3px 12px;background:var(--walnut);border-color:var(--walnut);color:#fff}
+.ast-msg.is-error{background:var(--danger-bg);border-color:transparent;color:var(--danger)}
+.ast-text{display:grid;gap:6px}.ast-text p{margin:0;font-size:14px;line-height:1.55;white-space:pre-wrap}
+.ast-msg time{display:block;margin-top:6px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ast-msg.from-user time{color:#ead9c6;text-align:right}
+.ast-sources{margin:8px 0 0;font-size:11px;line-height:1.5;color:var(--muted)}
+.ast-suggest{display:grid;gap:8px;margin:12px 0 6px}
+.ast-suggest button{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--walnut);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.ast-suggest button:hover{border-color:var(--walnut)}
+.ast-wait{margin:6px 0;font-size:12px;color:var(--muted)}
+.ast-retry{display:block;margin-top:6px;padding:4px 0;border:0;background:none;color:var(--walnut);font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+.ast-compose{display:flex;align-items:flex-end;gap:10px;padding:12px;border-top:1px solid var(--line);background:var(--paper)}
+.ast-compose textarea{flex:1;min-width:0;max-height:110px;resize:vertical;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;line-height:1.5;color:var(--ink);background:#fff}
+.ast-compose textarea:focus{outline:0;border-color:var(--walnut);box-shadow:0 0 0 3px rgba(104,69,45,.15)}
+.ast-compose button{display:grid;place-items:center;width:42px;height:42px;flex-shrink:0;border:0;border-radius:9px;background:var(--walnut);color:#fff;cursor:pointer}
+.ast-compose button:disabled{opacity:.45;cursor:default}
+.ast-products{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.ast-product{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--mist)}
+.ast-product img,.ast-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#efe7dc}
+.ast-product strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;font-weight:600;line-height:1.4}
+.ast-product small{display:block;margin-top:2px;font-size:11px;color:var(--muted)}
+.ast-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px}
+.ast-meta b{font-size:13px;color:var(--walnut)}
+.ast-meta em{padding:1px 7px;border-radius:999px;background:var(--paper);font-style:normal;font-size:10.5px;color:var(--muted)}
+.ast-meta em.is-in{background:var(--ok-bg);color:var(--ok)}.ast-meta em.is-out{background:var(--danger-bg);color:var(--danger)}.ast-meta em.is-hot{background:#efe7dc;color:#5a3a20}
+@media (max-width:699px){.ast{right:12px;bottom:max(12px,env(safe-area-inset-bottom))}.ast-panel{width:calc(100vw - 24px);height:min(640px,calc(100dvh - 100px))}.ast-compose textarea{font-size:16px}}
+
+/* TASK-110: Tài liệu uses the workspace table and form tokens. */
+.documents-page{gap:var(--s8,32px)}.documents-controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.documents-controls input{flex:1;min-width:0}.documents-page textarea{width:100%;resize:vertical}.documents-answer{max-width:75ch;overflow-wrap:anywhere}.documents-answer p{white-space:pre-wrap}.documents-page td{overflow-wrap:anywhere}

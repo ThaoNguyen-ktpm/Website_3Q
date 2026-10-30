@@ -8,11 +8,17 @@
 
     encode zstd gzip
 
+    # Embedded Sale AI supplies its own CSP and same-origin frame policy through Express.
+    @webHeaders {
+        not path /sale-ai /sale-ai/*
+    }
+    header @webHeaders {
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.googleusercontent.com https://cdn2-retail-images.kiotviet.vn https://cdn1-retail-images.kiotviet.vn https://cdn-images.kiotviet.vn https://bizweb.dktcdn.net; media-src 'self'; connect-src 'self' https://accounts.google.com/gsi/; frame-src 'self' https://accounts.google.com/gsi/; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        X-Frame-Options DENY
+    }
     header {
-        Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.googleusercontent.com; media-src 'self'; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         Strict-Transport-Security "max-age=15552000; includeSubDomains"
         X-Content-Type-Options nosniff
-        X-Frame-Options DENY
         Referrer-Policy strict-origin-when-cross-origin
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
         -Server
@@ -22,8 +28,13 @@
         reverse_proxy 127.0.0.1:4000
     }
 
+    @saleAi path /sale-ai /sale-ai/*
+    handle @saleAi {
+        reverse_proxy 127.0.0.1:4000
+    }
+
     handle {
-        root * /srv/baoq/client/dist
+        root * /srv/baoq/frontend/dist
 
         handle /assets/* {
             header Cache-Control "public, max-age=31536000, immutable" {

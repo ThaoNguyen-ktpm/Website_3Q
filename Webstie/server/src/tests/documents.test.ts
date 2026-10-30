@@ -15,7 +15,7 @@ vi.mock('../middlewares/requireAuth.js', () => ({ requireAuth: (req: any, res: a
     permissions: role === 'ADMIN' ? ['documents.view', 'documents.manage'] : role === 'MANAGER' ? ['documents.view'] : [] };
   next();
 } }));
-vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:5173', ANTHROPIC_API_KEY: '' } }));
+vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:8787', ANTHROPIC_API_KEY: '' } }));
 vi.mock('../models/documentStore.js', () => ({ documentStore: { read: vi.fn(), list: vi.fn(), add: vi.fn(), remove: vi.fn() } }));
 vi.mock('../models/auditLogModel.js', () => ({ create: vi.fn(async () => ({})), list: vi.fn(), deleteBefore: vi.fn() }));
 vi.mock('../services/documentEmbeddingService.js', () => ({ embed: vi.fn(async () => [1, 0]) }));
@@ -36,7 +36,7 @@ function pdfFixture(text = 'BaoQ internal policy') {
 }
 const metadata = { id: '29001f63-6edf-491c-931c-e22dd7f2ed27', name: 'Nội quy.pdf', pages: 1, uploadedAt: '', uploadedBy: 'Bảo' };
 const get = (role?: string) => { const call = request(app).get('/api/documents'); return role ? call.set('X-Test-Role', role) : call; };
-const post = (path = '', role = 'ADMIN') => request(app).post(`/api/documents${path}`).set('Origin', 'http://localhost:5173').set('X-Test-Role', role);
+const post = (path = '', role = 'ADMIN') => request(app).post(`/api/documents${path}`).set('Origin', 'http://localhost:8787').set('X-Test-Role', role);
 const upload = (pdf: Buffer, role = 'ADMIN') => post('', role).set('Content-Type', 'application/pdf').set('X-File-Name', encodeURIComponent('Nội quy.pdf')).send(pdf);
 
 beforeEach(() => {
@@ -58,7 +58,7 @@ it('requires login and enforces view/manage permissions on every endpoint', asyn
   expect((await get('MANAGER')).body.documents).toEqual([metadata]);
   expect((await upload(Buffer.from('%PDF-'), 'MANAGER')).status).toBe(403);
   expect((await post('/ask', 'STAFF').send({ question: 'Nội quy?' })).status).toBe(403);
-  expect((await request(app).delete(`/api/documents/${metadata.id}`).set('Origin', 'http://localhost:5173').set('X-Test-Role', 'MANAGER')).status).toBe(403);
+  expect((await request(app).delete(`/api/documents/${metadata.id}`).set('Origin', 'http://localhost:8787').set('X-Test-Role', 'MANAGER')).status).toBe(403);
 });
 it('rejects forged, wrong-type, oversized and malformed PDFs without persistence', async () => {
   expect((await upload(Buffer.from('fake'))).status).toBe(400);
@@ -82,7 +82,7 @@ it('returns 422 for an image-only/blank PDF and does not embed it', async () => 
   expect(embed).not.toHaveBeenCalled();
 });
 it('deletes and records audit without logging document content', async () => {
-  const result = await request(app).delete(`/api/documents/${metadata.id}`).set('Origin', 'http://localhost:5173').set('X-Test-Role', 'ADMIN');
+  const result = await request(app).delete(`/api/documents/${metadata.id}`).set('Origin', 'http://localhost:8787').set('X-Test-Role', 'ADMIN');
   expect(result.status).toBe(204);
   expect(documentStore.remove).toHaveBeenCalledWith(metadata.id);
   expect(auditModel.create).toHaveBeenCalledWith(expect.objectContaining({ action: 'document.delete', targetId: metadata.id, before: undefined, after: undefined }));

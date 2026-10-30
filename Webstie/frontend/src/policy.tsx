@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import demo from './demo-data.json';
-import {seed} from './tasks';
+import {seed} from './task-data';
 import {useLang,money,pct,showToast} from './ui';
 // Chính sách: parameter frames with document rules (read-only), DEMO drafts stored only in this browser (localStorage),
 // and an impact preview that says plainly when configuration or source data is missing. Nothing here applies real

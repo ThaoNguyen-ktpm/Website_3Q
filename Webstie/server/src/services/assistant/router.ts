@@ -1,4 +1,5 @@
 import { brandCandidates, fold } from './brands.js';
+import { extractSkus } from './sku.js';
 
 export type Sort = 'newest' | 'cheap' | 'expensive';
 export type ProductQuery = {
@@ -46,7 +47,7 @@ function priceRange(text: string) {
  */
 export function productQuery(question: string, brands: string[]): ProductQuery | null {
   const text = fold(question);
-  const sku = question.match(/\bSP\d{4,}\b/i)?.[0].toUpperCase() ?? null;
+  const sku = extractSkus(question)[0] ?? null;
   const hot = /\bhot\b|\btrend\b|hottrend|noi bat/.test(text);
   const { minPrice, maxPrice } = priceRange(text);
   const inStock = /\bcon hang\b|\bcon san\b|\bco san\b/.test(text);

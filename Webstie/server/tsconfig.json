@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rootDir": "src",
@@ -9,8 +11,15 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/tests/**/*"]
+  "include": [
+    "src/**/*.ts",
+    "src/sale-ai/**/*.js"
+  ],
+  "exclude": [
+    "src/tests/**/*",
+    "src/sale-ai/test/**/*"
+  ]
 }

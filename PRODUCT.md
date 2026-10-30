@@ -4,7 +4,7 @@
 web
 
 ## Stack
-React 19 + Vite 7 (`client/`), Express + Prisma MySQL (`server/`), npm workspaces. BossTele (`BossTele/`) là công cụ nội bộ riêng (Node, Telegram), không phải giao diện web.
+React 19 + Vite 6 (`Webstie/frontend/`), Express + Prisma MySQL (`Webstie/server/`), npm workspaces. BossTele (`BossTele/`) là công cụ nội bộ riêng (Node, Telegram), không phải giao diện web.
 
 ## Users
 Nội bộ BaoQ Luxury: Bảo và nhân viên được cấp quyền. Không dành cho khách hàng công khai. (Bảo xác nhận 2026-10-15.)
@@ -22,15 +22,15 @@ Dùng trên máy tính và điện thoại của nhân viên. Truy cập chỉ s
 - Đăng nhập chỉ bằng Google; chỉ email trong `GOOGLE_ALLOWED_EMAILS` vào được; phiên bằng cookie httpOnly 7 ngày.
 - API dữ liệu yêu cầu phiên đăng nhập.
 - Quy trình: Claude viết đặc tả và review, Codex code; thay đổi cấp 2 cần Bảo trả lời "OK" (xem `CLAUDE.md`, `AGENTS.md`).
-- Trang đăng nhập có mô hình 3D túi (`BirkinBag3D`) do phiên khác thêm; Bảo yêu cầu giữ nguyên, không sửa code túi.
+- TASK-110: chỉ giữ giao diện 8787; bỏ giao diện cũ và mô hình túi 3D.
 
 ## Brand Commitments
 - Tên: BaoQ Luxury. Khẩu hiệu: BUY · SELL · CONSIGN.
-- Logo: monogram "bq" trong khung oval vòm, chữ "BAOQ LUXURY" có chân, màu đồng (#ae8d6c) — file `client/public/brand/baoq-logo.png` (nền #201502) và `baoq-logo-transparent.png`.
+- Logo: monogram "bq" trong khung oval vòm, chữ "BAOQ LUXURY" có chân, màu đồng (#ae8d6c) — file `Webstie/frontend/public/brand/baoq-logo-original.jpg` và `baoq-wordmark.png`.
 - Giọng: sang, tiết chế, tin cậy. Ngắn gọn, lịch sự, không phô trương. (Bảo xác nhận 2026-10-15.)
 
 ## Evidence on Hand
-Logo thương hiệu; video nền đăng nhập `client/public/login-background.mp4`. Chưa có ảnh sản phẩm thật, đánh giá hay số liệu kinh doanh dùng được trên web.
+Logo thương hiệu trong `Webstie/frontend/public/brand/`. Chưa có ảnh sản phẩm thật, đánh giá hay số liệu kinh doanh dùng được trên web.
 
 ## Product Principles
 

@@ -19,9 +19,19 @@ it.each([
   ['cho tui danh sách hottrend của LV', { sku: null, brand: 'Louis Vuitton', hot: true, words: [] }],
   ['Chanel Classic Flap còn không', { sku: null, brand: 'Chanel', hot: false, words: ['classic', 'flap'] }],
   ['SP024215 giá bao nhiêu', { sku: 'SP024215', brand: null, hot: false, words: [] }],
+  ['xem sp025211_kg', { sku: 'SP025211_KG', brand: null, hot: false, words: [] }],
   ['hàng hot trend', { sku: null, brand: null, hot: true, words: [] }],
 ])('routes "%s" to a direct catalog lookup', (question, expected) => {
   expect(productQuery(question, brands)).toMatchObject(expected);
+});
+
+it('shows full SKU choices from the catalog without calling a model', async () => {
+  const reply = 'Có nhiều sản phẩm cùng mã gốc. Bạn chọn mã nào: SP024387_23092026, SP024387_KG?';
+  vi.mocked(executeTool).mockResolvedValue({ content: JSON.stringify({ message: reply, candidates: ['SP024387_23092026', 'SP024387_KG'] }), sources: [] });
+  const result = await chat({ messages: [{ role: 'user', content: 'SP024387' }] }, ['products.view']);
+  expect(result.reply).toBe(reply);
+  expect(result.products ?? []).toEqual([]);
+  expect(callModel).not.toHaveBeenCalled();
 });
 it.each(['Thêm nhân viên ở đâu?', 'Vốn 31 triệu markup 15% bán bao nhiêu', 'Thời tiết hôm nay',
   'giá túi Hermes so với Chanel thế nào', 'So sánh túi Chanel và Dior', 'túi LV khác gì túi Gucci', 'Hermes hay Chanel giữ giá',

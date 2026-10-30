@@ -15,12 +15,13 @@ Tạo database MySQL bằng tài khoản có quyền phù hợp:
 CREATE DATABASE shop_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Mở terminal tại `D:\Website`:
+Mở terminal tại `D:\Website_3Q\Webstie`:
 
 ```powershell
 Copy-Item server\.env.example server\.env
 # Sửa DATABASE_URL và SEED_ADMIN_PASSWORD trong server\.env.
 npm install
+npm ci --prefix frontend
 npm run db:migrate
 npm run db:seed
 ```
@@ -33,19 +34,17 @@ Nếu database cũ đã được tạo bằng `db:push`, hãy dùng database `sh
 
 ## Chạy thử
 
-Mở hai terminal tại `D:\Website`:
+Mở terminal tại `D:\Website_3Q\Webstie`:
 
 ```powershell
-npm run dev --workspace server
+npm run dev
 ```
 
-```powershell
-npm run dev --workspace client
-```
+Giao diện duy nhất ở cổng 8787; lệnh trên chạy cả API, frontend và bot tùy chọn.
 
-- Web: http://localhost:5173
+- Web: http://localhost:8787
 - API: http://localhost:4000/api/health → `{"status":"ok"}`
-- Danh sách sản phẩm: http://localhost:4000/api/products → `{ "products": [...] }`. Trang chủ tải và hiển thị các sản phẩm mẫu từ API.
+- Danh mục sản phẩm: `/api/catalog/products`, sau đăng nhập và quyền `products.view`; giao diện hiện hành ở cổng 8787.
 
 Vite chuyển tiếp `/api` sang cổng 4000 trong chế độ dev. Không dùng cổng 3100.
 
@@ -66,6 +65,6 @@ npm test
 - `server/src/services`: nghiệp vụ mua hàng khi được triển khai.
 - `server/src/models`: truy cập Prisma.
 - `server/src/middlewares`: xử lý lỗi và middleware.
-- `client/src/pages`, `components`, `api`, `hooks`: giao diện và gọi API.
+- `frontend/src/`: giao diện React/TypeScript; `frontend/src/api/`: gọi API. Điều hành → Quản lý → Tài liệu dùng quyền tài liệu hiện có.
 
 Dự án hiện chưa triển khai API tài khoản, giỏ hàng hoặc đặt hàng. Schema đã sẵn sàng cho các bước đó.

@@ -5,7 +5,7 @@ import { createCatalogSearch, parseCatalogQuery } from '../services/catalogSearc
 import { app } from '../app.js';
 import { rolePermissions } from '../config/permissions.js';
 
-vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:5173', SESSION_SECRET: 'catalog-test-secret-at-least-32-characters' } }));
+vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:8787', SESSION_SECRET: 'catalog-test-secret-at-least-32-characters' } }));
 const actor = vi.hoisted(() => ({ permissions: ['products.view'] as string[], loggedIn: true }));
 vi.mock('../middlewares/requireAuth.js', () => ({ requireAuth: (_req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (!actor.loggedIn) { res.status(401).json({ error: { code: 'UNAUTHENTICATED' } }); return; }

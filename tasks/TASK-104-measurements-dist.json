@@ -1,0 +1,41 @@
+{
+  "fixture": true,
+  "builtCore": true,
+  "count": 4474,
+  "dataDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task104-measure-E07aUo",
+  "authSession": "unauthenticated; real /api/auth/me returns 401",
+  "phases": {
+    "run": {
+      "ms": 2247.0085,
+      "authSamples": 9,
+      "authMaxMs": 1680.8232000000025
+    },
+    "prepare": {
+      "ms": 122.44740000000093,
+      "authSamples": 6,
+      "authMaxMs": 62.875700000000506
+    },
+    "commit": {
+      "ms": 1476.5220000000008,
+      "authSamples": 100,
+      "authMaxMs": 83.15930000000299
+    }
+  },
+  "bytesAfterRefreshAndRun": 13768638,
+  "timings": [
+    {
+      "kind": "prepare",
+      "totalMs": 97.77569999999832,
+      "saveMs": 40.14170000000013,
+      "publishMs": 2.106999999999971
+    },
+    {
+      "kind": "commit",
+      "totalMs": 1445.5913999999975,
+      "saveMs": 630.3085999999967,
+      "publishMs": 54.157500000001164
+    }
+  ],
+  "batchWrites": false,
+  "bytesAfterCommit": 19821776
+}

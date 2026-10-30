@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp, readdir} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createSaleAi} from '../core.js';
+import {SplitStore} from '../lib/split-store.js';
+test('embedded runtime starts empty, keeps sample and real history separate, and uses only the requested data root', async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'sale-runtime-'));
+ const sale=await createSaleAi({dataDir:dir, client:{all:async()=>[]}, sapoClient:undefined});
+ assert.deepEqual(sale.real.state.products,[]);
+ assert.deepEqual(sale.real.state.updates||[],[]);
+ assert.deepEqual(sale.simulator.state.products,[]);
+ assert.equal(sale.live.batchWrites,false);
+ assert.equal(typeof sale.handler,'function');
+ assert.equal('server' in sale,false);
+ assert.ok((await readdir(dir)).includes('kiot-state.store'));
+ const restarted=await createSaleAi({dataDir:dir, client:{all:async()=>[]}});
+ assert.deepEqual(restarted.real.state.products,[]);
+});

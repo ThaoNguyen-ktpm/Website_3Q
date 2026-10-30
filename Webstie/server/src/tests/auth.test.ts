@@ -7,7 +7,7 @@ import { verifyGoogleToken } from '../services/googleTokenVerifier.js';
 import { createSession, sessionMaxAge } from '../services/authService.js';
 
 vi.mock('../config/env.js', () => ({ env: {
-  APP_ORIGIN: 'http://localhost:5173',
+  APP_ORIGIN: 'http://localhost:8787',
   GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com',
   SESSION_SECRET: 'test-only-signing-secret-at-least-32-characters',
   GOOGLE_ALLOWED_EMAILS: ['allowed@example.test'],
@@ -33,7 +33,7 @@ function sessionCookie(value = createSession(user.id), signingSecret = secret) {
   const signature = createHmac('sha256', signingSecret).update(value).digest('base64').replace(/=+$/, '');
   return `sid=${encodeURIComponent(`s:${value}.${signature}`)}`;
 }
-const login = () => request(app).post('/api/auth/google').set('Origin', 'http://localhost:5173').send({ credential: 'fixture-token' });
+const login = () => request(app).post('/api/auth/google').set('Origin', 'http://localhost:8787').send({ credential: 'fixture-token' });
 
 it('returns per-staff permissions after Google login and on /me', async () => {
   const custom = { ...user, role: 'STAFF' as const, customPermissions: true, permissions: [{ permission: 'products.view' }] };
@@ -111,15 +111,15 @@ describe('Google login', () => {
     vi.mocked(auditModel.create).mockRejectedValueOnce(new Error('secret-token'));
     expect((await login()).status).toBe(200);
     vi.mocked(auditModel.create).mockRejectedValueOnce(new Error('secret-token'));
-    expect((await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:5173').set('Cookie',sessionCookie())).status).toBe(204);
+    expect((await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:8787').set('Cookie',sessionCookie())).status).toBe(204);
     expect(error.mock.calls).toEqual([['Không thể ghi nhật ký thao tác.'],['Không thể ghi nhật ký thao tác.']]);
     error.mockRestore();
   });
   it('records logout only for an identified session', async () => {
-    await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:5173').set('Cookie',sessionCookie());
+    await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:8787').set('Cookie',sessionCookie());
     expect(auditModel.create).toHaveBeenCalledWith(expect.objectContaining({ action: 'auth.logout', actorId: user.id, actorEmail: user.email }));
     vi.mocked(auditModel.create).mockClear();
-    await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:5173');
+    await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:8787');
     expect(auditModel.create).not.toHaveBeenCalled();
   });
   it('returns only the public client ID', async () => {
@@ -165,7 +165,7 @@ describe('Google login', () => {
     expect((await request(app).get('/api/auth/me').set('Cookie', cookie.split(';')[0])).status).toBe(200);
     expect((await request(app).get('/api/staff/roles').set('Cookie', cookie.split(';')[0])).status).toBe(200);
     expect((await request(app).get('/api/auth/me').set('Cookie', sessionCookie())).status).toBe(401);
-    const loggedOut = await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:5173');
+    const loggedOut = await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:8787');
     expect(loggedOut.headers['set-cookie'][0]).toContain('; Secure');
     expect(loggedOut.headers['set-cookie'][0]).toMatch(/^__Host-sid=;/);
   });
@@ -203,7 +203,7 @@ describe('Google login', () => {
 
   it.each([{}, { credential: '' }, { credential: 123 }, { credential: 'x'.repeat(4097) },
     { credential: 'fixture-token', role: 'ADMIN' }, null, []])('rejects invalid body before verifying', async (body) => {
-    const response = await request(app).post('/api/auth/google').set('Origin', 'http://localhost:5173')
+    const response = await request(app).post('/api/auth/google').set('Origin', 'http://localhost:8787')
       .set('Content-Type', 'application/json').send(JSON.stringify(body));
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
@@ -211,14 +211,14 @@ describe('Google login', () => {
   });
 
   it('rejects malformed JSON before verifying', async () => {
-    const response = await request(app).post('/api/auth/google').set('Origin', 'http://localhost:5173')
+    const response = await request(app).post('/api/auth/google').set('Origin', 'http://localhost:8787')
       .set('Content-Type', 'application/json').send('{');
     expect(response.status).toBe(400);
     expect(verifyGoogleToken).not.toHaveBeenCalled();
   });
 
   it.each([1, 4096])('accepts credential boundary length %i', async (length) => {
-    const response = await request(app).post('/api/auth/google').set('Origin', 'http://localhost:5173').send({ credential: 'x'.repeat(length) });
+    const response = await request(app).post('/api/auth/google').set('Origin', 'http://localhost:8787').send({ credential: 'x'.repeat(length) });
     expect(response.status).toBe(200);
   });
 
@@ -311,7 +311,7 @@ describe('Sessions', () => {
   });
 
   it('clears the cookie on logout', async () => {
-    const response = await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:5173');
+    const response = await request(app).post('/api/auth/logout').set('Origin', 'http://localhost:8787');
     expect(response.status).toBe(204);
     expect(response.text).toBe('');
     const cookie = response.headers['set-cookie'][0];

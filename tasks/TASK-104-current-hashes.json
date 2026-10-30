@@ -1,0 +1,362 @@
+[
+  {
+    "file": "lib/batch-joint.js",
+    "currentSourceSha256": "95837c0ff65f201ead8876fc5587f26c8fe9cf180ce70066c7b38ba9c442330c",
+    "integratedSha256": "95837c0ff65f201ead8876fc5587f26c8fe9cf180ce70066c7b38ba9c442330c",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/batch-update.js",
+    "currentSourceSha256": "d1b6e5b7286dc60124b91e6a9cc531691d441b50355ba0e17f3322b870103780",
+    "integratedSha256": "d1b6e5b7286dc60124b91e6a9cc531691d441b50355ba0e17f3322b870103780",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/cycle.js",
+    "currentSourceSha256": "ba2584b54dcacb025791c58c2aa34512fa1547c798e375010bb6f074ac3a38fe",
+    "integratedSha256": "ba2584b54dcacb025791c58c2aa34512fa1547c798e375010bb6f074ac3a38fe",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/fake-sync.js",
+    "currentSourceSha256": "c58b3dac27f05b2970afbf2e0346781d1f155f43161c17a7bffa3092b21e1cb8",
+    "integratedSha256": "c58b3dac27f05b2970afbf2e0346781d1f155f43161c17a7bffa3092b21e1cb8",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/joint-update.js",
+    "currentSourceSha256": "2ac86e8d555ff8653e69d5088d81a1a9cf90008c02e00a7aa02b5cb85eb525c2",
+    "integratedSha256": "2ac86e8d555ff8653e69d5088d81a1a9cf90008c02e00a7aa02b5cb85eb525c2",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/kiot.js",
+    "currentSourceSha256": "420c5a8c7c92937e81b63633d2333685a955dd5c96b2719e7978fb87a4701b13",
+    "integratedSha256": "df43c316dd1be9775f230949e11b884c9920cb94a3b841567fa4a15faca37baa",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "lib/live-draft.js",
+    "currentSourceSha256": "95059fce69dbc076c1fe20bc1969f8396230ea4adf0325d92cb10ea69905e75f",
+    "integratedSha256": "95059fce69dbc076c1fe20bc1969f8396230ea4adf0325d92cb10ea69905e75f",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/live.js",
+    "currentSourceSha256": "d307ce3ea5776bfd4f6b3e25a8f9a7766c7b36069098e4f7ea6f2003fcc78a27",
+    "integratedSha256": "d307ce3ea5776bfd4f6b3e25a8f9a7766c7b36069098e4f7ea6f2003fcc78a27",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/manual-pricing.js",
+    "currentSourceSha256": "d0b5f6b1f4ff6514d6e1c45195ac3aaba63ac6e80736716d3bb62172e35e4735",
+    "integratedSha256": "d0b5f6b1f4ff6514d6e1c45195ac3aaba63ac6e80736716d3bb62172e35e4735",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/pricing.js",
+    "currentSourceSha256": "372828bac67453cecd734fe9d941056296d8221c70362969b385b52b7cf57133",
+    "integratedSha256": "372828bac67453cecd734fe9d941056296d8221c70362969b385b52b7cf57133",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/read-pool.js",
+    "currentSourceSha256": "894116a94d7203122987b3c20d15d6b0ceab2ad6f12e68e03378c501cbc33391",
+    "integratedSha256": "894116a94d7203122987b3c20d15d6b0ceab2ad6f12e68e03378c501cbc33391",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/restore.js",
+    "currentSourceSha256": "2e79bb8117236813c8795dcec3b5d2d9e542f24274dbffaa770861269bd1d06f",
+    "integratedSha256": "2e79bb8117236813c8795dcec3b5d2d9e542f24274dbffaa770861269bd1d06f",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/retention.js",
+    "currentSourceSha256": null,
+    "integratedSha256": "56373b52b72ebf490c5a7d3a57d7c165f39e625058536e9c86a80e222c357ee0",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "lib/samples.js",
+    "currentSourceSha256": "4b47af63ca61007e96e268d1efd05190f7a0a6da1eb9bc0a2a5ed4ed44b365cc",
+    "integratedSha256": "4b47af63ca61007e96e268d1efd05190f7a0a6da1eb9bc0a2a5ed4ed44b365cc",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/sapo.js",
+    "currentSourceSha256": "0eb2d8b600d36ebaf692f74c7d7c15cbefbe2f27813e44b11f1871de9dbe0444",
+    "integratedSha256": "0eb2d8b600d36ebaf692f74c7d7c15cbefbe2f27813e44b11f1871de9dbe0444",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/service.js",
+    "currentSourceSha256": "5abc61511c3c945aa46edd5d5aae9b5a31284019e6ca6be9b2f2eb17e5d3df64",
+    "integratedSha256": "e1cd598f5fb63bb6ab8b4dc7852f6aa524ae826f7e31901d9deb9693fec75653",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "lib/shared-catalog.js",
+    "currentSourceSha256": "d806c8fce157b19cc70b2e019cdcad2b6dae8b3dd248c6d42e45d8012c7f383c",
+    "integratedSha256": "d806c8fce157b19cc70b2e019cdcad2b6dae8b3dd248c6d42e45d8012c7f383c",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/split-store.js",
+    "currentSourceSha256": "6daeef7a5a61bb135b08a2f4aa1e76dee3f62eae1128a746bb757b9861096aa6",
+    "integratedSha256": "3b78d040942dee652e20be864f87069d789a24dc353c4c951e11a72c2c20f71d",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "lib/store-cleanup.js",
+    "currentSourceSha256": null,
+    "integratedSha256": "1b1e7829349bb6267c63bd287c1ba1b25f1634d116f406e31e1037bf6e46da2b",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "lib/store-lock.js",
+    "currentSourceSha256": "d28345d9a7c592e635fe2e30bcb138e51fd3d2f37095ae8c587ec5faf5f081bf",
+    "integratedSha256": "d28345d9a7c592e635fe2e30bcb138e51fd3d2f37095ae8c587ec5faf5f081bf",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/store.js",
+    "currentSourceSha256": "ee2769488aefb725e77c504e2d40347c2eae663748d3a1569bb87efa8549473b",
+    "integratedSha256": "ee2769488aefb725e77c504e2d40347c2eae663748d3a1569bb87efa8549473b",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/update-errors.js",
+    "currentSourceSha256": "d23f88399d1df1993241a4a2f8b6b9e02dcd24e155203c843e73e749ad5f1709",
+    "integratedSha256": "d23f88399d1df1993241a4a2f8b6b9e02dcd24e155203c843e73e749ad5f1709",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/update-report.js",
+    "currentSourceSha256": "96f2eeaae753840bd6a0ab162fc39a1a3ffc5ff53640f0c2672ecff823dd2471",
+    "integratedSha256": "96f2eeaae753840bd6a0ab162fc39a1a3ffc5ff53640f0c2672ecff823dd2471",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "lib/view-data.js",
+    "currentSourceSha256": "cb997a4ae4d048f1ef04d84a5c38302d62fa9c6358fe7ec74ee5672951100ce8",
+    "integratedSha256": "cb997a4ae4d048f1ef04d84a5c38302d62fa9c6358fe7ec74ee5672951100ce8",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "public/age-cell.js",
+    "currentSourceSha256": "d101577aa33a719aeb16df9bd68eaee21afac0afeea690ffa5b0b6cf4fa494c8",
+    "integratedSha256": "d101577aa33a719aeb16df9bd68eaee21afac0afeea690ffa5b0b6cf4fa494c8",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "public/app.js",
+    "currentSourceSha256": "6d63a2e08cae800c4720a3dc41c46979efef0d37d6b3afe5eca4b437d8e2de8b",
+    "integratedSha256": "6d63a2e08cae800c4720a3dc41c46979efef0d37d6b3afe5eca4b437d8e2de8b",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "public/history-model.js",
+    "currentSourceSha256": "73c095f3947510b0d8915cd1eb387f5db9e5bda2eea40d98ebb0ad59bd54861b",
+    "integratedSha256": "73c095f3947510b0d8915cd1eb387f5db9e5bda2eea40d98ebb0ad59bd54861b",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "public/index.html",
+    "currentSourceSha256": "705fcdf3630273d0a7183454eb3ccc3122aa3f73f061b2d4f6692435fa5157da",
+    "integratedSha256": "705fcdf3630273d0a7183454eb3ccc3122aa3f73f061b2d4f6692435fa5157da",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "public/live-ui.js",
+    "currentSourceSha256": "99290dea7c84dde68082f8e8312ebf0bea92a2706fd960c4ea892f2cda250a21",
+    "integratedSha256": "99290dea7c84dde68082f8e8312ebf0bea92a2706fd960c4ea892f2cda250a21",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "public/style.css",
+    "currentSourceSha256": "5b5062349d33204adddae7adcbc7d3bb775d0407b8d9fc5d1e4ef2ad49315168",
+    "integratedSha256": "5b5062349d33204adddae7adcbc7d3bb775d0407b8d9fc5d1e4ef2ad49315168",
+    "sameAsCurrentSource": true
+  },
+  {
+    "file": "test/access-token.test.js",
+    "currentSourceSha256": "30fa3d837550af28054520befca2440d894cf142008bf91c6866fd7b55e6be31",
+    "integratedSha256": "5d35694b21345d4684ec0bf087b0684a7acff910e612ba922bee3e2bd11c380d",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/auto-table.test.js",
+    "currentSourceSha256": "9f10331d067085ef23097248e9a708f0742d4faa64f6bf2e4d8a68c42850ea8e",
+    "integratedSha256": "124aded31ef7f6a87b6893ae918bd85a406115886c47eb63ca37ca32cd6f3bc8",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/batch-joint.test.js",
+    "currentSourceSha256": "593dbda886e13b1bbdb5869ae1ccde9cde1faa56b63d665fcd29a075553a5133",
+    "integratedSha256": "35506819704004e47fee1cf34f8ac9ac9c1d27c0b82b0ea1aaf18f0b8af42bc4",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/batch-update.test.js",
+    "currentSourceSha256": "b6a8217a5cd5ab2b338d73d6bb8647c800881201344b9cd059b33237b2c40428",
+    "integratedSha256": "455bb916a81d92922914279a69bc09795dac028b8536199861681dcbc5d0d54b",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/continue-update.test.js",
+    "currentSourceSha256": "426f6edecd06d90952d54a8a35d19a4b40dfd213acf970c0750c9ee8900a9967",
+    "integratedSha256": "cca84283cfa7dbaf5a2254c98f2faf3ae295d8d2bf31e358340bd43abbf2910a",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/cycle.test.js",
+    "currentSourceSha256": "792a2d5a4a1392f1716c913f2735053a4e5bf8376a000dcb8d8413f9e9a9490c",
+    "integratedSha256": "05b915f7c30a6f4176383ccad0edcb76a01892578be3fdfc67df0caecb5ec0ca",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/fifteen-days.test.js",
+    "currentSourceSha256": "b5e78b134323e455b42f011ddbc1e8aa2d4e70f6da621b20850c27a6fe020968",
+    "integratedSha256": "9fd5795412996eb6f1d5be655c07c2973899cb11c91c11cd6950f667285e32cd",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/history-model.test.js",
+    "currentSourceSha256": "eebff538fbd25825b626248a1b9efe43bb95b8d6d0c39e2ef089e2f2508f7c2d",
+    "integratedSha256": "df393cccad4319721da0de5e85bea69d60b3d4bbf6a85493d82065c14d37f941",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/joint-update.test.js",
+    "currentSourceSha256": "ce5d11a7b52f9b747a4222bc14bf3611d740cd0be46db9a201ae500639aea9de",
+    "integratedSha256": "ed6cf69d9744ad67131c071380d37951799c957370fd9ded65f048952366e729",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/journal-window.test.js",
+    "currentSourceSha256": "364251ae153f7f8177abe3dcf0c33286b9bf818bea5c7c33d830a9d87111a5c8",
+    "integratedSha256": "ebe46ea65e10f794bc14114e792e9d7f72db914d0ce96f1f5e778cacaf11a20a",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/jul-batch.test.js",
+    "currentSourceSha256": "8a958a51e7fd132ee81a17e59d45e6abfa5630542c4725a1982f491a19baadc8",
+    "integratedSha256": "826a2f944242cba1f79db308431d889cc42905cfb3da61a4ca3fa75e68cfacd3",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/kiot-errors.test.js",
+    "currentSourceSha256": "865515b4caaef35520e78ed86db2d52fbbbf1354ad43146956b56e209fbbd219",
+    "integratedSha256": "4e323e3d5bc1bf7b6c7f065535f3e0773ebbfda320e120804440ab3cf8fda7ca",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/live-timing.test.js",
+    "currentSourceSha256": "8bcde2aabb247732df0cd68ac160b7af26c58ab6ea0109da1eea29a4912de0fa",
+    "integratedSha256": "3004e45eeb69e4919e605420909f2f62d07054792653071a4085f8ab7c254bd1",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/live.test.js",
+    "currentSourceSha256": "c0b20e329732410bb4d57894db98cca06587e37153a91618925da230ff2dcf16",
+    "integratedSha256": "837f6a00671afcaae4a4f32ea393ddf0d0280defe31963506198e57d1c614f19",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/m-filter.test.js",
+    "currentSourceSha256": "48d9c985ca261d7cbe90d4e2d23ef4473092953bebf07ece63395442cd8b3661",
+    "integratedSha256": "44c09d46ce3c8a6136725552a7820f1fdbe0639ceac7402f768356070b7ae314",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/mac-launch.test.js",
+    "currentSourceSha256": "87a4697033683f40179011be8ec6f40fce84844a6299ed25f2d9414667a413cc",
+    "integratedSha256": "bedc16c1de2284ec1b0e0ae90167a5987cc213f26b2ec1b10fbc7b7ab34ca9d5",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/manual.test.js",
+    "currentSourceSha256": "6c8d21551faf4303860d0159fc61581bd3b8527748d8291c575ae65de589402e",
+    "integratedSha256": "e65f61241db1787d23f3328f539513534dc54f6c01e291b9402fc801e325699e",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/note-first.test.js",
+    "currentSourceSha256": "8336c3f451b03dd34fedb1b70b37c1ae884d50ea9b3f3974efa3681c8da53c6b",
+    "integratedSha256": "9ab98f014ebd898f991364d48db0709870dfe8b55df283d1150521ed166f50e1",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/preoct-m1.test.js",
+    "currentSourceSha256": "558cdd18564857618475352d8b890af85c1ab5731ce902bab9ba3d454c9f7927",
+    "integratedSha256": "1e2a56b9b7ed8265d6418525c5f8cfb01a502601c8793be0e0721c3a690abb7a",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/restore-joint.test.js",
+    "currentSourceSha256": "51cf85e0b5fb90749b342d912b2f832ad85a55f5e2f001ca73e9eec90fd742be",
+    "integratedSha256": "eb6fb669e1b147153ff6fe282cbc946938b03ee7c4c10f6639749f8519988b89",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/retention.test.js",
+    "currentSourceSha256": null,
+    "integratedSha256": "f316a459b3d0081d3027bfe9f94724c40871ac5835ba7477fd3e3da75b3f4212",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/runtime.test.js",
+    "currentSourceSha256": null,
+    "integratedSha256": "dff291a841ec8a8711efd1c4c58366246e4dc8035562e48644840ad787dc3316",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/sapo.test.js",
+    "currentSourceSha256": "2009785c6e51e26a0f9af67fef8aaa979cbbf0b58d94005719dad593f0ae2bf4",
+    "integratedSha256": "bfda11759aa80d76ba3a5cf90ce6a98bee346683d132b915176f145561420b5f",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/shared-catalog.test.js",
+    "currentSourceSha256": "69c1194b9a4b5adf4ab693b9ade5c898ffcfe01ed92b7dbb06af00a94b527f04",
+    "integratedSha256": "0858f0ff3428872c92974572e7a66ada8c9e140c4f1bd0e0b36badbc8e8d63b5",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/simulator.test.js",
+    "currentSourceSha256": "a6f1df9903a353689b9c5a32817f31325ec8f447051e3fc229b5024087cd875a",
+    "integratedSha256": "5d77eff36617a4e118cb075f5626560e40c2377f1ed17a5c175c81a8380a62f9",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/split-store.test.js",
+    "currentSourceSha256": "4213ca280e67610b6670b37e4a0ca81ec1718429a194d101eb8c4019006bec60",
+    "integratedSha256": "a141c6717aa76bbde7bb807a1b644c81c0ad60cdc70ee97202762d014ba5aa8b",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/start-date.test.js",
+    "currentSourceSha256": "bfcd099372c4935fe212da4472146c068e0047e3a06cf1ca1c4863c8ee70735a",
+    "integratedSha256": "dbf9f022341a9968fa76873a6c9e26e11796a3d4494a4f642daa352556bc7518",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/table-write-sync.test.js",
+    "currentSourceSha256": "19918126ec77292d717590627d6dd77b5d662393389512fb3a85689d18466fcb",
+    "integratedSha256": "a50030feb2bc590d5a2f8ae7bea40da7947a065da4bab96f9e4e6e274ad480af",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/update-performance.test.js",
+    "currentSourceSha256": "b93d3a039e183438a3f2f4bb75ccd4f264e0f08ab7c8365d592eaae318bcbca2",
+    "integratedSha256": "897644288479b15dd4f3305d23cc640a8e9bd8652ff83526cc0a31f6a0db1f8b",
+    "sameAsCurrentSource": false
+  },
+  {
+    "file": "test/view-performance.test.js",
+    "currentSourceSha256": "c86c86ca278c84992b8c777297f4e07db82192ab3c392eeb695f945a1b9723c2",
+    "integratedSha256": "c257870bbf89108e49b758d42ea2ee2226b3e7f847eac952c0ce496685e94eca",
+    "sameAsCurrentSource": false
+  }
+]

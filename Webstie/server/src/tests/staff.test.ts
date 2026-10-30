@@ -10,7 +10,7 @@ import { allPermissions, hiddenPermissions, rolePermissions } from '../config/pe
 import * as auditModel from '../models/auditLogModel.js';
 vi.mock('../models/auditLogModel.js', () => ({ create: vi.fn(async () => ({})), list: vi.fn(), deleteBefore: vi.fn() }));
 
-vi.mock('../config/env.js', () => ({env:{APP_ORIGIN:'http://localhost:5173',SESSION_SECRET:'test-staff-secret-at-least-32-characters'}}));
+vi.mock('../config/env.js', () => ({env:{APP_ORIGIN:'http://localhost:8787',SESSION_SECRET:'test-staff-secret-at-least-32-characters'}}));
 vi.mock('../models/rolePermissionModel.js', () => ({ list: vi.fn(async () => []) }));
 vi.mock('../models/staffModel.js', () => ({
   findById:vi.fn(), findByEmail:vi.fn(), list:vi.fn(), create:vi.fn(), update:vi.fn(),
@@ -26,8 +26,8 @@ function cookie() {
  const signature=createHmac('sha256','test-staff-secret-at-least-32-characters').update(value).digest('base64').replace(/=+$/,'');
  return `sid=${encodeURIComponent(`s:${value}.${signature}`)}`;
 }
-const post = (body:unknown=draft)=>request(app).post('/api/staff').set('Origin', 'http://localhost:5173').set('Cookie',cookie()).send(body);
-const patch = (body:unknown,id=2)=>request(app).patch(`/api/staff/${id}`).set('Origin', 'http://localhost:5173').set('Cookie',cookie()).send(body);
+const post = (body:unknown=draft)=>request(app).post('/api/staff').set('Origin', 'http://localhost:8787').set('Cookie',cookie()).send(body);
+const patch = (body:unknown,id=2)=>request(app).patch(`/api/staff/${id}`).set('Origin', 'http://localhost:8787').set('Cookie',cookie()).send(body);
 beforeEach(()=>{
  vi.clearAllMocks();actor={...owner};
  savedPermissions = new Map();
@@ -70,7 +70,7 @@ describe('Staff API and permissions',()=>{
   expect(auditModel.create).not.toHaveBeenCalled();
  });
  it.each([['get','/api/staff'],['get','/api/staff/roles'],['post','/api/staff'],['patch','/api/staff/2']])('requires authentication: %s %s',async(method,url)=>{
-  const response=await request(app)[method as 'get'](url).set('Origin', 'http://localhost:5173');
+  const response=await request(app)[method as 'get'](url).set('Origin', 'http://localhost:8787');
   expect(response.status).toBe(401);expect(model.list).not.toHaveBeenCalled();expect(model.create).not.toHaveBeenCalled();expect(model.update).not.toHaveBeenCalled();
  });
  it.each(['STAFF'])('denies staff endpoints to %s',async role=>{
@@ -131,7 +131,7 @@ describe('Staff API and permissions',()=>{
   expect((await post(body)).status).toBe(400);expect(model.create).not.toHaveBeenCalled();
  });
  it.each([{}, {role:'OWNER'}, {phone:'abc'}, {fullName:''}, {permissions:['unknown']}])('validates strict patch body %j',async body=>{expect((await patch(body)).status).toBe(400)});
- it.each(['abc','0','-1','1.2','9007199254740992'])('rejects invalid id %s',async id=>{expect((await request(app).patch(`/api/staff/${id}`).set('Origin', 'http://localhost:5173').set('Cookie',cookie()).send({fullName:'Mới'})).status).toBe(400)});
+ it.each(['abc','0','-1','1.2','9007199254740992'])('rejects invalid id %s',async id=>{expect((await request(app).patch(`/api/staff/${id}`).set('Origin', 'http://localhost:8787').set('Cookie',cookie()).send({fullName:'Mới'})).status).toBe(400)});
 });
 
 describe('Per-staff permissions', () => {
@@ -201,7 +201,7 @@ describe('Per-staff permissions', () => {
   expect(await permissionsFor(other)).toEqual(rolePermissions.STAFF);
  });
  it('removes the role permission write route', async () => {
-  expect((await request(app).put('/api/staff/roles/STAFF/permissions').set('Origin', 'http://localhost:5173').set('Cookie',cookie()).send({permissions:[]})).status).toBe(404);
+  expect((await request(app).put('/api/staff/roles/STAFF/permissions').set('Origin', 'http://localhost:8787').set('Cookie',cookie()).send({permissions:[]})).status).toBe(404);
  });
  it('propagates failed writes', async () => {
   vi.mocked(model.update).mockRejectedValueOnce(new Error('fixture failure'));

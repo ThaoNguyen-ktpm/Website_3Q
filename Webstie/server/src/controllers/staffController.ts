@@ -23,7 +23,7 @@ export const createLoginLink: RequestHandler = async (request, response, next) =
     if (isPrimaryAdmin(target?.email) && !isPrimaryAdmin(response.locals.user.email)) {
       throw new ApiError(403, 'FORBIDDEN', 'Không thể tạo link cho tài khoản Admin chính.');
     }
-    response.json(await staff.loginLink(response.locals.user, id, request.ip));
+    response.json(await staff.loginLink(response.locals.user, id, request.ip, request.get('origin')));
   } catch (error) { next(error); }
 };
 export const updateStaff: RequestHandler = async (request, response, next) => {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MacBook: open the shop website at http://localhost:5173 by forwarding it to the machine running npm run dev.
+"""MacBook: open the shop website at http://localhost:8787 by forwarding it to the machine running npm run dev.
 
 Bảo 2026-10-20 (docs/LAN.md): Google sign-in only accepts localhost, so the Mac keeps using localhost and this
 script relays it over the shop wifi. Standard library only. Run: python3 mac-forward.py 192.168.110.213
@@ -9,7 +9,7 @@ import os
 import sys
 
 HOST = sys.argv[1] if len(sys.argv) > 1 else '192.168.110.213'
-PORT = 5173
+PORT = 8787
 LISTEN_PORT = int(os.environ.get('LISTEN_PORT', PORT))  # only differs when testing on the server itself
 
 

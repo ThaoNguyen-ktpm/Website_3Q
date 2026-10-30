@@ -8,6 +8,12 @@ const path = require('node:path');
 const { createBot, parseMoney } = require('../telegram-bot');
 const { createPriceFeedback } = require('../lib/price-feedback');
 
+test('numeric SKU suffix is never parsed as an offer', () => {
+  assert.equal(parseMoney('SP025211_29102026 khách trả 45tr'), 45000000);
+  assert.equal(parseMoney('SP025211_29102026'), null);
+  assert.equal(parseMoney('SP025211 SP025211_29102026'), null);
+});
+
 // TASK-040: "giá chốt" = facts card → customer's offer → one-line suggestion → Bảo's feedback.
 const product = { sku: 'SP024640', name: 'Túi Chanel Vanity with Chain Small Đen GHW', price: 65000000, onHand: 1, hotTrend: false, image: null };
 const saleRow = { sku: 'SP024640', status: 'simulated', m: 0, type: 'normal', ageDays: 11, price: 65000000, allowance: 0, net: 65000000, currentPrice: 65000000, cost: 51500000, reasons: [] };

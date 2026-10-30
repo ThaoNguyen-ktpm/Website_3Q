@@ -1,16 +1,17 @@
 'use strict';
 
-// Bảo 2026-10-19 (TASK-033): BossTele answers "giá sale" with the Sale AI tool's own formula (D:\BaoQ-AI lib/pricing.js
+// Bảo 2026-10-19 (TASK-033): BossTele answers "giá sale" with the embedded Sale AI core's formula (server/src/sale-ai/lib/pricing.js
 // calculate). P0 comes from Sale AI's store, read as plain files: no store lock, no write, no Kiot call.
 // Stock, name and current Kiot price come from the web catalog snapshot, which is fresher than Sale AI's last load.
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { cost } = require('./catalog');
+const { extractSkus, matchingSkus, skuChoice } = require('./lib/sku');
 
 const BRANCH = 44466; // Sale AI prices only stock at "Chi nhánh trung tâm".
 const defaults = {
-  saleDir: process.env.BAOQ_AI_DIR || 'D:/BaoQ-AI',
+  saleDir: process.env.BAOQ_AI_DIR || path.join(__dirname, '..', 'server', 'src', 'sale-ai'),
   catalogFile: path.join(__dirname, '..', 'server', 'data', 'catalog-cache.json'),
 };
 
@@ -35,8 +36,8 @@ function readSaleStore(storeDir) {
   return { policy: manifest.metadata?.policy ?? null, loadedAt: manifest.metadata?.loadedAt ?? null, products };
 }
 
-function createSalePricer({ saleDir = defaults.saleDir, catalogFile = defaults.catalogFile, today } = {}) {
-  const storeDir = path.join(saleDir, 'data', 'kiot-state.store');
+function createSalePricer({ saleDir = defaults.saleDir, dataDir = saleDir === defaults.saleDir && !process.env.BAOQ_AI_DIR ? path.join(__dirname, '..', 'server', 'data', 'sale-ai') : path.join(saleDir, 'data'), catalogFile = defaults.catalogFile, today } = {}) {
+  const storeDir = path.join(dataDir, 'kiot-state.store');
   const store = cachedByMtime(path.join(storeDir, 'manifest.json'), () => readSaleStore(storeDir));
   const catalog = cachedByMtime(catalogFile, () => new Map((JSON.parse(fs.readFileSync(catalogFile, 'utf8')).rows?.kiotviet ?? []).map(row => [row.sku, row])));
   let pricing;
@@ -46,8 +47,13 @@ function createSalePricer({ saleDir = defaults.saleDir, catalogFile = defaults.c
     let live = new Map();
     try { live = catalog(); } catch { /* no web snapshot: use Sale AI's own stock and price */ }
     const day = today ?? pricing.vietnamTime().date;
+    const codes = [...new Set([...live.keys(), ...sale.products.keys()])].map(sku => ({ sku }));
     const rows = skus.map(sku => {
-      const saved = sale.products.get(sku), row = live.get(sku);
+      const candidates = matchingSkus(codes, sku);
+      if (candidates.length > 1) return { sku, status: 'ambiguous', candidates: candidates.slice(0, 5).map(item => item.sku), reasons: [skuChoice(candidates)] };
+      sku = candidates[0]?.sku ?? sku;
+      const saved = [...sale.products.entries()].find(([code]) => code.toUpperCase() === sku.toUpperCase())?.[1];
+      const row = [...live.entries()].find(([code]) => code.toUpperCase() === sku.toUpperCase())?.[1];
       if (!saved && !row) return { sku, status: 'missing', reasons: ['Không có trong Sale AI và danh mục KiotViet'] };
       const branch = row?.detail?.inventories?.find(inventory => inventory.branchId === BRANCH);
       const product = {
@@ -69,7 +75,7 @@ function createSalePricer({ saleDir = defaults.saleDir, catalogFile = defaults.c
 }
 
 if (require.main === module) {
-  const skus = process.argv.slice(2).filter(arg => /^SP\d{4,}$/i.test(arg)).map(sku => sku.toUpperCase());
+  const skus = process.argv.slice(2).filter(arg => extractSkus(arg)[0] === arg.toUpperCase()).map(sku => sku.toUpperCase());
   if (!skus.length) { console.error('Dùng: node sale-price.js SP014899 [SP000009 ...]'); process.exitCode = 1; }
   else createSalePricer()(skus).then(result => console.log(JSON.stringify(result)))
     .catch(error => { console.error(`Không đọc được giá sale: ${error.message}`); process.exitCode = 1; });

@@ -34,3 +34,15 @@ Nếu thiếu thông tin hoặc môi trường cần thiết, ghi `blocked` cùn
 3. Yêu cầu Claude kiểm tra code và kết quả; Codex xử lý các lỗi được ghi nhận.
 
 Các file này hướng dẫn vai trò và lưu bàn giao; chúng không tự khởi chạy, kết nối hay điều phối hai ứng dụng.
+
+## Website sau TASK-110
+
+Giao diện duy nhất ở `Webstie/frontend/`, cổng 8787; API cổng 4000. Chạy dev/build/test tại `Webstie/`; build/test gốc gồm frontend và server. Frontend có lockfile độc lập: cài bằng `npm ci --prefix frontend`. Tài liệu nằm trong Điều hành → Quản lý, dùng API và quyền tài liệu hiện có. Kiểm thử đăng nhập Google, link dùng một lần, tài liệu và LAN cần bằng chứng trình duyệt riêng; không thay thế bằng typecheck.
+
+## Sale AI sau TASK-104
+
+Sale AI là lõi JS trong máy chủ Express (`Webstie/server/src/sale-ai/`), API và giao diện cũ ở `/sale-ai/`, sau đăng nhập, `sale.manage` và same-origin. Không bật tiến trình Sale AI riêng. Kho mới ở `Webstie/server/data/sale-ai/` (gitignored), không nhập dữ liệu cũ.
+
+Test lõi: `node --test *.test.js` tại `Webstie/server/src/sale-ai/test`, hoặc `npm run test:sale-ai` tại server. `npm test` server chạy Vitest riêng rồi test lõi; không để Vitest quét node:test. Build chép JS và public vào dist.
+
+Đánh số task phải tính cả `D:\BaoQ-AI\tasks` cũ; không tái sử dụng số đã có ở đó. Kho cũ giữ nguyên để lưu trữ. TASK-104 chưa cho phép kiểm thử ghi/khôi phục thật và không bật batch sản xuất. Đọc result/review để biết phần chưa xác minh trên máy đang chạy.

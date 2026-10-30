@@ -7,7 +7,7 @@ import { createSession } from '../services/authService.js';
 import * as audit from '../services/auditService.js';
 import { allPermissions, rolePermissions } from '../config/permissions.js';
 
-vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN:'http://localhost:5173', SESSION_SECRET:'test-audit-secret-at-least-32-characters' } }));
+vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN:'http://localhost:8787', SESSION_SECRET:'test-audit-secret-at-least-32-characters' } }));
 vi.mock('../models/prisma.js', () => ({ prisma: {
   auditLog: { create:vi.fn(),findMany:vi.fn(),count:vi.fn(),deleteMany:vi.fn() },
   $transaction:vi.fn(async values => Promise.all(values)),

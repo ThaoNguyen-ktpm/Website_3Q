@@ -10,7 +10,7 @@ import * as auditModel from '../models/auditLogModel.js';
 import { verifyGoogleToken } from '../services/googleTokenVerifier.js';
 
 vi.mock('../config/env.js', () => ({ env: {
-  APP_ORIGIN: 'http://localhost:5173',
+  APP_ORIGIN: 'http://localhost:8787',
   SESSION_SECRET: 'test-primary-admin-secret-at-least-32-characters',
   GOOGLE_CLIENT_ID: 'test-primary.apps.googleusercontent.com',
 } }));
@@ -41,7 +41,7 @@ function cookie(actorId: number) {
   return `sid=${encodeURIComponent(`s:${value}.${signature}`)}`;
 }
 const patch = (actorId: number, targetId: number, body: Record<string, unknown>) => request(app)
-  .patch(`/api/staff/${targetId}`).set('Origin', 'http://localhost:5173')
+  .patch(`/api/staff/${targetId}`).set('Origin', 'http://localhost:8787')
   .set('Cookie', cookie(actorId)).send(body);
 
 beforeEach(() => {
@@ -141,7 +141,7 @@ describe('Primary admin controller policy', () => {
     const person = people.find(person => person.id === actorId)!;
     vi.mocked(verifyGoogleToken).mockResolvedValue({ sub: 'test-google-sub', email: person.email, email_verified: true,
       iss: 'https://accounts.google.com', aud: 'test-primary.apps.googleusercontent.com', iat: 1, exp: 2 });
-    const response = await request(app).post('/api/auth/google').set('Origin', 'http://localhost:5173').send({ credential: 'test-token' });
+    const response = await request(app).post('/api/auth/google').set('Origin', 'http://localhost:8787').send({ credential: 'test-token' });
     expect(response.status).toBe(200);
     expect(response.body.user.isPrimaryAdmin).toBe(actorId === primary.id);
   });

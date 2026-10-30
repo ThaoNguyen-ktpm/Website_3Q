@@ -29,6 +29,29 @@ test('bot answers commands itself without Claude', async () => {
   assert.equal(asked.length, 0);
 });
 
+test('cost questions use the web code answer and keep the product card (TASK-107)', async () => {
+  const seen = [], sent = [];
+  const product = { sku: 'SP025211_KG', name: 'Túi', price: 26000000, onHand: 1, image: null };
+  const reply = 'SP025211_KG: vốn 20.000.000đ · đang bán 26.000.000đ · lời 6.000.000đ (30%)';
+  const bot = createBot({ allowFrom: ['7'], newSession: () => assert.fail('not a command'),
+    api: async (method, body) => { if (method === 'sendMessage') sent.push(body.text); },
+    quick: async messages => { seen.push(messages.at(-1).content); return { reply, products: [product] }; },
+    salePrices: async () => assert.fail('not a sale question'), ask: async () => assert.fail('no Claude'),
+  });
+  await bot.handleUpdate({ message: { chat: { id: 1, type: 'private' }, from: { id: 7 }, text: 'xem giá vốn SP025211_KG' } });
+  assert.deepEqual(seen, ['xem giá vốn SP025211_KG']);
+  assert.deepEqual(sent, [reply, 'Túi\nSP025211_KG · 26.000.000đ\nCòn 1']);
+});
+
+test('explicit cost calculator commands keep the existing command handler (TASK-107)', async () => {
+  const { sent, asked, handled, say } = setup();
+  const text = 'tính giá vốn=20000000 chi_phí=0 cách=markup tỷ_lệ=30';
+  await say(text);
+  assert.deepEqual(handled, [text]);
+  assert.deepEqual(sent, [`đã xử lý ${text}`]);
+  assert.deepEqual(asked, []);
+});
+
 test('bot sends free-form store questions to Claude and keeps one conversation for follow-ups', async () => {
   let clock = 0;
   const { sent, asked, say } = setup({ now: () => clock });

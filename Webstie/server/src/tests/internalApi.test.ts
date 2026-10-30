@@ -5,7 +5,7 @@ import { quickAnswer } from '../services/assistant/graph.js';
 import { catalogStore } from '../services/catalogStore.js';
 
 const token = 'x'.repeat(40);
-vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:5173', INTERNAL_TOKEN: 'x'.repeat(40) } }));
+vi.mock('../config/env.js', () => ({ env: { APP_ORIGIN: 'http://localhost:8787', INTERNAL_TOKEN: 'x'.repeat(40) } }));
 vi.mock('../services/assistant/graph.js', () => ({ quickAnswer: vi.fn(), chat: vi.fn() }));
 vi.mock('../services/catalogStore.js', () => ({ catalogStore: { sync: vi.fn(), rawRows: vi.fn() } }));
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(quickAnswer).mockResolvedValue({ reply: 'Có 1 sản phẩm phù hợp:', offTopic: false, sources: [], products: [] }); });

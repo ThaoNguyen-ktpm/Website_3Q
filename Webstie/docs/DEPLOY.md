@@ -24,14 +24,16 @@ TRUST_PROXY=1
 
 `TRUST_PROXY=1` chỉ phù hợp mô hình một proxy Caddy được kiểm soát. Nếu thêm CDN/proxy, phải kiểm tra lại số hop và đường truy cập trước khi dùng; không tin header chuyển tiếp từ kết nối Internet trực tiếp.
 
-- [ ] Tại gốc repo trên máy build có dependencies, chạy (shell Linux; trên Windows PowerShell dùng `npm.cmd` thay `npm`):
+- [ ] Tại Webstie/ trên máy build có dependencies (cài server bằng npm ci và frontend bằng npm ci --prefix frontend), chạy (shell Linux; trên Windows PowerShell dùng `npm.cmd` thay `npm`):
 
 ```sh
 npm run build
 npm test
 ```
 
-Build gốc biên dịch cả server lẫn client. Đưa **toàn bộ** `client/dist` tới `/srv/baoq/client/dist`, cho user Caddy quyền đọc và duyệt thư mục; không phục vụ gốc repo hoặc `server/.env`. Đưa bản build server cùng dependencies runtime tới máy chủ. Khi cần migration, dùng tài khoản migration riêng và lệnh `npm run db:migrate` sau backup; không tự seed/xóa dữ liệu.
+Build gốc biên dịch server và frontend (gồm TypeScript và Vite). Đưa **toàn bộ** `frontend/dist` tới `/srv/baoq/frontend/dist`, cho user Caddy quyền đọc và duyệt thư mục; không phục vụ gốc repo hoặc `server/.env`. Đưa bản build server cùng dependencies runtime tới máy chủ. Khi cần migration, dùng tài khoản migration riêng và lệnh `npm run db:migrate` sau backup; không tự seed/xóa dữ liệu.
+
+Mẫu Caddy chuyển `/sale-ai` và `/sale-ai/*` tới Express, giữ CSP và chính sách iframe cùng nguồn do Sale AI trả về. CSP/X-Frame-Options của giao diện không áp lên các đường dẫn này; cần kiểm tra iframe thật qua proxy khi nghiệm thu triển khai.
 
 - [ ] Chạy API qua trình quản lý dịch vụ của máy chủ để tự khởi động lại, giữ thư mục làm việc `/srv/baoq/server` và env production. Lệnh tiến trình tương ứng từ gốc repo:
 

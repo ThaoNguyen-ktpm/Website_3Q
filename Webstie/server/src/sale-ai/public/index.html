@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#f6f8fa">
+    <title>BAOQ · Kiểm thử giá sale</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main-content">Đến nội dung chính</a>
+    <div class="shell">
+      <!-- Thanh bên: thương hiệu, menu và thông tin nguồn dữ liệu. -->
+      <aside>
+        <a class="brand" href="./">
+          BAOQ
+          <span>LUXURY · SALE LAB</span>
+        </a>
+
+        <!-- Giữ data-view để app.js nhận diện màn hình khi bấm menu. -->
+        <nav aria-label="Màn hình">
+          <a data-view="results" href="?view=results" class="active" aria-current="page">Kết quả kiểm thử</a>
+          <a data-view="history" href="?view=history">Lịch sử</a>
+          <!-- TASK-088: Thiết lập tạm ẩn cho đến khi người dùng yêu cầu mở lại. -->
+        </nav>
+
+        <div class="aside-note">
+          Dữ liệu mẫu / Kiot thật<br>
+          Cập nhật khi bấm nút
+        </div>
+      </aside>
+
+      <!-- Nội dung chính. -->
+      <main id="main-content" tabindex="-1">
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">SALE AI</p>
+            <h1 id="title" tabindex="-1">Kết quả kiểm thử</h1>
+            <p class="muted">Kiểm tra giá trước khi ghi lên Kiot + Sapo.</p>
+          </div>
+
+          <div id="header-metrics" aria-label="Thống kê sản phẩm" hidden></div>
+        </header>
+
+        <!-- Bảo 2026-10-21: one line for the data state and its reload button; yellow when the Kiot data is old. -->
+        <div id="data-bar" class="data-bar">
+          <p id="sync-status" class="muted" aria-live="polite"></p>
+          <div id="data-controls" class="toolbar">
+            <label>Nguồn dữ liệu
+              <select id="dataset" name="dataset"><option value="real">Kiot thật</option><option value="sample">Dữ liệu mẫu</option></select>
+            </label>
+            <button id="refresh">Tải lại từ Kiot</button>
+          </div>
+        </div>
+        <section id="update-progress" class="update-progress" aria-label="Tiến độ cập nhật" hidden></section>
+        <p id="page-status" class="sr-only" role="status" aria-live="polite"></p>
+       
+
+        <!-- app.js cập nhật thông báo vào #message và màn hình vào #content. -->
+        <div id="message" role="status" aria-live="polite" hidden></div>
+        <section id="content" aria-label="Nội dung"></section>
+      </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
+

@@ -1,12 +1,14 @@
 import type { Permission } from '../../config/permissions.js';
 import { fold } from './brands.js';
 import { executeTool, type ProductCard, type Source } from './tools.js';
+import { extractSkus, matchingSkus, skuChoice } from './sku.js';
 
 type Reply = { reply: string; offTopic: false; sources: Source[]; products?: ProductCard[]; suggestions?: string[] };
 type Message = { role: string; content: string };
 
 // "giá chốt", "chốt giá", "đề xuất giá", "giảm được bao nhiêu", "lời bao nhiêu"… — negotiation/profit questions, not look-ups.
-const pricingIntent = /\bgia chot\b|\bchot gia\b|\bde xuat gia\b|\bgia de xuat\b|\bgiam (duoc|gia|bao nhieu|toi da)\b|\bthuong luong\b|\bdeal\b|\bgia (thap nhat|san|toi thieu)\b|\b(loi|lai) (bao nhieu|may|duoc)\b|\bbien loi nhuan\b|\bgia von\b/;
+const pricingIntent = /\bgia chot\b|\bchot gia\b|\bde xuat gia\b|\bgia de xuat\b|\bgiam (duoc|gia|bao nhieu|toi da)\b|\bthuong luong\b|\bdeal\b|\bgia (thap nhat|san|toi thieu)\b|\b(loi|lai) (bao nhieu|may|duoc)\b|\bbien loi nhuan\b/;
+const costIntent = /\bgia von\b|\bxem von\b|\bvon bao nhieu\b|\bvon cua\b|\bnhap gia bao nhieu\b/;
 const targetRate = /\b(?:loi|lai|markup)\s*(\d{1,3}(?:[.,]\d{1,2})?)\s*%/;
 // Keeps "%" and decimals, which the brand fold strips.
 const light = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
@@ -16,7 +18,8 @@ const pct = (value: number) => `${value.toLocaleString('vi-VN', { maximumFractio
 /** Last SKU mentioned in the conversation (current question first, then earlier turns). */
 function lastSku(messages: Message[]) {
   for (let i = messages.length - 1; i >= 0; i--) {
-    const sku = messages[i].content.match(/\bSP\d{4,}\b/gi)?.at(-1);
+    if (messages[i].role !== 'user') continue;
+    const sku = extractSkus(messages[i].content).at(-1);
     if (sku) return sku.toUpperCase();
   }
   return null;
@@ -30,21 +33,37 @@ function lastSku(messages: Message[]) {
 export async function pricingAnswer(messages: Message[], permissions: Permission[]): Promise<Reply | null> {
   const question = fold(messages.at(-1)!.content);
   const rate = light(messages.at(-1)!.content).match(targetRate)?.[1]?.replace(',', '.');
-  if (!pricingIntent.test(question) && !rate) return null;
-  const sku = lastSku(messages);
+  // BossTele's explicit calculator command keeps its own handler.
+  if (/^\s*tinh gia von\s*=/.test(light(messages.at(-1)!.content))) return null;
+  const costOnly = costIntent.test(question) && !pricingIntent.test(question) && !rate;
+  if (!costOnly && !pricingIntent.test(question) && !rate) return null;
+  let sku = lastSku(messages);
+  if (!sku && costOnly) return { reply: 'Bạn cho mình SKU sản phẩm (ví dụ SP014899) để mình xem giá vốn nhé.', offTopic: false, sources: [] };
   if (!sku) return rate ? null : { reply: 'Bạn cho mình SKU sản phẩm (ví dụ SP014899) để mình tính giá chốt nhé.', offTopic: false, sources: [] };
   const found = await executeTool('tim_san_pham', { q: sku, limit: 1 }, permissions);
-  const product = found.products?.find(item => item.sku === sku);
+  const candidates = matchingSkus(found.products ?? [], sku);
+  const data = JSON.parse(found.content) as { candidates?: string[]; message?: string };
+  if (candidates.length > 1 || data.candidates?.length) return { reply: data.message ?? skuChoice(candidates), offTopic: false, sources: [] };
+  const product = candidates[0];
   if (!product) return { reply: found.content.includes('không có quyền') ? 'Bạn không có quyền xem sản phẩm.' : `Không tìm thấy SKU ${sku} trên KiotViet.`, offTopic: false, sources: [] };
+  sku = product.sku;
   const costs = ((JSON.parse(found.content) as { items?: { sku: string; cost?: { cost: number | null }[] }[] }).items ?? [])
-    .find(item => item.sku === sku)?.cost?.map(row => row.cost).filter((value): value is number => typeof value === 'number' && value > 0) ?? [];
+    .find(item => item.sku.toUpperCase() === sku.toUpperCase())?.cost?.map(row => row.cost).filter((value): value is number => typeof value === 'number' && value > 0) ?? [];
   const base = { offTopic: false as const, sources: found.sources, products: [product] };
   if (!permissions.includes('products.cost')) {
+    if (costOnly) return { ...base, reply: `Bạn không có quyền xem giá vốn. Giá bán hiện tại ${product.price ? vnd(product.price) : 'chưa có'}.` };
     return { ...base, reply: `Giá bán hiện tại ${product.price ? vnd(product.price) : 'chưa có'}. Bạn không có quyền xem giá vốn nên mình không tính được mức giá chốt.` };
   }
+  if (!costs.length && costOnly) return { ...base, reply: `${sku} chưa có giá vốn trên KiotViet. Giá bán hiện tại ${product.price ? vnd(product.price) : 'chưa có'}.` };
   if (!costs.length) return { ...base, reply: `${sku} chưa có giá vốn trên KiotViet nên mình chưa tính được giá chốt. Giá bán hiện tại ${product.price ? vnd(product.price) : 'chưa có'}.` };
   // Branches can disagree on cost; the highest keeps the floor price safe.
   const cost = Math.max(...costs);
+  if (costOnly) {
+    const distinct = [...new Set(costs)];
+    const branches = distinct.length > 1 ? ` (chi nhánh khác nhau: ${distinct.map(vnd).join(', ')})` : '';
+    return { ...base, reply: `${sku}: vốn ${vnd(cost)}${branches}${product.price == null || product.price <= 0 ? ''
+      : ` · đang bán ${vnd(product.price)} · lời ${vnd(product.price - cost)} (${pct((product.price - cost) / cost * 100)})`}` };
+  }
   if (rate) {
     const calculation = JSON.parse((await executeTool('tinh_gia', { sku, cach: 'markup', ty_le: rate }, permissions)).content) as { sellingPrice?: string; message?: string };
     if (!calculation.sellingPrice) return { ...base, reply: calculation.message ?? 'Không tính được giá với mức lời này.' };

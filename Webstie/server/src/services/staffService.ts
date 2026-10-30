@@ -7,6 +7,7 @@ import { ApiError } from '../middlewares/errorHandler.js';
 import * as audit from './auditService.js';
 import { env } from '../config/env.js';
 import { createLink, lanOrigin } from './loginLinkService.js';
+import { allowedOrigin } from '../config/origins.js';
 
 export const publicUser = async (staff: Staff) => ({ id: staff.id, email: staff.email, fullName: staff.fullName,
   role: staff.role, roleLabel: roleLabels[staff.role], permissions: await permissionsFor(staff) });
@@ -51,7 +52,7 @@ async function permissionData(actor: Actor, role: Role, permissions: Permission[
   return { customPermissions, permissions: { deleteMany: {}, create: customPermissions ? effective.map(permission => ({ permission })) : [] } };
 }
 /** A one-time sign-in link for a staff member on another laptop of the shop wifi (Bảo 2026-10-20); the code is never logged. */
-export async function loginLink(actor: Actor, id: number, ip?: string) {
+export async function loginLink(actor: Actor, id: number, ip?: string, origin?: string) {
   canManage(actor);
   if (!Number.isSafeInteger(id) || id <= 0) throw new ApiError(400, 'VALIDATION_ERROR', 'Mã nhân viên không hợp lệ.');
   const target = await model.findById(id);
@@ -60,7 +61,8 @@ export async function loginLink(actor: Actor, id: number, ip?: string) {
   if (target.role === 'ADMIN' && actor.role !== 'ADMIN') denied();
   const link = createLink(target.id);
   await audit.record({ actor, action: 'staff.login_link', targetType: 'staff', targetId: target.id, after: { email: target.email, expiresAt: link.expiresAt }, ip });
-  return { url: `${lanOrigin(env.APP_ORIGIN)}/dang-nhap?ma=${link.code}`, expiresAt: link.expiresAt };
+  // The link opens the page it was made on (APP_ORIGIN defaults to 8787, or an EXTRA_ORIGINS page), on this machine's wifi IP.
+  return { url: `${lanOrigin(allowedOrigin(origin) ? origin! : env.APP_ORIGIN)}/dang-nhap?ma=${link.code}`, expiresAt: link.expiresAt };
 }
 export async function create(actor: Actor, body: unknown, ip?: string) {
   canManage(actor);

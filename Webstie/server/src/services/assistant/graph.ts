@@ -69,6 +69,8 @@ async function lookupAnswer(messages: Messages, brands: string[], permissions: P
       : { q: lookup.words.join(' ') || null, hot_trend: lookup.hot, brand: lookup.brand, limit: 5, in_stock: lookup.inStock,
         min_price: lookup.minPrice, max_price: lookup.maxPrice, sort: lookup.sort, offset: lookup.offset }, permissions);
     const products = output.products ?? [];
+    const choices = JSON.parse(output.content) as { candidates?: string[]; message?: string };
+    if (choices.candidates?.length) return { reply: choices.message!, offTopic: false, sources: [] };
     if (!products.length) {
       const denied = output.content.includes('không có quyền');
       const what = describe(lookup, true);

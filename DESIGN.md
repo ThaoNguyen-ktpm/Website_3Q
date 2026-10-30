@@ -47,7 +47,7 @@ components:
 # DESIGN — BaoQ Luxury
 
 ## Overview
-Trích từ trang đăng nhập hiện tại (`client/src/pages/LoginPage.tsx`, rule `.login-*` trong `client/src/style.css`), 2026-10-15. Video nền tối toàn màn hình với lớp tối 55%; một cột căn giữa: logo đồng, tiêu đề serif, câu phụ serif, nút Google, dòng điều khoản. Trên desktop, cột đăng nhập nằm bên trái trong bố cục 2 cột, cột phải là mô hình 3D túi (`.login-layout`, `.login-bag` — không sửa). CSS trang chủ cũ (`.site-header`, `.product-*`, nền #f7f8f4) là di sản chưa thiết kế lại.
+TASK-110: giao diện vận hành hiện tại dùng `Webstie/frontend/src/app-v2.css`, các thành phần `ui.tsx` và trang đăng nhập `login.tsx`. Mục Tài liệu dùng cùng bảng, form và màu của trang Nhân viên. Các token và mô tả phía dưới được lưu từ thiết kế năm 2026-10-15, cần đối chiếu CSS hiện hành trước khi dùng.
 
 ## Colors
 Dải đồng-ngà ăn theo logo trên nền gần đen. `bronze` là màu logo và viền focus; `heading` cho tiêu đề; `ink` cho chữ đọc; `muted` cho ghi chú. Nền phẳng `ground` khi video không chạy. Không gradient.

@@ -1,6 +1,6 @@
 # Hướng dẫn Codex — Website_3Q
 
-Áp dụng cho toàn bộ `D:\Website_3Q`: website (`Webstie/server/`, `Webstie/client/`) và BossTele (`Webstie/BossTele/`); mã chạy nằm trong `Webstie/` từ 27/10/2026. Khi làm trong `Webstie/BossTele/`, đọc thêm `Webstie/BossTele/AGENTS.md`.
+Áp dụng cho toàn bộ `D:\Website_3Q`: website (`Webstie/server/`, `Webstie/frontend/`) và BossTele (`Webstie/BossTele/`); mã chạy nằm trong `Webstie/` từ 27/10/2026. Khi làm trong `Webstie/BossTele/`, đọc thêm `Webstie/BossTele/AGENTS.md`.
 
 ## Ponytail dùng chung
 - Khi làm công việc code, đọc `.agents/skills/ponytail/SKILL.md` và áp dụng mức `full` mặc định, trừ khi người dùng chọn mức khác hoặc tắt trong phiên.
@@ -38,22 +38,23 @@
 
 ## Kiểm tra
 - Website: `npm run build` và `npm test` tại `D:\Website_3Q\Webstie`.
-- BossTele: `npm test` tại `D:\Website_3Q\BossTele`.
+- BossTele: `npm test` tại `D:\Website_3Q\Webstie\BossTele`.
+- Sale AI: `node --test *.test.js` tại `Webstie/server/src/sale-ai/test` (hoặc `npm run test:sale-ai` tại server); Vitest loại thư mục test lõi này.
 
 ## Bản đồ repo
 Chỉ ghi cấp thư mục. Khi thêm, xóa hoặc đổi vai trò một thư mục dưới đây, cập nhật mục này trong cùng thay đổi.
 
-- `Webstie/`: thư mục chính của ứng dụng (từ 27/10/2026); `npm run dev`, `npm run build`, `npm test` chạy tại đây. `Webstie/frontend/`: bản giao diện mẫu dùng làm thiết kế.
+- `Webstie/`: thư mục chính của ứng dụng; `npm run dev`, `npm run build`, `npm test` chạy tại đây. Build/test gốc gồm server và frontend; frontend có lockfile riêng, dùng `npm ci --prefix frontend` khi cài đặt.
 - `Webstie/server/`: API Express + Prisma (TypeScript), test bằng Vitest + supertest.
   - `src/routes/` → `src/controllers/` → `src/services/` → `src/models/` (truy cập Prisma).
   - `src/middlewares/`: xác thực, phân quyền, giới hạn tần suất, kiểm tra cùng nguồn, xử lý lỗi.
   - `src/config/`: biến môi trường, quyền, cookie phiên, admin chính.
   - `src/tests/`: test API. `prisma/`: schema, migrations, seed.
-- `Webstie/client/`: React + Vite + Tailwind (TypeScript).
-  - `src/pages/`: các trang; `src/admin/`: khu quản trị (models, controllers, views, components).
-  - `src/api/`: gọi API server; `src/hooks/`, `src/components/`: dùng chung.
-  - `src/three/`: mô hình 3D túi Birkin (three.js).
+- `Webstie/frontend/`: giao diện web duy nhất, React + Vite + TypeScript, cổng 8787; `src/` chứa các trang và thành phần dùng chung.
+  - `src/api/`: gọi API server; Tài liệu dùng quyền `documents.view` và `documents.manage`.
+  - `public/`: tài nguyên tĩnh, thương hiệu.
 - `Webstie/BossTele/`: công cụ Node >= 22 riêng (tìm sản phẩm, chat, định giá, bộ lọc Telegram). `lib/` logic, `test/` test, `docs/` tài liệu. `vendor/` là submodule, không sửa.
+- `Webstie/server/src/sale-ai/`: lõi JS và giao diện cũ Sale AI, chạy trong Express; không có tiến trình riêng. Kho ở `Webstie/server/data/sale-ai/`, không mang dữ liệu cũ.
 - `tasks/`: spec, result, review từ `TASK-009`. `Webstie/BossTele/tasks/`: lưu trữ `TASK-001` đến `TASK-008`.
 - `server/data/`: PDF gốc, chỉ mục tài liệu JSON và cache mô hình embedding cục bộ; không đưa vào Git.
 - `PRODUCT.md`, `DESIGN.md`: mô tả sản phẩm và hệ thống thiết kế giao diện.
@@ -68,7 +69,7 @@ Tra cứu chi tiết bằng CodeGraph (luôn theo code hiện tại, không cầ
 - Giữ thay đổi trong phạm vi yêu cầu, bảo toàn công việc có sẵn của người dùng.
 - Không tự chọn công nghệ hoặc tính năng lớn khi yêu cầu dự án chưa được xác định.
 - Không ghi bí mật, token hoặc mật khẩu vào code, tài liệu hay log.
-- Website chỉ dùng dữ liệu thử; không kết nối KiotViet, Sapo, cổng thanh toán hoặc dịch vụ thật. Ngoại lệ đã được Bảo duyệt: Google Sign-In để đăng nhập (TASK-010); đọc sản phẩm KiotViet và Sapo Web cho trang Tìm kiếm, chỉ đọc, khóa ở `BossTele/.env` (TASK-025); gọi Anthropic API cho hỏi đáp tài liệu (TASK-027); nhúng tool Sale AI (`D:\BaoQ-AI`, nghe 127.0.0.1:4310) ở trang Sale AI qua `/sale-ai/` trên chính server web, chỉ người đăng nhập có quyền `sale.manage`, mọi ghi giá KiotViet/Sapo chỉ đi qua các bước xem trước, cập nhật, khôi phục và lịch sử của chính Sale AI (TASK-035); nội dung đoạn tài liệu được gửi tới Anthropic.
+- Website chỉ dùng dữ liệu thử; không kết nối KiotViet, Sapo, cổng thanh toán hoặc dịch vụ thật. Ngoại lệ đã được Bảo duyệt: Google Sign-In để đăng nhập (TASK-010); đọc sản phẩm KiotViet và Sapo Web cho trang Tìm kiếm, chỉ đọc, khóa ở `BossTele/.env` (TASK-025); gọi Anthropic API cho hỏi đáp tài liệu (TASK-027); tích hợp lõi Sale AI trong máy chủ web tại `/sale-ai/`, kho mới `Webstie/server/data/sale-ai/`, chỉ người đăng nhập có quyền `sale.manage`, mọi ghi giá KiotViet/Sapo chỉ qua các bước xem trước, cập nhật, khôi phục và lịch sử của chính Sale AI (TASK-104); nội dung đoạn tài liệu được gửi tới Anthropic.
 - Ưu tiên dữ liệu thử nghiệm cho kiểm tra; thao tác tài khoản thật, gửi tin, triển khai hoặc thay đổi dữ liệu ngoài máy cần nằm trong phạm vi người dùng đã cho phép.
 - Báo cáo trung thực: phân biệt kiểm tra cục bộ, mô phỏng và hành vi đã xác minh trên hệ thống thật.
 
@@ -82,3 +83,5 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
+
+TASK-104: số task Sale AI tính cả lịch sử `D:\BaoQ-AI\tasks`; tra cả hai nơi trước khi chọn số mới. Không xóa kho lưu trữ cũ.

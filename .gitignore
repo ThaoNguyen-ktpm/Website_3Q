@@ -10,3 +10,5 @@ dist/
 coverage/
 *.tsbuildinfo
 Webstie/server/data/
+# TASK-110: reversible local archive of the retired UI, including prior uncommitted work.
+Webstie/.task-110-client-backup/

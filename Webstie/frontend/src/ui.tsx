@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
-// Shared helpers for the v2 views. Views that render their own VI/EN text read the language set by LanguageToggle
-// (document.documentElement.lang) and mark themselves data-no-translate so the glossary translator skips them.
+// Shared helpers for the v2 views. Views with their own VI/EN text read document.documentElement.lang
+// (index.html sets vi; the VI/EN toggle was removed on 2026-10-27, so the site is Vietnamese only).
 export type Lang='vi'|'en';
 export function useLang():Lang{const [l,setL]=useState<Lang>(()=>document.documentElement.lang==='en'?'en':'vi');
  useEffect(()=>{const o=new MutationObserver(()=>setL(document.documentElement.lang==='en'?'en':'vi'));o.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});return()=>o.disconnect()},[]);return l}
@@ -21,7 +21,7 @@ export function Toast({undoLabel}:{undoLabel:string}){
  return <div className={`toast${m?' is-open':''}`} role="status" aria-live="polite" onMouseEnter={hold} onFocus={hold} onMouseLeave={release}>
   <span data-no-translate>{m?.text}</span>{m?.undo&&<button type="button" id="toast-undo" onClick={()=>{m.undo!();setM(null)}}>{undoLabel}</button>}</div>}
 
-const P:Record<string,string>={overview:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',transactions:'M4 7h16 M16 3l4 4-4 4 M20 17H4 M8 13l-4 4 4 4',inventory:'M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10',errors:'M12 3L2 21h20z M12 9v5 M12 17v1',costs:'M4 5h16v14H4z M4 9h16 M15 14h2',nc:'M5 3h10l4 4v14H5z M9 11h6 M9 15h6',policy:'M6 3h9l4 4v14H6z M9 9h6 M9 13h6 M9 17h3',home:'M3 11l9-7 9 7v9H3z M9 20v-6h6v6',result:'M4 19h16 M7 15l4-4 3 3 5-6',tasks:'M5 6h14 M5 12h14 M5 18h9'};
+const P:Record<string,string>={sale:'M4 17l5-5 4 4 7-8 M15 8h5v5',search:'M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12z M16 16l4 4',team:'M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1 M9 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7 M22 19v-1a4 4 0 0 0-3-3.9 M16 3.1a3.5 3.5 0 0 1 0 6.8',audit:'M12 7v5l3 2 M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9',overview:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',transactions:'M4 7h16 M16 3l4 4-4 4 M20 17H4 M8 13l-4 4 4 4',inventory:'M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10',errors:'M12 3L2 21h20z M12 9v5 M12 17v1',costs:'M4 5h16v14H4z M4 9h16 M15 14h2',nc:'M5 3h10l4 4v14H5z M9 11h6 M9 15h6',policy:'M6 3h9l4 4v14H6z M9 9h6 M9 13h6 M9 17h3',home:'M3 11l9-7 9 7v9H3z M9 20v-6h6v6',result:'M4 19h16 M7 15l4-4 3 3 5-6',tasks:'M5 6h14 M5 12h14 M5 18h9'};
 export const Icon=({name}:{name:string})=><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={P[name]||P.nc}/></svg>;
 export const Chev=()=><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 export const Back=()=><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;

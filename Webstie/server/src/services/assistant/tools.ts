@@ -9,6 +9,7 @@ import { embed } from '../documentEmbeddingService.js';
 import { retrieveChunks } from '../documentRetrievalService.js';
 import * as staff from '../staffService.js';
 import * as audit from '../auditService.js';
+import { extractSkus, matchingSkus, skuChoice } from './sku.js';
 
 export type Source = { kind: 'product' | 'document' | 'guide' | 'staff' | 'audit' | 'price'; label: string };
 type PriceCalculation = { capital: string; expenses: string; cost: string; method: string; rate: string; sellingPrice: string; formula: string };
@@ -81,8 +82,11 @@ export async function executeTool(name: string, args: unknown, permissions: Perm
       // Brand filters use the KiotViet brand field (names often abbreviate, e.g. "LV"); text words must all appear in the name.
       const words = (q ?? '').split(/\s+/).map(fold).filter(Boolean);
       const broad = Boolean(brand || hotTrend || inStock || minPrice != null || maxPrice != null || sort !== 'newest' || offset);
-      const result = await catalogStore.products({ q: broad ? (hotTrend ? '!' : '') : q!, page: 1, pageSize: broad ? 100000 : 15 }, cost);
-      const matching = result.items.filter(item => (!hotTrend || item.name.includes('!'))
+      const sku = q && extractSkus(q)[0] === q.toUpperCase() ? q : null;
+      const result = await catalogStore.products({ q: broad ? (hotTrend ? '!' : '') : q!, page: 1, pageSize: broad || sku ? 100000 : 15 }, cost);
+      const candidates = sku ? matchingSkus(result.items, sku) : result.items;
+      if (sku && candidates.length > 1) return output({ message: skuChoice(candidates), candidates: candidates.slice(0, 5).map(item => item.sku) });
+      const matching = candidates.filter(item => (!hotTrend || item.name.includes('!'))
         && (!brand || fold(String(item.kiot?.tradeMarkName ?? item.sapo?.vendor ?? '')) === fold(brand))
         && (!broad || words.every(word => fold(item.name).includes(word)))
         && (!inStock || (item.onHand ?? 0) > 0)
@@ -103,7 +107,7 @@ export async function executeTool(name: string, args: unknown, permissions: Perm
       // Structured copies drive the widget's product cards; the model only needs to summarise.
       const images = new Map(result.items.map(item => [item.sku, typeof item.image === 'string' && item.image.startsWith('https://') ? item.image : null]));
       const products: ProductCard[] = items.map(item => ({ sku: item.sku, name: item.name, price: item.price, onHand: item.onHand, reserved: item.reserved, hotTrend: item.hotTrend, image: images.get(item.sku) ?? null }));
-      return { ...output({ items, total: broad ? matching.length : result.total, syncedAt: result.syncedAt, sources: result.sources,
+      return { ...output({ items, total: broad || sku ? matching.length : result.total, syncedAt: result.syncedAt, sources: result.sources,
         ...(!cost ? { notice: 'Bạn không có quyền xem giá vốn.' } : {}) }, items.map(item => ({ kind: 'product', label: `${item.sku} · ${item.name}` }))), products };
     }
     case 'hoi_tai_lieu': {
@@ -149,8 +153,9 @@ export async function executeTool(name: string, args: unknown, permissions: Perm
       if (!capital) {
         if (!permissions.includes('products.view')) return denied('sản phẩm');
         if (!permissions.includes('products.cost')) return output({ message: 'Bạn không có quyền xem giá vốn; hãy nhập số vốn để tính.' });
-        const found = (await catalogStore.products({ q: sku!, page: 1, pageSize: 15 }, true)).items
-          .find(item => item.sku.toLowerCase() === sku!.toLowerCase());
+        const candidates = matchingSkus((await catalogStore.products({ q: sku!, page: 1, pageSize: 100000 }, true)).items, sku!);
+        if (candidates.length > 1) return output({ message: skuChoice(candidates), candidates: candidates.slice(0, 5).map(item => item.sku) });
+        const found = candidates[0];
         if (!found) return output({ message: `Không tìm thấy SKU ${sku}.` });
         const costs = [...new Set((found.kiot?.inventories ?? []).map(row => row.cost).filter((value): value is number => typeof value === 'number' && value > 0))];
         if (!costs.length) return output({ message: `SKU ${found.sku} chưa có giá vốn trên KiotViet; hãy nhập số vốn để tính.` });

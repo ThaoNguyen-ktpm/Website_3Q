@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {loadTasks,saveTasks,type Task} from './tasks';
+import {loadTasks,saveTasks,type Task} from './task-data';
 import {useLang,localIso,reduceMotion,showToast,Close} from './ui';
 // HOME v2: open work first. Only existing task fields are used (status, due date, department); no invented priority.
 const DEPTS=['Điều hành','Studio','Marketing'];
@@ -34,7 +34,8 @@ const Glyph=({s}:{s:string})=>s==='Hoàn thành'?<svg className="glyph" viewBox=
  :s==='Đang làm'?<svg className="glyph" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M10 2.75a7.25 7.25 0 0 1 0 14.5z" fill="currentColor"/></svg>
  :<svg className="glyph" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.25" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg>;
 
-export default function HomeView({route,go,overview,roleControl}:{route:URLSearchParams;go:(n:Record<string,string>,replace?:boolean)=>void;overview:string;roleControl?:React.ReactNode}){
+// hello/aside: the signed-in home replaces the demo band and "Đi tới" (Bảo 2026-10-27, design v3).
+export default function HomeView({route,go,overview,roleControl,hello,aside}:{route:URLSearchParams;go:(n:Record<string,string>,replace?:boolean)=>void;overview:string;roleControl?:React.ReactNode;hello?:React.ReactNode;aside?:React.ReactNode}){
  const lang=useLang(),t=T[lang],tv=(v:string)=>lang==='en'?(DEPT_EN[v]||v):v,ts=(v:string)=>lang==='en'?(ST_EN[v]||v):v;
  const [tasks,setTasks]=useState<Task[]>(loadTasks);const [note,setNote]=useState(false);
  const filter=route.get('homeFilter')||'open',dept=route.get('homeDept')||'all',layout=route.get('homeView')||'list',taskId=route.get('task')||'';
@@ -66,12 +67,12 @@ export default function HomeView({route,go,overview,roleControl}:{route:URLSearc
   return <><div className="dept-grid">{withWork.map(d=>{const items=list.filter(x=>(x.department||'Điều hành')===d);return <section className="dept" key={d}><h3>{tv(d)} <span className="num">{items.length}</span></h3><ul className="rows">{items.map(x=>row(x))}</ul></section>})}</div>{none.length>0&&<p className="dept-empty">{t.deptEmpty(none.map(tv).join(', '))}</p>}</>};
  const filters:[string,string,number][]=[['open',t.fOpen,counts.open],['today',t.fToday,counts.today],['overdue',t.fOver,counts.overdue],['done',t.fDone,counts.done]];
  return <div data-no-translate>
-  <section className="band on-dark intro" aria-labelledby="home-h1"><div className="wrap">
+  {hello??<>  <section className="band on-dark intro" aria-labelledby="home-h1"><div className="wrap">
    <div className="band-meta"><p className="date"><span className="d-long">{dLong}</span><span className="d-short">{dShort}</span></p><div className="band-controls">{roleControl}
     <button className="chip-demo" type="button" aria-expanded={note} aria-controls="demo-note" onClick={()=>setNote(!note)}><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.75" fill="none" stroke="currentColor" strokeWidth="1.3"/><path d="M8 7v4M8 5v.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>{t.demo}</button></div>
     <p className="demo-note" id="demo-note" hidden={!note}>{t.demoNote}</p></div>
    <h1 className="display" id="home-h1" tabIndex={-1}>{head}</h1><p className="lede">{open.length?t.lede(open.length,depts):t.ledeEmpty}</p>
-   <div className="cta-row">{ctaTask&&<a className="btn btn-primary-dark" href={href({task:ctaTask})}>{cta}</a>}<a className={ctaTask?'btn btn-ghost-dark':'btn btn-primary-dark'} href="#page=tasks&taskView=new">{t.ctaCreate}</a></div></div></section>
+   <div className="cta-row">{ctaTask&&<a className="btn btn-primary-dark" href={href({task:ctaTask})}>{cta}</a>}<a className={ctaTask?'btn btn-ghost-dark':'btn btn-primary-dark'} href="#page=tasks&taskView=new">{t.ctaCreate}</a></div></div></section></>}
   <section className="work"><div className="wrap work-grid"><div>
    <div className="toolbar"><h2 className="vh">{t.listTitle}</h2>
     <div className="seg" role="group" aria-label={t.listTitle}>{filters.map(([k,l,n])=><button type="button" key={k} aria-pressed={filter===k} onClick={()=>go({homeFilter:k},true)}>{l} <span className="count num">{n}</span></button>)}</div>
@@ -79,7 +80,7 @@ export default function HomeView({route,go,overview,roleControl}:{route:URLSearc
      <div className="seg icon-seg" role="group" aria-label={t.dept}><button type="button" aria-pressed={layout==='list'} aria-label={t.viewList} title={t.viewList} onClick={()=>go({homeView:''},true)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></button><button type="button" aria-pressed={layout==='dept'} aria-label={t.viewDept} title={t.viewDept} onClick={()=>go({homeView:'dept'},true)}><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.75" y="3.75" width="5.5" height="12.5" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5"/><rect x="11.75" y="3.75" width="5.5" height="8.5" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5"/></svg></button></div></div></div>
    <div className="list-region" id="list-region" ref={region} aria-live="polite">{layout==='dept'?deptLayout():listLayout()}</div>
    <div className="list-foot"><a className="text-link" href="#page=tasks&taskView=list&taskFilter=all">{t.openTasksPage}</a></div></div>
-   <aside className="side" aria-labelledby="side-h"><h2 id="side-h">{t.goTo}</h2><ul><li><a href={`#page=${overview}`}><strong>{t.goOverview}</strong><span>{t.goOverviewSub}</span></a></li><li><a href="#page=tasks&taskView=list"><strong>{t.goTasks}</strong><span>{t.goTasksSub}</span></a></li></ul></aside>
+   {aside??<aside className="side" aria-labelledby="side-h"><h2 id="side-h">{t.goTo}</h2><ul><li><a href={`#page=${overview}`}><strong>{t.goOverview}</strong><span>{t.goOverviewSub}</span></a></li><li><a href="#page=tasks&taskView=list"><strong>{t.goTasks}</strong><span>{t.goTasksSub}</span></a></li></ul></aside>}
   </div></section>
   <TaskSheet t={t} task={tasks.find(x=>x.id===taskId)||null} tv={tv} ts={ts} close={closeSheet} onChange={next=>update(next)} tasks={tasks}/>
  </div>}

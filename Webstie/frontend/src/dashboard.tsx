@@ -13,16 +13,18 @@ const SHORT:Record<string,string>={overview:'Tổng quan',transactions:'Thu–b�
 
 export function OpsBand({title,crumbs,actions,overviewTarget}:{title:string;crumbs:ReactNode;actions?:ReactNode;overviewTarget?:string}){
  return <section className="band slim on-dark"><div className="wrap-wide"><div className="slim-top"><nav className="crumbs" aria-label="Đường dẫn"><a href="#page=portal">Trang chủ</a><span aria-hidden="true">/</span>{crumbs}</nav></div>
-  <div className="slim-main"><h1 className="display slim-title" tabIndex={-1}>{title}</h1><div className="slim-actions">{overviewTarget&&<a className="ghost-btn" href={`#page=${overviewTarget}`}><Back/>Quay lại tổng quan</a>}{actions}</div></div></div></section>}
-export function OpsSide({page,nav,warnings}:{page:string;nav:(p:string)=>void;warnings:number}){
+  <div className="slim-main"><h1 className="display slim-title" tabIndex={-1}>{title}</h1><div className="slim-actions" id="band-actions">{overviewTarget&&<a className="ghost-btn" href={`#page=${overviewTarget}`}><Back/>Quay lại tổng quan</a>}{actions}</div></div></div></section>}
+// manage: the real Nhân viên / Nhật ký pages this person may open (Bảo 2026-10-27).
+// reports=false (not Admin): the demo reports and the unconnected pages are not listed (Bảo 2026-10-27).
+export function OpsSide({page,nav,warnings,manage=[],reports=true}:{page:string;nav:(p:string)=>void;warnings:number;manage?:[string,string][];reports?:boolean}){
  const item=(k:string,label:ReactNode,icon:string,extra?:ReactNode,muted=false)=><li key={k}><button type="button" className={`side-link side-btn${muted?' is-muted':''}`} aria-current={page===k?'page':undefined} onClick={()=>nav(k)}><Icon name={icon}/><span>{label}</span>{extra}</button></li>;
- return <aside className="ops-side" aria-label="Điều hướng Điều hành"><nav aria-label="Trong Điều hành"><h2>Điều hành</h2><ul>
+ return <aside className="ops-side" aria-label="Điều hướng Điều hành"><nav aria-label="Trong Điều hành">{manage.length>0&&<><h2>Quản lý</h2><ul>{manage.map(([k,l])=>item(k,l,k,<span className="live">THẬT</span>))}</ul></>}{reports&&<><h2>Báo cáo (demo)</h2><ul>
   {DATA_PAGES.map(k=>item(k,labels[k],k,k==='errors'&&warnings?<span className="badge-n"><span aria-hidden="true">{warnings}</span><span className="vh"> cảnh báo</span></span>:undefined))}</ul>
-  <h2>Chưa kết nối nguồn</h2><ul>{NC_PAGES.map(k=>item(k,labels[k],'nc',<small>Chưa kết nối</small>,true))}</ul>
+  <details className="side-fold" open={NC_PAGES.includes(page)}><summary>Chưa kết nối nguồn ({NC_PAGES.length})</summary><ul>{NC_PAGES.map(k=>item(k,labels[k],'nc',undefined,true))}</ul></details></>}
   <h2>Khác</h2><ul>{item('policy','Chính sách','policy')}<li><button type="button" className="side-link side-btn" onClick={()=>nav('portal')}><Icon name="home"/><span>← Trang chủ</span></button></li></ul></nav></aside>}
-export function OpsTabs({page,nav}:{page:string;nav:(p:string)=>void}){
- return <nav className="ops-tabs" aria-label="Tab Điều hành"><div className="tabs-row"><ul>{DATA_PAGES.map(k=><li key={k}><a href={`#page=${k}`} onClick={e=>{e.preventDefault();nav(k)}} aria-current={page===k?'page':undefined}>{SHORT[k]}</a></li>)}</ul>
-  <details><summary>Chưa kết nối ({NC_PAGES.length})</summary><ul>{NC_PAGES.map(k=><li key={k}><a href={`#page=${k}`} onClick={e=>{e.preventDefault();nav(k)}} aria-current={page===k?'page':undefined}>{labels[k]}<small>Chưa kết nối</small></a></li>)}<li><a href="#page=policy" onClick={e=>{e.preventDefault();nav('policy')}}>Chính sách<small>Khung demo</small></a></li></ul></details></div></nav>}
+export function OpsTabs({page,nav,manage=[],reports=true}:{page:string;nav:(p:string)=>void;manage?:[string,string][];reports?:boolean}){
+ return <nav className="ops-tabs" aria-label="Tab Điều hành"><div className="tabs-row"><ul>{manage.map(([k,l])=><li key={k}><a href={`#page=${k}`} onClick={e=>{e.preventDefault();nav(k)}} aria-current={page===k?'page':undefined}>{l}</a></li>)}{reports&&DATA_PAGES.map(k=><li key={k}><a href={`#page=${k}`} onClick={e=>{e.preventDefault();nav(k)}} aria-current={page===k?'page':undefined}>{SHORT[k]}</a></li>)}</ul>
+  <details><summary>{reports?`Chưa kết nối (${NC_PAGES.length})`:'Khác'}</summary><ul>{reports&&NC_PAGES.map(k=><li key={k}><a href={`#page=${k}`} onClick={e=>{e.preventDefault();nav(k)}} aria-current={page===k?'page':undefined}>{labels[k]}<small>Chưa kết nối</small></a></li>)}<li><a href="#page=policy" onClick={e=>{e.preventDefault();nav('policy')}}>Chính sách<small>Khung demo</small></a></li></ul></details></div></nav>}
 
 const T={vi:{kRevenue:'Doanh thu thuần',kCost:'Tổng chi phí',kResult:'Kết quả demo',kInventory:'Giá trị tồn demo',cRevenue:'Đã trừ hoàn trả trong kỳ',cInventory:'4 SKU trong snapshot demo',ofRev:(p:string)=>`${p} doanh thu`,viewDetails:'Xem chi tiết',
   weekly:'Doanh thu & kết quả theo tuần',weeklySub:'Kết quả = doanh thu − giá vốn − chi phí vận hành theo ngày demo.',lgRevCol:'Doanh thu (cột)',lgResLine:'Kết quả (đường)',lgRevenue:'Doanh thu',lgResult:'Kết quả',lgCost:'Chi phí',showTable:'Xem dạng bảng',showChart:'Xem biểu đồ',week:'Tuần',

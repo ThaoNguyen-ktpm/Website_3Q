@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-sale-ai.mjs",
     "start": "node dist/server.js",
-    "test": "vitest run",
+    "test": "vitest run && npm run test:sale-ai",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "test:sale-ai": "node --test src/sale-ai/test/*.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.135.0",

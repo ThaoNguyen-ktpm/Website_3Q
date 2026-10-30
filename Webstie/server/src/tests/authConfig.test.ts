@@ -25,7 +25,7 @@ describe('Optional auth configuration', () => {
   });
   it('defaults to the local app origin without trusting proxies', async () => {
     const { env } = await import('../config/env.js');
-    expect(env.APP_ORIGIN).toBe('http://localhost:5173');
+    expect(env.APP_ORIGIN).toBe('http://localhost:8787');
     expect(env.TRUST_PROXY).toBeUndefined();
   });
 
