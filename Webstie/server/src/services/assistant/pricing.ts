@@ -1,7 +1,9 @@
 import type { Permission } from '../../config/permissions.js';
 import { fold } from './brands.js';
 import { executeTool, type ProductCard, type Source } from './tools.js';
-import { extractSkus, matchingSkus, skuChoice } from './sku.js';
+import { extractSkus, matchingSkus, skuChoice, vnd } from '../../config/shared.js';
+// Keeps "%" and decimals, which the brand fold strips.
+import { fold as light } from '../../config/shared.js';
 
 type Reply = { reply: string; offTopic: false; sources: Source[]; products?: ProductCard[]; suggestions?: string[] };
 type Message = { role: string; content: string };
@@ -10,9 +12,6 @@ type Message = { role: string; content: string };
 const pricingIntent = /\bgia chot\b|\bchot gia\b|\bde xuat gia\b|\bgia de xuat\b|\bgiam (duoc|gia|bao nhieu|toi da)\b|\bthuong luong\b|\bdeal\b|\bgia (thap nhat|san|toi thieu)\b|\b(loi|lai) (bao nhieu|may|duoc)\b|\bbien loi nhuan\b/;
 const costIntent = /\bgia von\b|\bxem von\b|\bvon bao nhieu\b|\bvon cua\b|\bnhap gia bao nhieu\b/;
 const targetRate = /\b(?:loi|lai|markup)\s*(\d{1,3}(?:[.,]\d{1,2})?)\s*%/;
-// Keeps "%" and decimals, which the brand fold strips.
-const light = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
-const vnd = (value: number) => `${Math.round(value).toLocaleString('vi-VN')}đ`;
 const pct = (value: number) => `${value.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}%`;
 
 /** Last SKU mentioned in the conversation (current question first, then earlier turns). */

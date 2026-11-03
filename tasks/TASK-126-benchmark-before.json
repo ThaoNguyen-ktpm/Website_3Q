@@ -1,0 +1,26 @@
+{
+  "label": "before",
+  "trusted": false,
+  "products": 4800,
+  "items": 1311,
+  "pages": 59,
+  "delayMs": {
+    "page": 600,
+    "put": 700,
+    "listModified": 400
+  },
+  "outcome": "success",
+  "calls": {
+    "all": 1,
+    "modified": 28,
+    "put": 27
+  },
+  "prepareMs": 428.1935000000012,
+  "totalMs": 76938.4318,
+  "initialReadMs": 36469,
+  "saveMs": 7451.774100000033,
+  "journalBytes": 25929493,
+  "storeGrowthBytes": 667026517,
+  "bytesWritten": 667041541,
+  "tempDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task126-before-F3lIQO"
+}

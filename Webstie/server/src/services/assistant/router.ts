@@ -1,5 +1,5 @@
 import { brandCandidates, fold } from './brands.js';
-import { extractSkus } from './sku.js';
+import { extractSkus } from '../../config/shared.js';
 
 export type Sort = 'newest' | 'cheap' | 'expensive';
 export type ProductQuery = {
@@ -50,7 +50,7 @@ export function productQuery(question: string, brands: string[]): ProductQuery |
   const sku = extractSkus(question)[0] ?? null;
   const hot = /\bhot\b|\btrend\b|hottrend|noi bat/.test(text);
   const { minPrice, maxPrice } = priceRange(text);
-  const inStock = /\bcon hang\b|\bcon san\b|\bco san\b/.test(text);
+  const inStock = !/\bhet hang\b/.test(text);
   const sort: Sort = /\bre nhat\b|\bgia thap\b|\bre hon\b|\bre\b/.test(text) ? 'cheap' : /\bdat nhat\b|\bgia cao\b|\bmac nhat\b/.test(text) ? 'expensive' : 'newest';
   const found = new Set<string>(), names: string[] = [];
   let rest = ` ${text} `;

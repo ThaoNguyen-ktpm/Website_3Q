@@ -1,7 +1,38 @@
 import {createHash} from 'node:crypto';
 import {loadEnvFile} from 'node:process';
 import {money} from './pricing.js';
-export const sapoFingerprint=p=>createHash('sha256').update(JSON.stringify(p)).digest('hex');
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+// One queue for every Sapo client in this process, including restore and catalog reads.
+export class SapoRateLimiter {
+ constructor({now=Date.now,sleep:wait=sleep}={}){this.now=now;this.sleep=wait;this.tail=Promise.resolve();this.nextAt=0;this.pauseUntil=0;}
+ pause(ms){this.pauseUntil=Math.max(this.pauseUntil,this.now()+ms);}
+ get waiting(){return this.pauseUntil>this.now()?{until:new Date(this.pauseUntil).toISOString()}:null;}
+ run(fn){
+  const pending=this.tail.then(async()=>{
+   while(Math.max(this.nextAt,this.pauseUntil)>this.now())await this.sleep(Math.min(60000,Math.max(this.nextAt,this.pauseUntil)-this.now()));
+   this.nextAt=this.now()+500;
+   return fn();
+  });
+  this.tail=pending.catch(()=>{});return pending;
+ }
+ observe(headers){
+  // Header spelling is case-insensitive; tolerate the shop-prefixed REST variant too.
+  const value=headers?.get?.('X-Sapo-Api-Call-Limit')??headers?.get?.('X-Sapo-Shop-Api-Call-Limit');
+  const match=/^(\d+)\s*\/\s*(\d+)$/.exec(value||'');
+  if(!match)return;const used=Number(match[1]),limit=Number(match[2]);
+  if(Number.isSafeInteger(used)&&Number.isSafeInteger(limit)&&limit>0&&used>limit*.7)this.pause(Math.ceil(used-limit*.7)*500);
+ }
+}
+const sharedLimiter=new SapoRateLimiter();
+function retryDelay(headers,now,fallback){
+ const value=headers?.get?.('Retry-After');
+ if(value!=null&&value.trim()!==''){
+  const seconds=Number(value);if(Number.isFinite(seconds))return seconds>=0&&Number.isFinite(seconds*1000)?Math.max(500,seconds*1000):fallback;
+  const date=Date.parse(value);if(Number.isFinite(date))return Math.max(500,date-now);
+ }
+ return fallback;
+}
+export const sapoFingerprint=p=>createHash('sha256').update(JSON.stringify(p&&Object.hasOwn(p,'content')?{...p,content:p.content??''}:p)).digest('hex');
 const id=value=>{if(!Number.isSafeInteger(value)||value<=0)throw Error('Sapo trả ID không hợp lệ');return value;};
 export function sapoCatalogEntry(p){
  id(p?.id);if(!Array.isArray(p.variants))throw Error('Sapo: danh sách phiên bản không hợp lệ');
@@ -11,24 +42,32 @@ export function sapoCatalogEntry(p){
  })};
 }
 export function validateSapoProduct(p) {
- id(p?.id);if(typeof p.content!=='string'||!Array.isArray(p.variants)||!p.variants.length)throw Error('Sapo: chưa xác minh được cấu trúc giá/mô tả');
- const seen=new Set();for(const v of p.variants){id(v.id);if(seen.has(v.id)||typeof v.sku!=='string'||!Number.isSafeInteger(Number(v.price))||Number(v.price)<=0)throw Error('Sapo: dữ liệu phiên bản không hợp lệ');seen.add(v.id);}
- return {id:p.id,content:p.content,variants:p.variants.map(v=>({id:v.id,sku:v.sku,price:Number(v.price)}))};
+ id(p?.id);if((p.content!==null&&typeof p.content!=='string')||!Array.isArray(p.variants)||!p.variants.length)throw Error('Sapo: chưa xác minh được cấu trúc giá/mô tả');
+ const seen=new Set();for(const v of p.variants){id(v.id);if(seen.has(v.id)||typeof v.sku!=='string'||!['number','string'].includes(typeof v.price)||String(v.price).trim()===''||!Number.isSafeInteger(Number(v.price))||Number(v.price)<0)throw Error('Sapo: dữ liệu phiên bản không hợp lệ');seen.add(v.id);}
+ return {id:p.id,content:p.content??'',variants:p.variants.map(v=>({id:v.id,sku:v.sku,price:Number(v.price)}))};
 }
 export class SapoClient {
- constructor(config,fetcher=fetch) {
+ constructor(config,fetcher=fetch,timing) {
   if(!config){try{loadEnvFile('.env');}catch(e){if(e.code!=='ENOENT')throw e;}config={shop:process.env.SAPO_SHOP,key:process.env.SAPO_API_KEY,secret:process.env.SAPO_API_SECRET};}
-  this.config=config;this.fetcher=fetcher;
+  this.config=config;this.fetcher=fetcher;this.limiter=timing?new SapoRateLimiter(timing):sharedLimiter;
  }
  get configured(){return /^[a-z0-9][a-z0-9-]*\.mysapo\.net$/.test(this.config.shop||'')&&!!this.config.key&&!!this.config.secret;}
  get binding(){return sapoFingerprint(this.config);}
+ get rateLimitWait(){return this.limiter.waiting;}
  async request(path,method='GET',body) {
   if(!this.configured)throw Error('Sapo chưa kết nối — chưa thể cập nhật chung');
+  for(let attempt=0;;attempt++){
   try{
+   return await this.limiter.run(async()=>{
    const response=await this.fetcher('https://'+this.config.shop+path,{method,redirect:'error',signal:AbortSignal.timeout(30000),headers:{Authorization:'Basic '+Buffer.from(this.config.key+':'+this.config.secret).toString('base64'),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
-   if(!response.ok){const e=Error(`Sapo ${method}: HTTP ${response.status}`);e.httpStatus=response.status;e.uncertain=method==='PUT'&&(response.status>=500||response.status===408);throw e;}
+   this.limiter.observe(response.headers);
+   if(!response.ok){const e=Error(response.status===429&&method==='PUT'?'Sapo quá giới hạn — chưa ghi':`Sapo ${method}: HTTP ${response.status}`);e.httpStatus=response.status;e.uncertain=method==='PUT'&&(response.status>=500||response.status===408);
+    if(response.status===429){const ms=retryDelay(response.headers,this.limiter.now(),2000*2**Math.min(attempt,3));e.retryAfter=ms/1000;this.limiter.pause(ms);}
+    throw e;}
    return await response.json();
-  }catch(error){if(error.httpStatus)throw error;const e=Error(`Sapo ${method}: mất phản hồi hoặc hết thời gian chờ`);e.uncertain=method==='PUT';throw e;}
+   });
+  }catch(error){if(method==='GET'&&error.httpStatus===429&&attempt<3)continue;if(error.httpStatus)throw error;const e=Error(`Sapo ${method}: mất phản hồi hoặc hết thời gian chờ`);e.uncertain=method==='PUT';throw e;}
+  }
  }
  async all(){const out=[],seen=new Set();for(let page=1;;page++){
   const body=await this.request('/admin/products.json?limit=250&page='+page);
@@ -38,7 +77,7 @@ export class SapoClient {
  }}
  async product(productId){const p=validateSapoProduct((await this.request('/admin/products/'+id(productId)+'.json')).product);if(p.id!==productId)throw Error('Sapo trả sai ID sản phẩm');return p;}
  async update(productId,variantId,price,content){id(productId);id(variantId);if(!Number.isSafeInteger(price)||price<=0||(content!==null&&typeof content!=='string'))throw Error('Sapo: giá/mô tả không hợp lệ');return this.request('/admin/products/'+productId+'.json','PUT',{product:{id:productId,...(content===null?{}:{content}),variants:[{id:variantId,price}]}});}
- async restore(productId,variants,content){id(productId);if(!Array.isArray(variants)||!variants.length||typeof content!=='string')throw Error('Sapo: bản khôi phục không hợp lệ');const seen=new Set();for(const v of variants){id(v.id);if(seen.has(v.id)||!Number.isSafeInteger(v.price)||v.price<=0)throw Error('Sapo: bản giá khôi phục không hợp lệ');seen.add(v.id);}return this.request('/admin/products/'+productId+'.json','PUT',{product:{id:productId,content,variants:variants.map(v=>({id:v.id,price:v.price}))}});}
+ async restore(productId,variants,content){content??='';id(productId);if(!Array.isArray(variants)||!variants.length||typeof content!=='string')throw Error('Sapo: bản khôi phục không hợp lệ');const seen=new Set();for(const v of variants){id(v.id);if(seen.has(v.id)||!Number.isSafeInteger(v.price)||v.price<=0)throw Error('Sapo: bản giá khôi phục không hợp lệ');seen.add(v.id);}return this.request('/admin/products/'+productId+'.json','PUT',{product:{id:productId,content,variants:variants.map(v=>({id:v.id,price:v.price}))}});}
 }
 // Bảo 2026-10-27: Kiot codes may carry a suffix (SP024387_23092026, SP024882_KG) while Sapo keeps SP024387.
 export const sapoSku=code=>String(code).split('_')[0];
@@ -51,7 +90,11 @@ export function sapoNote(existing,row,kiotNote) {
  }
  const key=Buffer.from(sapoSku(row.code)).toString('hex');const start=`<!--BAOQ-SKU-${key}-->`,end=`<!--/BAOQ-SKU-${key}-->`;
  const block=start+(kiotNote??`<p>BAOQ | M${row.m} | Giá bán ${money(row.price)} | Sale được giảm thêm tối đa ${money(row.allowance)}</p>`)+end;
- let found=false;const content=existing.replace(new RegExp(start+'[\\s\\S]*?'+end,'g'),()=>{if(found)return '';found=true;return block;});return content+(found?'':block);
+ let found=false;const content=(existing??'').replace(new RegExp(start+'[\\s\\S]*?'+end,'g'),()=>{if(found)return '';found=true;return block;});return content+(found?'':block);
+}
+export const hasSapoZeroPrice=p=>p.variants.some(v=>Number(v.price)===0);
+export function skipSapoZeroPrice(item){
+ for(const p of Object.values(item.platforms)){p.status='skipped_sapo_zero_price';p.requestSent=false;p.error='Sapo đang để giá 0 — bỏ qua, xử lý tay trên Sapo';}
 }
 export class SapoService {
  constructor(client,store,binding){this.client=client;this.store=store;this.binding=binding||client.binding;}

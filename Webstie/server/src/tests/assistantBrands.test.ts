@@ -43,7 +43,7 @@ it('fixes a misspelled brand and searches at once, saying what was fixed', async
   const product = { sku: 'SP1', name: 'Túi Chanel Boy', price: 1, onHand: 1, hotTrend: false, image: null };
   vi.mocked(executeTool).mockResolvedValue({ content: JSON.stringify({ total: 1 }), sources: [], products: [product] });
   const result = await chat({ messages: [{ role: 'user', content: 'Túi Chanle còn hàng không?' }] }, []);
-  expect(result.reply).toBe('Đã sửa "Chanle" thành "Chanel". Có 1 sản phẩm Chanel, còn hàng phù hợp:');
+  expect(result.reply).toBe('Đã sửa "Chanle" thành "Chanel". Có 1 sản phẩm Chanel còn hàng:');
   expect(executeTool).toHaveBeenCalledWith('tim_san_pham', expect.objectContaining({ brand: 'Chanel', q: 'tui', in_stock: true }), []);
   expect(callModel).not.toHaveBeenCalled();
 });

@@ -40,7 +40,7 @@ test('pre-July items are excluded without any proposed price or note, including 
       const product = item(created, true, extra), before = structuredClone(product);
       const row = calculate(product, day);
       assert.equal(row.status, 'excluded');
-      assert.match(row.reasons.join(), /Hàng tạo trước 01\/07\/2026: không giảm/);
+      assert.match(row.reasons.join(), extra.p0 ? /Giá gốc từ 600 triệu: không giảm/ : /Hàng tạo trước 01\/07\/2026: không giảm/);
       for (const key of ['m', 'price', 'allowance', 'net']) assert.equal(row[key], null);
       assert.equal(row.markdown, undefined);
       assert.equal(row.notePreview, undefined);
@@ -63,7 +63,7 @@ test('July and October boundaries use Vietnam calendar dates', () => {
   assert.equal(calculate(item('2026-10-15T17:00:00Z', true), '2026-11-01').m, 0);
 });
 
-test('new cohorts retain validation and manual pricing guards', () => {
+test('new cohorts retain validation and exclude high prices with or without manual approvals', () => {
   for (const created of ['2026-03-15', '2026-07-01', '2026-10-16']) {
     assert.equal(calculate(item(created, false, { p0: 0 }), '2026-11-01').status, 'waiting');
     assert.equal(calculate(item(created), '2026-09-30').status, 'waiting');
@@ -71,8 +71,8 @@ test('new cohorts retain validation and manual pricing guards', () => {
   }
   for (const created of ['bad', '2026-02-30', '2026-11-02']) assert.equal(calculate(item(created), '2026-11-01').status, 'waiting');
   for (const created of ['2026-07-01', '2026-10-16']) {
-    assert.match(calculate(item(created, false, { p0: 700e6 }), '2026-11-01').reasons.join(), /giá duyệt riêng/);
-    assert.equal(calculate(item(created, false, { p0: 700e6, manualPricing: { price: 665e6, allowance: 19950000 } }), '2026-11-01').price, 665e6);
+    assert.match(calculate(item(created, false, { p0: 700e6 }), '2026-11-01').reasons.join(), /không giảm/);
+    assert.equal(calculate(item(created, false, { p0: 700e6, manualPricing: { price: 665e6, allowance: 19950000 } }), '2026-11-01').price, null);
   }
 });
 

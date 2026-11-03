@@ -32,7 +32,7 @@ test('GET failure immediately before PUT has correct stage, safe diagnostic and 
 test('closed socket on pre-write GET recovers through KiotClient and permits exactly one price/note PUT',async()=>{
   const f=await fixture(1);let reads=0;
   const adapter=new KiotClient({credentials:{retailer:'baoqluxury',client:'FAKE',secret:'FAKE'},fetcher:async(url,options)=>{
-    assert.equal(options.method,'GET');assert.equal(options.headers.Connection,'close');
+    assert.equal(options.method,'GET');assert.equal(options.headers.Connection,undefined);
     if(++reads===2)throw Object.assign(new TypeError('fetch failed'),{cause:{code:'UND_ERR_SOCKET'}});
     const p=f.products[0];return {ok:true,status:200,json:async()=>({id:p.id,code:p.code,name:p.name,basePrice:p.currentPrice,createdDate:p.createdAt,isActive:p.active,description:p.notes,inventories:[{branchId:44466,onHand:p.stock}]})};
   }});adapter.token='FAKE';adapter.expires=Date.now()+60000;
@@ -42,13 +42,13 @@ test('closed socket on pre-write GET recovers through KiotClient and permits exa
 });
 test('success sends price and note together once per product and keeps P0',async()=>{
   const f=await fixture();const u=await f.live.commit(f.proposal.id,true);assert.equal(u.outcome,'success');assert.equal(u.summary.succeeded,3);
-  assert.equal(f.calls.length,3);assert.ok(f.calls.every(c=>Object.keys(c.fields).length===2));assert.ok(f.sim.state.products.every(p=>p.p0===35e6));assert.match(summaryText(u.summary,u),/thành công 3/);
+  assert.equal(f.calls.length,3);assert.ok(f.calls.every(c=>Object.keys(c.fields).length===2));assert.ok(f.sim.state.products.every(p=>p.p0===35e6));assert.equal(summaryText(u.summary,u),'3/3 thành công');
 });
 test('middle failure stops remaining products, retains successful changes, never restores old values',async()=>{
   const f=await fixture();const write=f.client.update;
   f.client.update=async(p,fields)=>{if(p.id===2&&fields.basePrice!==35e6){f.calls.push({id:2});f.apply(2,{basePrice:fields.basePrice});throw Error('Lỗi ghi chú');}await write(p,fields);};
   const u=await f.live.commit(f.proposal.id,true);assert.equal(u.outcome,'partial_failure');assert.deepEqual(u.items.map(i=>i.status),['done','write_failed','not_sent']);
-  assert.deepEqual(f.calls.map(c=>c.id),[1,2]);assert.equal(f.products[0].currentPrice,32.4e6);assert.equal(f.products[1].currentPrice,32.4e6);assert.equal(f.products[1].notes,'Ghi chú cũ');assert.deepEqual(f.products[2],f.original[2]);assert.equal(u.summary.succeeded,1);assert.match(u.items[1].error,/ghi chú/);assert.match(summaryText(u.summary,u),/thành công 1/);
+  assert.deepEqual(f.calls.map(c=>c.id),[1,2]);assert.equal(f.products[0].currentPrice,32.4e6);assert.equal(f.products[1].currentPrice,32.4e6);assert.equal(f.products[1].notes,'Ghi chú cũ');assert.deepEqual(f.products[2],f.original[2]);assert.equal(u.summary.succeeded,1);assert.match(u.items[1].error,/ghi chú/);assert.match(summaryText(u.summary,u),/1\/3 thành công/);
 });
 test('timeouts only read back: confirmed receipt stays applied, unreceived write remains failed',async()=>{
   for(const receipt of [false,true]){

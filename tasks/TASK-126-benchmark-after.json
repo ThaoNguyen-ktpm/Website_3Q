@@ -1,0 +1,26 @@
+{
+  "label": "after",
+  "trusted": true,
+  "products": 4800,
+  "items": 1311,
+  "pages": 59,
+  "delayMs": {
+    "page": 600,
+    "put": 700,
+    "listModified": 400
+  },
+  "outcome": "success",
+  "calls": {
+    "all": 0,
+    "modified": 28,
+    "put": 27
+  },
+  "prepareMs": 476.6993999999995,
+  "totalMs": 51578.146,
+  "initialReadMs": 417,
+  "saveMs": 18223.5258,
+  "journalBytes": 1713802,
+  "storeGrowthBytes": -3284271,
+  "bytesWritten": 57922612,
+  "tempDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task126-after-pUsixR"
+}

@@ -1,0 +1,150 @@
+{
+  "label": "after-measured",
+  "trusted": true,
+  "products": 4800,
+  "items": 1311,
+  "pages": 59,
+  "delayMs": {
+    "page": 600,
+    "put": 700,
+    "listModified": 400
+  },
+  "outcome": "success",
+  "calls": {
+    "all": 0,
+    "modified": 28,
+    "put": 27
+  },
+  "prepareMs": 449.4842000000008,
+  "totalMs": 39787.1115,
+  "initialReadMs": 403,
+  "saveMs": 6584.609999999993,
+  "cleanupMs": 1526.9951,
+  "saves": [
+    {
+      "ms": 164.69640000000072,
+      "cleanup": false
+    },
+    {
+      "ms": 263.4524000000001,
+      "cleanup": false
+    },
+    {
+      "ms": 94.78330000000096,
+      "cleanup": false
+    },
+    {
+      "ms": 164.4248000000007,
+      "cleanup": false
+    },
+    {
+      "ms": 183.71460000000116,
+      "cleanup": false
+    },
+    {
+      "ms": 216.4935000000005,
+      "cleanup": false
+    },
+    {
+      "ms": 152.61379999999917,
+      "cleanup": false
+    },
+    {
+      "ms": 149.74179999999978,
+      "cleanup": false
+    },
+    {
+      "ms": 172.2286000000022,
+      "cleanup": false
+    },
+    {
+      "ms": 152.08410000000003,
+      "cleanup": false
+    },
+    {
+      "ms": 167.23080000000118,
+      "cleanup": false
+    },
+    {
+      "ms": 210.1716000000015,
+      "cleanup": false
+    },
+    {
+      "ms": 170.6758000000009,
+      "cleanup": false
+    },
+    {
+      "ms": 159.19010000000344,
+      "cleanup": false
+    },
+    {
+      "ms": 172.89000000000306,
+      "cleanup": false
+    },
+    {
+      "ms": 164.8752999999997,
+      "cleanup": false
+    },
+    {
+      "ms": 176.81849999999758,
+      "cleanup": false
+    },
+    {
+      "ms": 172.93770000000222,
+      "cleanup": false
+    },
+    {
+      "ms": 194.22469999999885,
+      "cleanup": false
+    },
+    {
+      "ms": 159.77670000000217,
+      "cleanup": false
+    },
+    {
+      "ms": 188.085699999996,
+      "cleanup": false
+    },
+    {
+      "ms": 171.3078999999998,
+      "cleanup": false
+    },
+    {
+      "ms": 152.53429999999935,
+      "cleanup": false
+    },
+    {
+      "ms": 153.9881000000023,
+      "cleanup": false
+    },
+    {
+      "ms": 165.7815000000046,
+      "cleanup": false
+    },
+    {
+      "ms": 170.11190000000352,
+      "cleanup": false
+    },
+    {
+      "ms": 164.67730000000302,
+      "cleanup": false
+    },
+    {
+      "ms": 166.2201000000059,
+      "cleanup": false
+    },
+    {
+      "ms": 159.5083999999988,
+      "cleanup": false
+    },
+    {
+      "ms": 1793.621500000001,
+      "cleanup": true
+    }
+  ],
+  "journalBytes": 1713821,
+  "storeGrowthBytes": -3284252,
+  "reachableGrowthBytes": 23188484,
+  "bytesWritten": 57923163,
+  "tempDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task126-after-measured-SnRxJH"
+}

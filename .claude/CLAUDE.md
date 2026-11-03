@@ -8,3 +8,10 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
+
+## Serena (Bảo 2026-11-02)
+
+MCP `serena` (Serena 2, công cụ `serena_repl`, đọc code bằng language server TypeScript; cấu hình `.serena/project.yml`).
+- Tra cứu, đọc code, phạm vi ảnh hưởng: dùng CodeGraph trước (nhanh hơn).
+- Dùng Serena khi cần chính xác theo ngữ nghĩa: tìm mọi chỗ dùng một hàm/biến (`s.lsp.find_referencing_symbols`), tìm định nghĩa, đổi tên hoặc chuyển symbol qua nhiều file. Gọi `s.info("lsp")` / `s.info("edit")` để xem cách dùng.
+- Lần gọi đầu mỗi phiên mất vài giây để khởi động language server. Không có Serena thì làm như cũ.

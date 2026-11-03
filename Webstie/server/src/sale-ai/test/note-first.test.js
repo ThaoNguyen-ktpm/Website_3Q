@@ -35,5 +35,5 @@ test('legacy live block at bottom moves to top and keeps its event',()=>{
  assert.equal(liveNote(original+block,row,'same-event','2026-10-13 10:00'),block+original);
 });
 test('current policy supersedes the note-first layout version',()=>{
- assert.equal(POLICY,'baoq-2026-10-30-hide-before-jul-v10');
+ assert.equal(POLICY,'baoq-2026-11-02-hide-600m-v11');
 });

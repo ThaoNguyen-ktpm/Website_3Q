@@ -41,9 +41,48 @@ it.each(['Thêm nhân viên ở đâu?', 'Vốn 31 triệu markup 15% bán bao n
 it('answers product look-ups from the catalog without asking the model', async () => {
   vi.mocked(executeTool).mockResolvedValue({ content: JSON.stringify({ items: [], total: 2 }), sources: [{ kind: 'product', label: 'SP1 · a' }], products: [card('SP1'), card('SP2')] });
   const result = await chat({ messages: [{ role: 'user', content: 'mẫu hot chanel' }] }, ['products.view']);
-  expect(result).toMatchObject({ reply: 'Có 2 sản phẩm Hot trend Chanel phù hợp:', offTopic: false, products: [card('SP1'), card('SP2')] });
+  expect(result).toMatchObject({ reply: 'Có 2 sản phẩm Hot trend Chanel còn hàng:', offTopic: false, products: [card('SP1'), card('SP2')] });
   expect(executeTool).toHaveBeenCalledWith('tim_san_pham', expect.objectContaining({ q: null, hot_trend: true, brand: 'Chanel', offset: 0 }), ['products.view']);
   expect(callModel).not.toHaveBeenCalled();
+});
+
+it.each(['Chanel Classic Flap', 'túi LV', 'hàng hot trend', 'túi dưới 50 triệu', 'túi rẻ nhất'])('defaults lists to in-stock: %s', question => {
+  expect(productQuery(question, brands)?.inStock).toBe(true);
+});
+it.each(['túi Chanel nào hết hàng', 'tui LV het hang', 'SP014899', 'SP014899 còn hàng không'])('keeps explicit sold-out and SKU lookups unfiltered: %s', question => {
+  expect(productQuery(question, brands)?.inStock).toBe(false);
+});
+it('counts sold-out matches with identical filters and returns no cards or product sources', async () => {
+  vi.mocked(executeTool).mockResolvedValueOnce({ content: '{"total":0}', products: [], sources: [] })
+    .mockResolvedValueOnce({ content: '{"total":12}', products: [card('SP1')], sources: [{ kind: 'product', label: 'SP1' }] });
+  const result = await chat({ messages: [{ role: 'user', content: 'túi LV dưới 50 triệu rẻ nhất' }] }, ['products.view']);
+  expect(result.reply).toBe('Có 12 sản phẩm Louis Vuitton, tui, dưới 50 triệu, giá thấp nhất trước nhưng đều đã hết hàng.');
+  expect(result.products ?? []).toEqual([]);
+  expect(result.sources).toEqual([]);
+  const args = { q: 'tui', brand: 'Louis Vuitton', hot_trend: false, limit: 5, in_stock: true, min_price: null, max_price: 50_000_000, sort: 'cheap', offset: 0 };
+  expect(executeTool).toHaveBeenNthCalledWith(1, 'tim_san_pham', args, ['products.view']);
+  expect(executeTool).toHaveBeenNthCalledWith(2, 'tim_san_pham', { ...args, in_stock: false }, ['products.view']);
+});
+it('keeps pagination in stock and does not retry an exhausted page', async () => {
+  vi.mocked(executeTool).mockResolvedValue({ content: '{"total":10}', products: [], sources: [] });
+  const result = await chat({ messages: [{ role: 'user', content: 'túi Chanel' }, { role: 'assistant', content: 'Có 10 món' }, { role: 'user', content: 'mẫu khác' }] }, ['products.view']);
+  expect(result.reply).toBe('Đã hết sản phẩm Chanel, tui để xem thêm.');
+  expect(executeTool).toHaveBeenCalledTimes(1);
+  expect(executeTool).toHaveBeenCalledWith('tim_san_pham', expect.objectContaining({ in_stock: true, offset: 10 }), ['products.view']);
+});
+it('does not retry a denied lookup', async () => {
+  vi.mocked(executeTool).mockResolvedValue({ content: '{"message":"Bạn không có quyền xem sản phẩm."}', sources: [] });
+  expect((await chat({ messages: [{ role: 'user', content: 'túi Chanel' }] }, [])).reply).toBe('Bạn không có quyền xem sản phẩm.');
+  expect(executeTool).toHaveBeenCalledTimes(1);
+});
+it.each([0, -1])('keeps a named SKU card when stock is %s', async onHand => {
+  const product = { ...card('SP014899'), onHand };
+  vi.mocked(executeTool).mockResolvedValue({ content: '{"total":1}', products: [product], sources: [] });
+  const result = await chat({ messages: [{ role: 'user', content: 'SP014899' }] }, ['products.view']);
+  expect(result.reply).toBe('SP014899 đã hết hàng.');
+  expect(result.products).toEqual([product]);
+  expect(executeTool).toHaveBeenCalledTimes(1);
+  expect(executeTool).toHaveBeenCalledWith('tim_san_pham', { q: 'SP014899', limit: 5 }, ['products.view']);
 });
 it('lets the model answer comparisons instead of searching the catalog', async () => {
   vi.mocked(callModel).mockResolvedValueOnce({ text: 'ON', calls: [] }).mockResolvedValueOnce({ text: 'Hermes thường giữ giá tốt hơn.', calls: [] });

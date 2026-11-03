@@ -1,6 +1,5 @@
-import { validateManual } from './manual-pricing.js';
 // Bảo 2026-10-19 (TASK-039): start date moved from 13/10 to 01/10/2026; 15-day steps unchanged.
-export const POLICY = 'baoq-2026-10-30-hide-before-jul-v10';
+export const POLICY = 'baoq-2026-11-02-hide-600m-v11';
 export const START = '2026-10-01';
 export const NO_MARKDOWN_BEFORE = '2026-07-01';
 export const BATCH_FROM = '2026-07-01';
@@ -63,6 +62,9 @@ export function calculate(product, day) {
   Object.assign(result, ageFields(product, day));
   result.startDate = result.saleStartDate;
   result.age = result.ageDays;
+  if (Number.isSafeInteger(product.p0) && product.p0 >= 600e6) {
+    return { ...result, status: 'excluded', excludedReason: 'over_600m', reasons: ['Giá gốc từ 600 triệu: không giảm'] };
+  }
   if (product.inventoryMissing || product.activeMissing) return { ...result, reasons: ['Thiếu trạng thái kinh doanh hoặc tồn kho chi nhánh'] };
   if (!product.active || !(product.stock > 0)) return { ...result, status: 'excluded', reasons: ['Bỏ qua: hết tồn hoặc ngừng kinh doanh'] };
   if (!Number.isSafeInteger(product.p0) || product.p0 <= 0) result.reasons.push('Giá gốc P0 không hợp lệ');
@@ -73,24 +75,12 @@ export function calculate(product, day) {
   if (day < START) result.reasons.push('Ngày xét trước mốc 01/10/2026');
   if (result.reasons.length) return result;
   if (created < NO_MARKDOWN_BEFORE) return { ...result, status: 'excluded', excludedReason: 'before_no_markdown', reasons: ['Hàng tạo trước 01/07/2026: không giảm'] };
-  if (product.p0 >= 600e6) {
-    if (!product.manualPricing || product.manualPricing.price == null || product.manualPricing.allowance == null) {
-      return { ...result, reasons: ['Chờ nhập giá duyệt riêng'] };
-    }
-    try { validateManual(product.manualPricing.price, product.manualPricing.allowance); }
-    catch (error) { return { ...result, reasons: [error.message] }; }
-    result.pricingMode = 'manual';
-    result.manualPricing = structuredClone(product.manualPricing);
-    result.price = product.manualPricing.price;
-    result.allowance = product.manualPricing.allowance;
-  } else {
   const band = bands.find(b => product.p0 < b[0] * 1e6);
   result.markdown = result.m === 0 ? 0 : (band[1] + (result.m >= 2 ? band[2] : 0) + Math.max(0, result.m - 2) * band[3]) * 1e6;
   result.markdown = Math.round(result.markdown); // table amounts are exact integer VND
   result.price = product.p0 - result.markdown;
   result.allowance = product.p0 < 5e6 || result.m >= 4 ? 0 : result.m === 3 ?
     (product.p0 < 100e6 ? result.price * .03 : baseAllowance(product.p0, result.price) / 2) : baseAllowance(product.p0, result.price);
-  }
   result.net = result.price - result.allowance;
   if (result.price <= 0 || result.net <= 0) result.reasons.push('Giá sau giảm hoặc giá chốt không dương: cần xem xét');
   if (!Number.isInteger(result.allowance)) result.reasons.push('Quyền sale có phần lẻ VND: chờ quy tắc làm tròn');
@@ -113,7 +103,7 @@ export function ageFields(product, day) {
     dateStatus: !createdDateVN ? 'invalid' : !valid ? 'future_or_before_start' : 'valid' };
 }
 export function previewNote(existing, result, day) {
-  const event = result.pricingMode === 'manual' ? 'Dùng giá tay duyệt riêng; giữ giá và quyền sale đến khi sửa lại, không áp dụng markdown tự động.' : result.m === 0 ? 'M0 — chưa markdown' : `Áp dụng M1–M${result.m} từ P0 ${money(result.p0)}`;
+  const event = result.m === 0 ? 'M0 — chưa markdown' : `Áp dụng M1–M${result.m} từ P0 ${money(result.p0)}`;
   const block = `[BAOQ-MO-PHONG]\nNgày xét: ${day} | M${result.m} | Giá dự kiến: ${money(result.price)}\nQuyền sale hiện tại dự kiến: ${money(result.allowance)}\nSự kiện dự kiến: ${event}\nChỉ mô phỏng — chưa cập nhật Kiot.\n[/BAOQ-MO-PHONG]`;
   // Replace only a complete owned preview block; preserve all other text.
   const owned = '\\[BAOQ-MO-PHONG\\][\\s\\S]*?\\[\\/BAOQ-MO-PHONG\\]';

@@ -206,6 +206,11 @@ dialog.rec-dialog[open]{animation:app-dlg-in var(--dur-3) var(--ease-out)}
 .btn-sm{min-height:36px;padding:0 var(--s3);font-size:13px}
 .ws-link{display:block;margin-top:var(--s2);min-height:36px;font-size:12px}
 .ws-frame{display:block;width:100%;border:1px solid var(--line);border-radius:14px;background:#fff}
+/* V2 uses the page scrollbar; the same frame expands only while a detail is open. */
+.ws-v2-slot{min-width:0}
+.ws-v2-frame{border:0;border-radius:0;background:transparent;min-height:400px}
+.ws-v2-frame.is-overlay{position:fixed;inset:0;width:100%;height:100dvh;z-index:10001}
+.ws-v2-backdrop{position:fixed;inset:0;z-index:10000;pointer-events:none;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .ws-form{display:grid;gap:var(--s4)}
 .ws-perms{margin:0;padding:var(--s4);border:1px solid var(--line);border-radius:var(--r-md);display:grid;gap:0}
 .ws-perms legend{padding:0 6px;font-weight:600;font-size:14px}
@@ -256,10 +261,7 @@ dialog.rec-dialog[open]{animation:app-dlg-in var(--dur-3) var(--ease-out)}
 html,body,.level,.sheet-body,.dialog{scrollbar-width:none}
 html::-webkit-scrollbar,body::-webkit-scrollbar,.level::-webkit-scrollbar,.sheet-body::-webkit-scrollbar,.dialog::-webkit-scrollbar{display:none}
 
-/* Bảo 2026-10-27: header logo = the shop site's wordmark (D:/HTML assets/baoq-wordmark-bright-4k.png), same 200x46 crop. */
-.brand{padding:5px var(--s3)}
-.wordmark-img{display:block;width:200px;height:46px;object-fit:cover;object-position:center;filter:brightness(0) invert(1)}
-@media (max-width:699px){.site-header .brand{padding:12px var(--s2)}.wordmark-img{width:138px;height:32px}}
+/* Bảo 2026-11-03: header dùng lại logo gốc cắt bằng CSS (.wordmark), như V2. */
 
 /* Bảo 2026-10-27, design v3: slimmer work band, signed-in home tiles, account button, sidebar tags. */
 .band.slim{padding:calc(var(--header-h) + 10px) 0 20px}

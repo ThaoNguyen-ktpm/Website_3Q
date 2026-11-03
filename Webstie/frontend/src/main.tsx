@@ -1,11 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import '@fontsource/playfair-display/400.css';
-import '@fontsource/playfair-display/600.css';
-import '@fontsource/be-vietnam-pro/400.css';
-import '@fontsource/be-vietnam-pro/500.css';
-import '@fontsource/be-vietnam-pro/600.css';
-import '@fontsource/be-vietnam-pro/700.css';
 import './app-v2-base.css';
 import './app-v2.css';
 import {lazy, Suspense} from 'react';
@@ -29,7 +23,7 @@ function PublicHome({onLogin}:{onLogin?:()=>void}){
   {onLogin&&<div className="cta-row"><button className="btn btn-primary-dark" type="button" onClick={onLogin}>Đăng nhập</button></div>}
  </div></section>;
  return <><header className={`site-header on-dark${scrolled?' is-scrolled':''}`}><span/>
-  <button className="brand" type="button" onClick={()=>{location.hash='page=portal'}} aria-label="BAOQ Luxury, Trang chủ"><img className="wordmark-img" src="/brand/baoq-wordmark.png" alt="" width="200" height="46"/></button>
+  <button className="brand" type="button" onClick={()=>{location.hash='page=portal'}} aria-label="BAOQ Luxury, Trang chủ"><span className="wordmark"><img src="/brand/baoq-logo-original.jpg" alt="" width="2048" height="2048"/></span></button>
   <div className="header-right">{onLogin&&<button className="icon-btn header-login" type="button" aria-label="Đăng nhập" title="Đăng nhập" onClick={onLogin}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="1.5"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></button>}</div></header>
   <main id="main">{hello}
    <section className="wrap shop-info" aria-labelledby="shop-h"><h2 id="shop-h" className="vh">Thông tin cửa hàng</h2><div className="shop-grid">

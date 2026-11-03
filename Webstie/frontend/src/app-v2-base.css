@@ -14,9 +14,11 @@
   --chart-accent:#a0612e; --chart-context:#bdb6ad;
   --danger:#9a3324; --danger-bg:#f7ebe7; --caution:#7a4d12; --caution-bg:#f7efe1; --ok:#2d6342; --ok-bg:#e9f1eb;
   /* type */
-  /* bundled via @fontsource (main.tsx), both ship a Vietnamese subset so stacked diacritics (ề, ộ) render the same on every OS */
-  --serif:"Playfair Display","Times New Roman",serif;
-  --sans:"Be Vietnam Pro","Segoe UI",Arial,sans-serif;
+  /* V2 system fonts, no webfont (Bảo chose V2 on 2026-11-02, replacing the @fontsource Playfair/Be Vietnam Pro bundle).
+     "Palatino Linotype" sits before Georgia: Windows has no Baskerville/Palatino, and Georgia splits stacked diacritics
+     (ề, ế render as "e` ") while Palatino Linotype keeps them whole. Checked in Chromium on Windows 11. */
+  --serif:"Baskerville","Palatino","Palatino Linotype","Georgia",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
   /* spacing (4-based) */
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s7:32px;--s8:40px;--s9:56px;
   --gutter:40px;--max:1120px;--header-h:56px;
@@ -505,3 +507,11 @@ h1[tabindex="-1"]:focus,h2[tabindex="-1"]:focus{outline:none}
   .drawer,.sheet,.dialog,.toast,.level{transition:none!important}
   .btn:active{transform:none}
 }
+
+/* TASK-132: shared operations groups wrap on mobile, including long V2 labels. */
+.ops-v2-tabs .tabs-row{flex-wrap:wrap}
+.ops-v2-tabs .tabs-row>div{min-width:0;width:100%}
+.ops-v2-tabs .ops-tabs-group{display:block;padding:8px var(--s3) 0;font-size:12px;color:var(--muted)}
+.ops-v2-tabs .tabs-row>div>ul{display:flex;flex-wrap:wrap;gap:0 var(--s1);list-style:none;margin:0;padding:0}
+.ops-v2-tabs a{white-space:normal;gap:8px}
+.ops-v2-tabs details ul{max-width:calc(100vw - 32px);max-height:50vh;overflow-y:auto}

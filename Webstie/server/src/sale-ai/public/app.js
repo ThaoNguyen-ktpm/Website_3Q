@@ -1,4 +1,4 @@
-import { renderLiveResults, renderHistory, showUpdateDetails, clearLiveSelection } from './live-ui.js';
+import { renderLiveResults, renderHistory, showUpdateDetails, clearLiveSelection, notifyUpdate } from './live-ui.js';
 import { ageCell } from './age-cell.js';
 
 // Website_3Q frames this page with ?embed=1 (Bảo 2026-10-19, TASK-035): dark purple theme without the own menu, and the page
@@ -22,10 +22,11 @@ const dateTime = d => dateFormatter.format(new Date(d));
 const scenarioStatus = status => ({price_failed:'Chưa ghi được giá',note_pending:'Chờ bổ sung ghi chú',simulated:'Mô phỏng thành công'})[status] || status;
 const typeLabel = type => type === 'hottrend' ? 'Hottrend' : type === 'normal' ? 'Hàng thường' : 'Chờ xử lý: thiếu tên';
 let state, view = 'results', selectedRun, query = '', mFilter = '', pending = false;
+let observedJob,finishedJob,polling=false,statusOffline=false;
 let dataset='real';
 const context=()=>{
   const source=state.dataset;
-  return {esc,money,dateTime,pagedTable,api:(path,body,options={})=>api(path,body,{dataset:source,...options}),action,message,query,mFilter,loading:loadedKey!==requestKey(),canWrite:()=>!pending&&loadedKey===requestKey()&&dataset===source,beginOperation:()=>{pending=true;},endOperation:()=>{pending=false;},acceptUpdate:async()=>{if(dataset===source)await loadView();},openUpdateHistory:id=>{showUpdateDetails({dataset:source},id,context());}};
+  return {esc,money,dateTime,pagedTable,api:(path,body,options={})=>api(path,body,{dataset:source,...options}),action,message,query,mFilter,loading:loadedKey!==requestKey(),canWrite:()=>!pending&&!state.busy&&loadedKey===requestKey()&&dataset===source,beginOperation:()=>{pending=true;},endOperation:()=>{pending=false;},acceptUpdate:async()=>{if(dataset===source)await loadView();},openUpdateHistory:id=>{showUpdateDetails({dataset:source},id,context());}};
 };
 const pages = Object.fromEntries(['results','history','edits'].map(key=>[key,{page:1,size:10}]));
 let resultsRunId;
@@ -47,6 +48,7 @@ async function loadView(focusTarget){
     const data=await api('/api/view?'+params,undefined,{signal:controller.signal,dataset:source});
     if(sequence!==requestSequence||key!==requestKey())return false;
     state=data;
+    if(source==='real'&&data.job?.kind==='update')observedJob=data.job.id;
     if(data.pagination)Object.assign(pager,{page:data.pagination.page,size:data.pagination.size});
     if(data.editsPagination)Object.assign(pages.edits,{page:data.editsPagination.page,size:data.editsPagination.size});
     loadedKey=requestKey();render();syncUrl();$('#content').setAttribute('aria-busy','false');
@@ -104,9 +106,10 @@ function pagedTable(headers, items, row, key) {
   const start = (pager.page-1)*pager.size;
   const name = {results:'kết quả kiểm thử',history:'lịch sử lượt chạy',edits:'lịch sử giá tay'}[key] || 'sản phẩm cập nhật Kiot';
   const hidden=key==='results'?(state.runs.find(r=>r.id===selectedRun)||state.runs[0])?.hiddenBeforeNoMarkdownCount:0;
+  const hiddenOver600m=key==='results'?(state.runs.find(r=>r.id===selectedRun)||state.runs[0])?.hiddenOver600mCount:0;
   const controls = `<div class="pagination" data-pagination="${key}" tabindex="-1" aria-label="Phân trang ${name}">
     <label>${key==='results'?'Sản phẩm mỗi trang':'Dòng mỗi trang'} <select data-page-size="${key}" aria-label="Số dòng mỗi trang — ${name}">${[10,50,100].map(size=>`<option value="${size}" ${size===pager.size?'selected':''}>${size}</option>`).join('')}</select></label>
-    <span class="muted">Hiển thị ${total?start+1:0}–${Math.min(start+pager.size,total)} / ${total}${hidden?` · Đã ẩn ${count(hidden)} món tạo trước 01/07/2026 (không giảm)`:''}</span>
+    <span class="muted">Hiển thị ${total?start+1:0}–${Math.min(start+pager.size,total)} / ${total}${hidden?` · Đã ẩn ${count(hidden)} món tạo trước 01/07/2026 (không giảm)`:''}${hiddenOver600m?` · Đã ẩn ${count(hiddenOver600m)} món từ 600 triệu (không giảm)`:''}</span>
     <div class="page-buttons"><button data-page-key="${key}" data-page="1" ${pager.page===1?'disabled':''}>Đầu</button><button data-page-key="${key}" data-page="${pager.page-1}" ${pager.page===1?'disabled':''}>Trước</button>
     <span>Trang ${pager.page} / ${totalPages}</span><button data-page-key="${key}" data-page="${pager.page+1}" ${pager.page===totalPages?'disabled':''}>Sau</button><button data-page-key="${key}" data-page="${totalPages}" ${pager.page===totalPages?'disabled':''}>Cuối</button></div></div>`;
   return table(headers,(remote?items:items.slice(start,start+pager.size)).map(row)) + controls;
@@ -126,8 +129,24 @@ async function api(path, body, options={}) {
   const source=options.dataset||dataset;
   const querySuffix=path.includes('?')?'&':'?';
   // Relative to the page: /api/… standalone, /sale-ai/api/… inside Website_3Q (TASK-035).
-  const response = await fetch(path.replace(/^\//,'')+querySuffix+'dataset='+source, {...(body === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,dataset:source})}),signal:options.signal});
-  const data = await response.json(); if(!response.ok) throw new Error(data.error); return data;
+  let response,data;
+  try {
+    response = await fetch(path.replace(/^\//,'')+querySuffix+'dataset='+source, {...(body === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,dataset:source})}),signal:options.signal});
+    data = await response.json();
+  }catch(error){
+    if(error.name==='AbortError')throw error;
+    throw new Error('Mất kết nối máy chủ Sale AI — xem Lịch sử sau khi máy chủ chạy lại.');
+  }
+  if(!response.ok)throw new Error(data.error||'Máy chủ Sale AI không xử lý được yêu cầu.');
+  if(response.status===202){
+    for(;;){
+      await new Promise(resolve=>setTimeout(resolve,1000));
+      const job=await api('/api/jobs/'+encodeURIComponent(data.id),undefined,options);
+      if(job.status==='failed')throw new Error(job.error+' — Xem Lịch sử trước khi cập nhật tiếp.');
+      if(job.status==='completed'){if(job.kind==='update')finishedJob=job.id;return job.result;}
+    }
+  }
+  return data;
 }
 let messageTimer;
 function message(text,error=false){
@@ -226,26 +245,29 @@ if(await loadView()){if(!state.busy)await ensureView();}
 function renderProgress(op){
   const box=$('#update-progress');if(!box)return;
   if(!op){box.hidden=true;box.innerHTML='';return;}
-  const b=op.batch,finished=Math.min(b.total,b.done+b.failed+b.unknown),percent=b.total?Math.floor(finished*100/b.total):0;
+  const b=op.batch||{total:op.total,done:Math.min(...Object.values(op.platforms||{all:{processed:op.processed}}).map(p=>p.processed)),failed:0,unknown:0},finished=Math.min(b.total,b.done+b.failed+b.unknown),percent=b.total?Math.floor(finished*100/b.total):0;
   const time=(t,seconds)=>new Date(t).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',...(seconds?{second:'2-digit'}:{})});
   const eta=b.etaSeconds==null?'Đang ước tính thời gian…':`Còn khoảng ${Math.max(1,Math.ceil(b.etaSeconds/60))} phút · dự kiến xong lúc ${time(Date.now()+b.etaSeconds*1000)}`;
   const bar=(label,p)=>p?`<div class="progress-row"><span>${label}</span><progress max="${p.total||1}" value="${p.processed}"></progress><span>${p.processed}/${p.total}</span></div>`:'';
   box.hidden=false;
-  box.innerHTML=`<div class="progress-head"><b>Đang cập nhật ${b.total} sản phẩm · ${percent}%</b><span>${eta}</span></div>
+  box.innerHTML=`<div class="progress-head"><b>Đang kiểm tra và cập nhật ${count(b.total)} món · ${count(finished)}/${count(b.total)} · ${percent}%</b><span>${eta}</span></div>
     <progress class="progress-main" max="100" value="${percent}"></progress>
-    <ol class="progress-steps"><li class="done">Đọc danh sách Kiot + Sapo</li><li class="current">Ghi và xác minh lô ${b.lot}/${b.lots}</li><li>Lưu lịch sử</li></ol>
+    <ol class="progress-steps"><li class="done">Kiểm tra điều kiện</li><li class="current">${op.batch?`Ghi và xác minh lô ${b.lot}/${b.lots}`:'Ghi và xác minh từng món'}</li><li>Lưu lịch sử</li></ol>
     ${b.pause?`<p class="progress-pause">${b.pause.side==='kiot'?'Kiot':'Sapo'} báo quá giới hạn — tạm nghỉ đến ${time(b.pause.until,true)} rồi tự chạy tiếp.</p>`:''}
     ${bar('Kiot',op.platforms?.kiot)}${bar('Sapo',op.platforms?.sapo)}
     <div class="progress-counts"><span>Thành công <b>${b.done}</b></span><span>Lỗi <b>${b.failed}</b></span><span>Chưa xác định <b>${b.unknown}</b></span>${b.unchanged?`<span>Bỏ qua (đã đúng giá) <b>${b.unchanged}</b></span>`:''}</div>
     <p class="muted">Có thể đóng trang, Sale AI vẫn chạy. Không tắt máy và cửa sổ npm run dev.</p>`;
 }
 setInterval(async()=>{
+  if(polling)return;polling=true;
   try {
     const status=await api('/api/status');
-    renderProgress(dataset==='real'&&status.operation?.running&&status.operation.source===dataset&&status.operation.batch?status.operation:null);
+    statusOffline=false;
+    if(status.job?.status==='running'&&status.job.kind==='update')observedJob=status.job.id;
+    renderProgress(dataset==='real'&&status.operation?.running&&status.operation.source===dataset?status.operation:null);
     if(dataset==='real') {
       if(status.operation?.running&&status.operation.source===dataset){
-        const text=status.operation.platforms?Object.entries(status.operation.platforms).map(([name,p])=>(name==='kiot'?'Kiot':'Sapo')+': '+p.stage+' · '+p.processed+'/'+p.total+' sản phẩm').join(' | '):status.operation.stage+' · '+status.operation.processed+'/'+status.operation.total+' sản phẩm';
+        const text=status.operation.platforms?Object.entries(status.operation.platforms).map(([name,p])=>(name==='kiot'?'Kiot':'Sapo')+': '+(name==='sapo'&&status.sapoWait?'Đang chờ giới hạn Sapo…':p.stage)+' · '+p.processed+'/'+p.total+' sản phẩm').join(' | '):(status.sapoWait?'Đang chờ giới hạn Sapo…':status.operation.stage)+' · '+status.operation.processed+'/'+status.operation.total+' sản phẩm';
         $('#sync-status').textContent=text;
         const box=document.querySelector('dialog .dialog-error');if(box)box.textContent=text;
       }
@@ -254,8 +276,19 @@ setInterval(async()=>{
       else $('#sync-status').textContent=syncLine();
     }
     if(pending||status.busy||document.querySelector('dialog[open]')||$('#result-search')?.composing)return;
+    if(dataset==='real'&&observedJob&&status.job?.id===observedJob&&status.job.status!=='running'&&finishedJob!==observedJob){
+      finishedJob=observedJob;const job=await api('/api/jobs/'+encodeURIComponent(observedJob));
+      await loadView();
+      if(job.status==='completed')notifyUpdate(job.result,context());else message(job.error+' — Xem Lịch sử trước khi cập nhật tiếp.',true);
+      return;
+    }
     if(loadedKey!==requestKey())return;
-    if(status.revision===state?.revision)return;
+    if(status.revision===state?.revision&&!state?.busy)return;
     if(await loadView())message('Bảng đã cập nhật dữ liệu mới.');
-  } catch{}
+  } catch(error){
+    if(error.name!=='AbortError'&&!statusOffline){
+      statusOffline=true;message(error.message,true);
+      const box=$('#update-progress');if(box){box.hidden=false;box.textContent=error.message;}
+    }
+  }finally{polling=false;}
 },3000);

@@ -55,7 +55,7 @@ test('page update writes Kiot in lots of 50 without a GET per product; both side
  assert.ok(f.products.every(x=>x.currentPrice===u.items[0].row.price&&x.notes.includes('data-baoq-event')));
  assert.ok(f.sapos.every(s=>s.variants[0].price===u.items[0].row.price&&s.content.startsWith('<b>HTML gốc</b>')));
  assert.ok(u.items.every(i=>i.platforms.kiot.afterProduct&&i.platforms.sapo.afterProduct));
- assert.equal(summaryText(u.summary,u),'Đã cập nhật thành công 120/120 sản phẩm.');
+ assert.equal(summaryText(u.summary,u),'120/120 thành công');
  assert.equal(f.live.operation?.batch?.done??120,120);
  assert.equal((await prepareRestore(f.live,u.id)).tasks.length,240);
 });
@@ -69,10 +69,11 @@ test('products right on both sides are not sent; a product right on Kiot only se
  const u=await f.live.commit(p.id,true);
  assert.equal(u.outcome,'success');assert.deepEqual(f.counts.lots,[]);assert.equal(f.counts.sapoPuts,1);
  assert.deepEqual(kiotStatus(u,'SP000010'),{status:'done',skipped:true,alreadyOk:true});
- assert.equal(summaryText(u.summary,u),'Đã cập nhật thành công 1/1 sản phẩm. Bỏ qua 2 sản phẩm đã đúng giá.');
+ assert.equal(summaryText(u.summary,u),'1/3 thành công · 2 đã đúng giá');
+ assert.deepEqual(u.unchangedCodes,['SP000009','SP000011']);
  const r=await prepareRestore(f.live,u.id);assert.deepEqual(r.tasks.map(t=>t.name),['sapo']);
  const again=await f.prepare();assert.equal(again.items.length,0);assert.equal(again.unchanged,3);
- const none=await f.live.commit(again.id,true);assert.equal(summaryText(none.summary,none),'Tất cả 3 sản phẩm đã đúng giá, không cần cập nhật.');
+ const none=await f.live.commit(again.id,true);assert.equal(summaryText(none.summary,none),'0/3 thành công · 3 đã đúng giá');
 });
 
 test('a Kiot edit after the check is never overwritten: before the first lot and before a later lot',async()=>{
@@ -83,11 +84,11 @@ test('a Kiot edit after the check is never overwritten: before the first lot and
  const u=await f.live.commit(p.id,true);
  for(const [code,id] of [['SP000009',1],['SP000118',110]]){
   const item=u.items.find(i=>i.code===code);
-  assert.deepEqual(Object.values(item.platforms).map(x=>[x.status,x.error]),[['preflight_failed','Kiot thay đổi sau xác nhận'],['preflight_failed','Kiot thay đổi sau xác nhận']]);
+  for(const result of Object.values(item.platforms)){assert.equal(result.status,'preflight_failed');assert.match(result.error,/Kiot đã thay đổi.*mô tả/);}
   assert.match(f.byId.get(id).notes,/Sửa tay/);assert.equal(f.sapoById.get(5000000+id-1).variants[0].price,35e6);
  }
  assert.deepEqual(f.counts.lots,[49,50,19]);assert.equal(u.outcome,'partial_failure');
- assert.equal(summaryText(u.summary,u),'Đã cập nhật thành công 118/120 sản phẩm. Lỗi 2 sản phẩm.');
+ assert.equal(summaryText(u.summary,u),'118/120 thành công · 2 lỗi kiểm tra');
 });
 
 test('bulk timeout marks the whole lot unknown, sends nothing again, and the other lots continue',async()=>{

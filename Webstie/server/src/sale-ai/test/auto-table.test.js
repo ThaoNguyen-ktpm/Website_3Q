@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createTestApp} from './http-fixture.js';
 import {normalizeProduct} from '../lib/kiot.js';
+import {responseResult} from './job-result.js';
 const memory=()=>{let s=null;return {read:async()=>structuredClone(s),write:async value=>{s=structuredClone(value);}};};
 
-test('commit never reloads or recalculates table; manual reload remains available; retry disabled',async()=>{
+test('commit refreshes verified table rows without reloading; manual reload remains available; retry disabled',async()=>{
   const row=normalizeProduct({id:1,code:'WRITE-1',name:'Mẫu',basePrice:35e6,isActive:true,createdDate:'2026-12-03',inventories:[{branchId:44466,onHand:1}],description:''});
   let reads=0,failNote=true,failReload=false;
   const client={all:async()=>{reads++;if(failReload)throw Error('Lỗi tải danh sách');return [structuredClone(row)];},product:async()=>structuredClone(row),update:async(p,v)=>{if(failNote)throw Error('Lỗi ghi chú');if('basePrice' in v)row.currentPrice=v.basePrice;if('description' in v)row.notes=v.description;},price:async(p,v)=>{row.currentPrice=v;},note:async(p,v)=>{if(failNote)throw Error('Lỗi ghi chú');row.notes=v;}};
@@ -13,15 +14,18 @@ test('commit never reloads or recalculates table; manual reload remains availabl
   app.live.sapo=null;app.live.requireJoint=false;
   assert.equal(reads,0);await app.refreshTable();app.real.state.mapping={verified:true};
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+app.server.address().port;
-  const post=async(path,body)=>{const res=await fetch(base+path,{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(res.status,200);return res.json();};
+  const post=async(path,body)=>{const res=await fetch(base+path,{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await responseResult(app,res);assert.equal(result.status,200);return result.data;};
   try {
     const proposal=await app.live.prepare(app.real.state.runs[0].id,['WRITE-1']);
     const runBefore=structuredClone(app.real.state.runs[0]);
     const partial=await post('/api/kiot/commit',{id:proposal.id,confirmed:true});assert.equal(partial.summary.failed,1);assert.equal(reads,1);assert.deepEqual(app.real.state.runs[0],runBefore);
     const disabled=await fetch(base+'/api/kiot/retry',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:'{}'});assert.equal(disabled.status,410);
-    failNote=false;const next=await app.live.prepare(app.real.state.runs[0].id,['WRITE-1']);const complete=await post('/api/kiot/commit',{id:next.id,confirmed:true});assert.equal(complete.summary.succeeded,1);assert.equal(reads,1);assert.deepEqual(app.real.state.runs[0],runBefore);
-    await app.keepCurrent();assert.deepEqual(app.real.state.runs[0],runBefore);assert.equal(reads,1);
-    await assert.rejects(app.live.prepare(app.real.state.runs[0].id,['WRITE-1']),/Kiot đã thay đổi/);
+    failNote=false;const next=await app.live.prepare(app.real.state.runs[0].id,['WRITE-1']);const complete=await post('/api/kiot/commit',{id:next.id,confirmed:true});assert.equal(complete.summary.succeeded,1);assert.equal(reads,1);
+    // TASK-125 deliberately replaces the old stale-table behavior after verified writes.
+    const runAfter=structuredClone(app.real.state.runs[0]);assert.notEqual(runAfter.id,runBefore.id);assert.equal(runAfter.rows[0].currentPrice,row.currentPrice);assert.equal(runAfter.rows[0].notesBefore,row.notes);assert.ok(runAfter.rows[0].liveReadAt);
+    assert.deepEqual(app.real.state.runs.find(r=>r.id===runBefore.id),runBefore);
+    await app.keepCurrent();assert.deepEqual(app.real.state.runs[0],runAfter);assert.equal(reads,1);
+    await app.live.prepare(app.real.state.runs[0].id,['WRITE-1']);
     await post('/api/kiot/refresh',{});assert.equal(reads,2);assert.equal(app.real.state.runs[0].rows[0].currentPrice,row.currentPrice);
     const again=await app.live.prepare(app.real.state.runs[0].id,['WRITE-1']);failReload=true;
     const result=await post('/api/kiot/commit',{id:again.id,confirmed:true});assert.equal(result.summary.succeeded,1);assert.equal(result.refreshError,undefined);assert.equal(reads,2);
@@ -41,7 +45,7 @@ test('diagnostic endpoint uses the live server client for three GETs, never writ
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+app.server.address().port;
   try {
     const r=await fetch(base+'/api/kiot/diagnose',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({code:'AUTO-1'})});
-    assert.equal(r.status,200);const data=await r.json();assert.equal(data.checks.length,3);assert.ok(data.checks.every(c=>c.ok));assert.equal(reads,3);assert.deepEqual(app.real.state,before);
+    const result=await responseResult(app,r);assert.equal(result.status,200);const data=result.data;assert.equal(data.checks.length,3);assert.ok(data.checks.every(c=>c.ok));assert.equal(reads,3);assert.deepEqual(app.real.state,before);
   }finally{await new Promise(resolve=>app.server.close(resolve));}
 });
 test('manual reads calculate changed table without writing; unchanged keeps snapshot and P0',async()=>{
@@ -58,9 +62,9 @@ test('startup and the daily roll-forward never read Kiot; old unfinished write d
 test('refresh HTTP produces table immediately; removed manual price endpoint never changes data',async()=>{
   const {app,rows}=await setup();rows[0].currentPrice=700e6;
   await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+app.server.address().port;
-  const post=async(path,body)=>{const response=await fetch(base+path,{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({dataset:'real',...body})});assert.equal(response.status,200);return response.json();};
+  const post=async(path,body)=>{const response=await fetch(base+path,{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({dataset:'real',...body})});const result=await responseResult(app,response);assert.equal(result.status,200);return result.data;};
   try{
-    await post('/api/kiot/refresh',{});assert.match(app.real.state.runs[0].rows[0].reasons.join(),/giá duyệt riêng/);
+    await post('/api/kiot/refresh',{});assert.deepEqual(app.real.state.runs[0].rows,[]);assert.equal(app.real.state.runs[0].hiddenOver600mCount,1);
     const before=structuredClone(app.real.state);
     const response=await fetch(base+'/api/manual-price',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({dataset:'real',code:'AUTO-1',price:665e6,allowance:0})});
     assert.equal(response.status,410);assert.deepEqual(app.real.state,before);

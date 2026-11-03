@@ -1,7 +1,8 @@
 import {randomUUID} from 'node:crypto';
 import {sapoFingerprint} from './sapo.js';
 import {updateSummary} from './update-report.js';
-const equalKiot=(a,b)=>a.id===b.id&&a.code===b.code&&a.currentPrice===b.currentPrice&&a.notes===b.notes;
+import {notesFingerprint} from './kiot-fingerprint.js';
+const equalKiot=(a,b)=>a.id===b.id&&a.code===b.code&&a.currentPrice===b.currentPrice&&(b.notesHash!==undefined?notesFingerprint(a.notes)===b.notesHash:a.notes===b.notes);
 const clone=value=>structuredClone(value);
 const hasSapo=update=>update.items.some(i=>i.platforms?.sapo);
 function sourceFor(service,state,id){
@@ -9,6 +10,7 @@ function sourceFor(service,state,id){
  if(!source||source.mode!=='joint-v1'||source.restoreVersion!==1)throw Error('Lượt này chưa có bản khôi phục được kiểm chứng; chỉ hỗ trợ lượt cập nhật mới.');
  // Kiot-only updates have no Sapo platform, so restoring them never touches Sapo.
  if(hasSapo(source)){
+  if(service.sapoWrite===false)throw Error('Lượt cũ có Sapo — cần hoàn tác tay');
   if(source.sapoBinding!==service.sapo?.binding)throw Error('Cấu hình Sapo đã đổi; không thể khôi phục sang cấu hình khác.');
   service.sapo.requireVerified();
  }
@@ -36,7 +38,7 @@ function tasksFor(source){
   // TASK-102: a side already right before the update (alreadyOk) was never written, so there is nothing to restore.
   if(item.platforms.kiot.status==='done'&&!item.platforms.kiot.alreadyOk){
    const expected=item.platforms.kiot.afterProduct;if(!expected)throw Error('Thiếu bản đọc lại Kiot; không khôi phục.');
-   tasks.push({name:'kiot',productId:item.id,codes:[item.code],expected:clone(expected),target:clone(item.before)});
+   tasks.push({name:'kiot',kiotDescription:source.kiotDescription!==false,productId:item.id,codes:[item.code],expected:clone(expected),target:clone(item.before)});
   }
   if(item.platforms.sapo?.status==='done'&&!item.platforms.sapo.alreadyOk){
    const expected=item.platforms.sapo.afterProduct;if(!expected)throw Error('Thiếu bản đọc lại Sapo; không khôi phục.');
@@ -59,10 +61,10 @@ export async function prepareRestore(service,sourceId){
   const skipped=source.items.filter(i=>codes.has(i.code)).map(i=>({id:i.id,code:i.code,name:i.name,status:'skipped',error:[...blocked].find(([task])=>task.codes.includes(i.code))?.[1]||'Đã thay đổi sau cập nhật'}));
   const items=source.items.map(i=>({code:i.code,name:i.name,id:i.id,
    before:clone(i.platforms.kiot.afterProduct||i.before),row:{price:i.before.currentPrice},notePreview:i.before.notes,
-   ...(i.platforms.sapo?{sapo:{...clone(i.sapo),before:clone(tasks.find(t=>t.name==='sapo'&&t.codes.includes(i.code))?.expected||i.sapo.before),notePreview:i.sapo.before.content},
-   restoreSapoPrice:i.sapo.before.variants.find(v=>v.id===i.sapo.variantId)?.price}:{}),
+   ...(i.platforms.sapo?{sapo:{...clone(i.sapo),before:clone(tasks.find(t=>t.name==='sapo'&&t.codes.includes(i.code))?.expected||i.sapo.before),notePreview:i.sapo.before?.content},
+   restoreSapoPrice:i.sapo.before?.variants.find(v=>v.id===i.sapo.variantId)?.price}:{}),
    restoreKiot:restores('kiot',i.code),restoreSapo:restores('sapo',i.code)}));
-  const prepared={id:randomUUID(),kind:'restore',sourceId,at:service.clock().toISOString(),status:'prepared',sapoBinding:source.sapoBinding,tasks,items,skipped};
+  const prepared={id:randomUUID(),kind:'restore',kiotDescription:source.kiotDescription!==false,sourceId,at:service.clock().toISOString(),status:'prepared',sapoBinding:source.sapoBinding,tasks,items,skipped};
   state.prepared=[prepared];return prepared;
  });
 }
@@ -77,7 +79,7 @@ export async function commitRestore(service,id,confirmed){
   const p=state.prepared?.find(p=>p.id===id);
   if(!p||p.kind!=='restore'||p.status!=='prepared'||service.clock().getTime()-Date.parse(p.at)>300000)throw Error('Bản xác nhận khôi phục hết hạn hoặc không hợp lệ.');
   sourceFor(service,state,p.sourceId);p.status='consumed';
-  const update={id:randomUUID(),mode:'restore-joint-v1',sourceId:p.sourceId,at:service.clock().toISOString(),label:p.items.some(i=>i.sapo)?'Khôi phục Kiot + Sapo':'Khôi phục Kiot',items:p.items.map(i=>({...clone(i),status:'journaled',platforms:{kiot:{status:i.restoreKiot?'journaled':'done',skipped:!i.restoreKiot},...(i.sapo?{sapo:{status:i.restoreSapo?'journaled':'done',skipped:!i.restoreSapo}}:{})}})),restoreTasks:clone(p.tasks),attempts:[{id:randomUUID(),at:service.clock().toISOString(),kind:'restore',status:'running'}],skipped:clone(p.skipped||[])};
+  const update={id:randomUUID(),mode:'restore-joint-v1',kiotDescription:p.kiotDescription!==false,sourceId:p.sourceId,at:service.clock().toISOString(),label:p.items.some(i=>i.sapo)?'Khôi phục Kiot + Sapo':'Khôi phục Kiot',items:p.items.map(i=>({...clone(i),status:'journaled',platforms:{kiot:{status:i.restoreKiot?'journaled':'done',skipped:!i.restoreKiot},...(i.sapo?{sapo:{status:i.restoreSapo?'journaled':'done',skipped:!i.restoreSapo}}:{})}})),restoreTasks:clone(p.tasks),attempts:[{id:randomUUID(),at:service.clock().toISOString(),kind:'restore',status:'running'}],skipped:clone(p.skipped||[])};
   for(const item of update.items)for(const result of Object.values(item.platforms))if(result.skipped)result.status='skipped';
   scope.updateId=update.id;state.updates.unshift(update);
   let saveError;const save=async()=>{if(saveError)throw saveError;summarize(update);try{await service.checkpoint(state,update);}catch(e){saveError=e;throw e;}};await save();
@@ -94,8 +96,8 @@ export async function commitRestore(service,id,confirmed){
      const actual=await read(service,task);
      // Edited in the last moment: leave this product, keep restoring the others.
      if(!same(task,actual)){for(const r of rs){r.status='preflight_failed';r.error='Dữ liệu thay đổi ngay trước khôi phục';}await save();continue;}
-     for(const r of rs){r.status='sending';r.stage='Khôi phục giá và mô tả';r.requestSent=true;}state.tableStale=true;await save();sending=true;
-     if(name==='kiot')await service.sendUpdate(actual,{basePrice:task.target.currentPrice,description:task.target.notes});
+     for(const r of rs){r.status='sending';r.stage=name==='kiot'&&task.kiotDescription===false?'Khôi phục giá':'Khôi phục giá và mô tả';r.requestSent=true;}state.tableStale=true;await save();sending=true;
+     if(name==='kiot')await service.sendUpdate(actual,{basePrice:task.target.currentPrice,...(task.kiotDescription!==false?{description:task.target.notes}:{})});
      else await service.sapo.client.restore(task.productId,task.variants,task.target.content);
      verifying=true;for(const r of rs)r.stage='Xác minh sau khôi phục';const restored=await read(service,task);
      if(name==='kiot'){if(!equalKiot(restored,task.target))throw Error('Kiot đọc lại không khớp bản gốc');const local=state.products.find(i=>i.id===task.productId);if(local)Object.assign(local,restored);}

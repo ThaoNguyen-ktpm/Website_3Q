@@ -143,15 +143,17 @@ test('concurrent runs blocked, persistence failure restores busy state', async (
   store.write=async()=>{throw new Error('disk failure');};const before=simulator.state.runs.length;
   await assert.rejects(simulator.run('2027-01-20'),/disk failure/);assert.equal(simulator.state.runs.length,before);assert.equal(simulator.busy,false);
 });
-test('local HTTP: reject foreign origin, no live write endpoint', async () => {
-  const dir=await mkdtemp(join(tmpdir(),'baoq-http-'));const {server}=await createTestApp({store:new Store(join(dir,'state.json')),clock:()=>new Date('2027-01-20T03:00:00Z')});
+test('local HTTP: reject foreign origin, unconfirmed live update never writes', async () => {
+  const dir=await mkdtemp(join(tmpdir(),'baoq-http-'));const {server,real}=await createTestApp({store:new Store(join(dir,'state.json')),clock:()=>new Date('2027-01-20T03:00:00Z')});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base=`http://127.0.0.1:${server.address().port}`;
   const post=(path,body,origin=base)=>fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)});
   try {
     assert.match(await(await fetch(base)).text(),/Kết quả kiểm thử/);assert.equal((await fetch(base+'/api/state')).status,200);
     // Foreign-origin rejection is tested through the website middleware in saleAiProxy.test.ts.
     const response=await post('/api/run',{});assert.equal(response.status,200);assert.equal((await response.json()).label,'Đã mô phỏng');
-    assert.equal((await post('/api/kiot/update',{})).status,404);
+    // TASK-116 adds this route; explicit confirmation is still mandatory before accepting work.
+    const before=structuredClone(real.state),unconfirmed=await post('/api/kiot/update',{});
+    assert.equal(unconfirmed.status,400);assert.match((await unconfirmed.json()).error,/Chưa xác nhận/);assert.deepEqual(real.state,before);
     assert.equal((await post('/api/classify',{code:'SP000395',type:'normal'})).status,404);
     assert.equal((await post('/api/settings',{enabled:true,time:'09:00'})).status,404); // schedule removed 21/10/2026
     assert.equal((await post('/api/scenarios',{})).status,200);assert.equal((await fetch(base+'/../../AGENTS.md')).status,404);

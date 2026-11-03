@@ -1,0 +1,150 @@
+{
+  "label": "after-compressed",
+  "trusted": true,
+  "products": 4800,
+  "items": 1311,
+  "pages": 59,
+  "delayMs": {
+    "page": 600,
+    "put": 700,
+    "listModified": 400
+  },
+  "outcome": "success",
+  "calls": {
+    "all": 0,
+    "modified": 28,
+    "put": 27
+  },
+  "prepareMs": 397.53330000000096,
+  "totalMs": 39598.8681,
+  "initialReadMs": 415,
+  "saveMs": 6451.860000000001,
+  "cleanupMs": 1992.6476000000039,
+  "saves": [
+    {
+      "ms": 143.05719999999928,
+      "cleanup": false
+    },
+    {
+      "ms": 228.91580000000067,
+      "cleanup": false
+    },
+    {
+      "ms": 55.29670000000078,
+      "cleanup": false
+    },
+    {
+      "ms": 140.66340000000127,
+      "cleanup": false
+    },
+    {
+      "ms": 139.73499999999694,
+      "cleanup": false
+    },
+    {
+      "ms": 126.92309999999998,
+      "cleanup": false
+    },
+    {
+      "ms": 132.0105999999978,
+      "cleanup": false
+    },
+    {
+      "ms": 120.24629999999888,
+      "cleanup": false
+    },
+    {
+      "ms": 126.09979999999996,
+      "cleanup": false
+    },
+    {
+      "ms": 125.40799999999945,
+      "cleanup": false
+    },
+    {
+      "ms": 148.99890000000232,
+      "cleanup": false
+    },
+    {
+      "ms": 157.02080000000205,
+      "cleanup": false
+    },
+    {
+      "ms": 137.98430000000008,
+      "cleanup": false
+    },
+    {
+      "ms": 137.03830000000016,
+      "cleanup": false
+    },
+    {
+      "ms": 166.4364999999998,
+      "cleanup": false
+    },
+    {
+      "ms": 155.00309999999808,
+      "cleanup": false
+    },
+    {
+      "ms": 171.19280000000072,
+      "cleanup": false
+    },
+    {
+      "ms": 149.4076999999961,
+      "cleanup": false
+    },
+    {
+      "ms": 138.43149999999878,
+      "cleanup": false
+    },
+    {
+      "ms": 156.79119999999966,
+      "cleanup": false
+    },
+    {
+      "ms": 155.74199999999837,
+      "cleanup": false
+    },
+    {
+      "ms": 168.16799999999785,
+      "cleanup": false
+    },
+    {
+      "ms": 133.2598999999973,
+      "cleanup": false
+    },
+    {
+      "ms": 134.966499999995,
+      "cleanup": false
+    },
+    {
+      "ms": 136.67510000000038,
+      "cleanup": false
+    },
+    {
+      "ms": 148.27469999999448,
+      "cleanup": false
+    },
+    {
+      "ms": 186.762999999999,
+      "cleanup": false
+    },
+    {
+      "ms": 166.3721000000005,
+      "cleanup": false
+    },
+    {
+      "ms": 175.12950000000274,
+      "cleanup": false
+    },
+    {
+      "ms": 2332.4651000000013,
+      "cleanup": true
+    }
+  ],
+  "journalBytes": 1713821,
+  "storeGrowthBytes": -24237443,
+  "reachableGrowthBytes": 2235293,
+  "bytesWritten": 36969972,
+  "tempDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task126-after-compressed-KPqHq2"
+}

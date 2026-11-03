@@ -1,3 +1,4 @@
+import { fold as sharedFold } from '../../config/shared.js';
 import { catalogStore } from '../catalogStore.js';
 
 /** Common ways staff write brands whose KiotViet name is abbreviated or spelled differently (alias → KiotViet name). */
@@ -9,7 +10,7 @@ const aliases: Record<string, string> = {
   'hermes': 'Hermes', 'louis vuitton': 'Louis Vuitton', 'lv': 'Louis Vuitton',
 };
 const ignored = new Set(['Brand lạ']);
-export const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+export const fold = (text: string) => sharedFold(text).replace(/[^a-z0-9]+/g, ' ').trim();
 
 /** Damerau–Levenshtein (optimal string alignment) distance, small strings only. */
 export function editDistance(a: string, b: string): number {

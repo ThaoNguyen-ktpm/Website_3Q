@@ -18,6 +18,7 @@ import { documentRouter } from './routes/documentRoutes.js';
 import { assistantRouter } from './routes/assistantRoutes.js';
 import { internalRouter } from './routes/internalRoutes.js';
 import { saleAiRouter } from './routes/saleAiRoutes.js';
+import { v2Router } from './routes/v2Routes.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -40,6 +41,8 @@ app.use('/sale-ai', (_request, response, next) => { response.setHeader('Content-
   cookieParser(env.SESSION_SECRET), requireAuth, requirePermission('sale.manage'), requireSameOrigin, saleAiRouter);
 app.use(express.json());
 app.use(cookieParser(env.SESSION_SECRET));
+app.use('/v2', (_request, response, next) => { response.setHeader('Cache-Control', 'no-store'); next(); },
+  requireAuth, requireSameOrigin, v2Router);
 // Outside /api: never proxied to the browser; loopback + INTERNAL_TOKEN only.
 app.use('/internal', internalRouter);
 app.use('/api/auth', authRouter);

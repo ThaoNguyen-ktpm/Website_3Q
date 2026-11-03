@@ -9,7 +9,8 @@ const { spawn } = require('node:child_process');
 
 const SKILL = path.join(__dirname, '..', '.claude', 'skills', 'tra-gia-thi-truong', 'SKILL.md');
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'HKD', 'SGD', 'AUD', 'CNY', 'KRW', 'CHF', 'THB'];
-const fold = text => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
+const { fold } = require('../../shared/text');
+const { vnd } = require('../../shared/money');
 
 // "thị trường", "check giá ngoài", "giá tham khảo", "trên mạng/google", "giá retail", resale site names.
 // "giá hãng" only with accents: folded it is "giá hàng", which is any price question.
@@ -35,7 +36,6 @@ async function exchangeRates(fetchImpl = fetch) {
 
 /** The task message for Claude: Bảo's text, the shop's own listing (no cost price) and today's rates. */
 function marketPrompt({ text, products = [], rates = null, today = new Date() }) {
-  const vnd = value => `${Math.round(value).toLocaleString('vi-VN')}đ`;
   const stock = product => product.onHand === null || product.onHand === undefined ? 'không quản lý tồn' : `còn ${product.onHand}`;
   return [
     `Ngày tra: ${ddmmyyyy(today)}`,

@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { calculateTargetPrice, fold, extractSkus, matchingSkus, skuChoice } from '../../config/shared.js';
 import { z } from 'zod';
 import type { Permission } from '../../config/permissions.js';
 import { catalogStore } from '../catalogStore.js';
@@ -9,14 +8,10 @@ import { embed } from '../documentEmbeddingService.js';
 import { retrieveChunks } from '../documentRetrievalService.js';
 import * as staff from '../staffService.js';
 import * as audit from '../auditService.js';
-import { extractSkus, matchingSkus, skuChoice } from './sku.js';
 
 export type Source = { kind: 'product' | 'document' | 'guide' | 'staff' | 'audit' | 'price'; label: string };
 type PriceCalculation = { capital: string; expenses: string; cost: string; method: string; rate: string; sellingPrice: string; formula: string };
 // Same exact BigInt calculator BossTele uses, so the model never does price arithmetic itself.
-// Loaded on first use so importing this module never depends on resolving a file: URL.
-const loadCalculator = () => (createRequire(import.meta.url)(fileURLToPath(new URL('../../../../BossTele/lib/target-price.js', import.meta.url))) as
-  { calculateTargetPrice: (input: { capital: string; expenses: string; method: string; rate: string }) => PriceCalculation }).calculateTargetPrice;
 const money = z.union([z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER), z.string().trim().regex(/^\d{1,15}$/)]);
 const percent = z.union([z.number().nonnegative().max(1000), z.string().trim().regex(/^\d{1,4}(\.\d{1,4})?$/)]);
 // Tool schemas are exported as JSON Schema, which cannot carry zod transforms; normalise after parsing.
@@ -55,7 +50,6 @@ export const toolDefinitions = Object.entries(schemas).map(([name, schema]) => {
   parameters.required = Object.keys(parameters.properties ?? {});
   return { name, description: descriptions[name as keyof typeof schemas], parameters };
 });
-const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
 function output(data: unknown, sources: Source[] = []): ToolResult {
   const serialized = JSON.stringify(data);
   let content = serialized;
@@ -165,7 +159,7 @@ export async function executeTool(name: string, args: unknown, permissions: Perm
         product = { sku: found.sku, name: found.name, price: found.price };
       }
       let calculation: PriceCalculation;
-      try { calculation = loadCalculator()({ capital, expenses: chi_phi == null ? '0' : String(chi_phi), method: cach, rate: ty_le }); }
+      try { calculation = calculateTargetPrice({ capital, expenses: chi_phi == null ? '0' : String(chi_phi), method: cach, rate: ty_le }); }
       catch (error) { return output({ message: error instanceof Error ? error.message : 'Tham số tính giá không hợp lệ.' }); }
       return output({ ...calculation, ...(product ? { product } : {}), ...(note ? { note } : {}),
         notice: 'Giá theo mục tiêu nhập, chưa phải kết luận về giá thị trường; trợ lý không cập nhật giá lên KiotViet.' },

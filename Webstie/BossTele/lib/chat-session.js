@@ -1,7 +1,7 @@
 'use strict';
 
 const { parseCommand, REJECT, HELP } = require('./chat-commands');
-const { calculateTargetPrice } = require('./target-price');
+const { calculateTargetPrice } = require('../../shared/target-price');
 const { SearchCache } = require('./search-cache');
 const { createPricingAi } = require('./pricing-ai');
 

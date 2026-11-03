@@ -5,6 +5,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {createSaleAi} from '../core.js';
 import {calculate, POLICY} from '../lib/pricing.js';
+import {jobResult} from './job-result.js';
 
 const memory=(initial=null)=>{let value=initial;return {read:async()=>structuredClone(value),write:async next=>{value=structuredClone(next);}};};
 const item=(code,createdAt,extra={})=>({id:code,code,name:'Túi '+code,createdAt,p0:35e6,currentPrice:35e6,active:true,stock:1,notes:'Ghi chú '+code,...extra});
@@ -13,7 +14,7 @@ async function request(sale,url,method='GET',body={}) {
   const req=Readable.from(method==='POST'?[JSON.stringify(body)]:[]);
   Object.assign(req,{url,method,headers:{'content-type':'application/json'}});
   let status,data;await sale.handler(req,{writeHead(code){status=code;},end(bytes){data=JSON.parse(bytes);}});
-  return {status,data};
+  return status===202?jobResult(sale,data.id):{status,data};
 }
 async function fixture(list=products(),runs=[]) {
   const calls=[];
@@ -26,6 +27,27 @@ async function fixture(list=products(),runs=[]) {
   return {sale,calls,liveStore,options};
 }
 const run=async sale=>{const result=await request(sale,'/api/run','POST',{dataset:'real'});assert.equal(result.status,200);return result.data;};
+
+test('600m boundary excludes even approved manual prices and preserves stored data',async()=>{
+  const expensive=item('HIGH','2026-07-01',{p0:650e6,currentPrice:650e6,manualPricing:{price:620e6,allowance:0}});
+  const atLimit=calculate({...expensive,p0:600e6},'2026-11-02');
+  assert.equal(atLimit.status,'excluded');assert.equal(atLimit.excludedReason,'over_600m');
+  assert.equal(atLimit.price,null);assert.equal(atLimit.notePreview,undefined);
+  assert.equal(calculate({...expensive,p0:599999999},'2026-11-02').status,'simulated');
+  const {sale,calls}=await fixture([expensive,item('LOW','2026-07-01')]);
+  const result=await run(sale);assert.deepEqual(result.rows.map(r=>r.code),['LOW']);assert.equal(result.hiddenOver600mCount,1);
+  const view=(await request(sale,'/api/view?dataset=real')).data;assert.equal(view.runs[0].hiddenOver600mCount,1);
+  const selection=(await request(sale,`/api/kiot/selection?runId=${result.id}`)).data;
+  assert.deepEqual(selection.codes,['LOW']);assert.deepEqual(selection.excludedCodes,[]);
+  sale.real.state.updates=[{id:'failed',items:[{code:'LOW',status:'preflight_failed'}],skipped:selection.excludedCodes}];
+  const retry=(await request(sale,'/api/kiot/retry-selection?updateId=failed')).data;
+  assert.equal(retry.total,1);assert.equal(retry.notEligible,0);
+  const rejected=await request(sale,'/api/kiot/prepare','POST',{runId:result.id,codes:['HIGH']});assert.equal(rejected.status,400);
+  assert.deepEqual(sale.real.state.products[0].manualPricing,expensive.manualPricing);assert.deepEqual(calls,[]);
+  const before=structuredClone(sale.real.state.products);
+  const removed=await request(sale,'/api/manual-price','POST',{dataset:'real',code:'HIGH',price:620e6,allowance:0});
+  assert.equal(removed.status,410);assert.deepEqual(sale.real.state.products,before);
+});
 
 test('core omits only pre-July exclusions, persists count and retains products/P0 and old runs',async()=>{
   const old={id:'old',day:'2026-10-29',policy:POLICY,rows:[calculate(products()[0],'2026-10-29')]};
@@ -90,10 +112,11 @@ test('select-all spans pages without returning hidden codes',async()=>{
 test('shared results pagination renders hidden summary next to count; old runs remain compatible',async()=>{
   const source=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
   const fn=source.slice(source.indexOf('function pagedTable('),source.indexOf('function bindPagination('));
-  const state={pagination:{total:2,totalPages:1,page:1,size:10},runs:[{id:'new',hiddenBeforeNoMarkdownCount:2886}]};
+  const state={pagination:{total:2,totalPages:1,page:1,size:10},runs:[{id:'new',hiddenBeforeNoMarkdownCount:2886,hiddenOver600mCount:1}]};
   const context=vm.createContext({state,selectedRun:null,pages:{results:{page:1,size:10}},count:n=>Number(n||0).toLocaleString('vi-VN'),table:()=>'<table></table>'});
   vm.runInContext(fn,context);
   const render=()=>vm.runInContext("pagedTable([],[],()=>'', 'results')",context);
   assert.match(render(),/Đã ẩn 2\.886 món tạo trước 01\/07\/2026 \(không giảm\)/);
+  assert.match(render(),/Đã ẩn 1 món từ 600 triệu \(không giảm\)/);
   state.runs=[{id:'old'}];assert.doesNotMatch(render(),/Đã ẩn/);
 });

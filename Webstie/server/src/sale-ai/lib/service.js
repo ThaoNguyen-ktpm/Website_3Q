@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { validateManual } from './manual-pricing.js';
 import { calculate, ageFields, typeFromName, validDay, vietnamTime, POLICY } from './pricing.js';
 import { migrateCycles } from './cycle.js';
 import {liveDraft} from './live-draft.js';
@@ -36,15 +35,25 @@ export class Simulator {
       migrateCycles(next, vietnamTime(this.clock()).date, this.clock().toISOString());
       await this.store.write(next); this.state = next;
     }
-    const recovered=structuredClone(this.state);
+    await this.recoverInterrupted();
+  }
+  async recoverInterrupted() {
+    const recovered=this.state?structuredClone(this.state):await this.store.read();
+    if(!recovered)return;
     let interrupted=false;
     for (const update of recovered.updates||[]) for (const attempt of update.attempts||[]) if(attempt.status==='running') {
       attempt.status='interrupted';interrupted=true;
         if(['joint-v1','restore-joint-v1'].includes(update.mode)){
         update.outcome='interrupted';
-        for(const item of update.items){for(const p of Object.values(item.platforms||{}))if(p.status!=='done'&&p.status!=='not_sent'&&p.status!=='write_failed'&&p.status!=='preflight_failed'){p.status='unknown';p.error='Lượt bị gián đoạn — chưa xác định; không tự gửi tiếp';}
-          item.status=Object.values(item.platforms||{}).every(p=>p.status==='done')?'done':'unknown';item.error='Lượt bị gián đoạn — xem kết quả từng bên';}
-        update.platformSummary=Object.fromEntries(['kiot','sapo'].map(name=>{const succeeded=update.items.filter(i=>i.platforms?.[name]?.status==='done').length;return [name,{total:update.items.length,succeeded,failed:update.items.length-succeeded}];}));
+        for(const item of update.items){
+          for(const p of Object.values(item.platforms||{}))if(!['skipped_sapo_zero_price','done','not_sent','write_failed','preflight_failed'].includes(p.status)){
+            if(update.mode==='joint-v1'&&p.status==='ready'&&p.requestSent!==true){p.status='not_sent';p.error='Chưa gửi — lượt bị dừng';p.requestSent=false;}
+            else{p.status='unknown';p.error='Lượt bị gián đoạn — chưa xác định; không tự gửi tiếp';}
+          }
+          const platforms=Object.values(item.platforms||{});
+          item.status=platforms.every(p=>p.status==='skipped_sapo_zero_price')?'skipped_sapo_zero_price':platforms.every(p=>p.status==='done')?'done':update.mode==='joint-v1'&&platforms.every(p=>p.status==='not_sent')?'not_sent':'unknown';if(item.status!=='skipped_sapo_zero_price')item.error=item.status==='not_sent'?'Chưa gửi — lượt bị dừng':'Lượt bị gián đoạn — xem kết quả từng bên';}
+        const names=[...new Set(update.items.flatMap(i=>Object.keys(i.platforms||{})))];
+        update.platformSummary=Object.fromEntries(names.map(name=>{const succeeded=update.items.filter(i=>i.platforms?.[name]?.status==='done').length;const skipped=update.items.filter(i=>i.platforms?.[name]?.status==='skipped_sapo_zero_price').length;return [name,{total:update.items.length,succeeded,failed:update.items.length-succeeded-skipped}];}));
         attempt.items=update.items.map(i=>({code:i.code,name:i.name,status:i.status,error:i.error,platforms:structuredClone(i.platforms)}));
       }
       if(['rollback-v1','stop-v1'].includes(update.mode)) {
@@ -57,6 +66,7 @@ export class Simulator {
     if(interrupted) {await this.store.write(recovered);this.state=recovered;}
   }
   async mutate(fn,scope) {
+    if(this.halted)throw Error('Sale AI đã dừng vì lỗi nghiêm trọng');
     if (this.busy) { const error = new Error('Đang xử lý một lượt khác, vui lòng chờ'); error.status = 409; throw error; }
     this.busy = true;
     try {
@@ -64,10 +74,11 @@ export class Simulator {
       const next = scope?liveDraft(this.state,scope):structuredClone(this.state);
       if(scope){this.liveScope=scope;scope.timings.cloneMs=performance.now()-started;}
       const result = await fn(next);
+      if(this.halted)throw Error('Sale AI đã dừng vì lỗi nghiêm trọng');
       retainRuns(next, this.maxRuns);
-      const publishing=performance.now();const published=scope?liveDraft(next,scope):next;
+      const publishing=performance.now();const published=scope?liveDraft(next,scope,this.state):next;
       if(scope)scope.timings.publishMs+=performance.now()-publishing;
-      const saving=performance.now();await this.store.write(published,scope?{immutable:true}:undefined);
+      const saving=performance.now();await this.store.write(published,scope?{immutable:true,cleanup:!!scope.updateId}:undefined);
       if(scope)scope.timings.saveMs+=performance.now()-saving;
       this.state = published;
       return result;
@@ -87,30 +98,14 @@ export class Simulator {
         run.rows=run.rows.map((row,index)=>this.live.snapshot(row,state.products[index],state));
       }
       // Filter after snapshots so each row keeps its original product identity.
-      const rowCount=run.rows.length;
-      run.rows=run.rows.filter(row=>row.excludedReason!=='before_no_markdown');
-      run.hiddenBeforeNoMarkdownCount=rowCount-run.rows.length;
+      run.hiddenBeforeNoMarkdownCount=run.rows.filter(row=>row.excludedReason==='before_no_markdown').length;
+      run.hiddenOver600mCount=run.rows.filter(row=>row.excludedReason==='over_600m').length;
+      run.rows=run.rows.filter(row=>!['before_no_markdown','over_600m'].includes(row.excludedReason));
       // Automatic table previews roll forward; preserve older explicit/scheduled
       // snapshots and all live-update journals, without a full snapshot per minute.
       if(trigger==='data_change'&&state.runs[0]?.trigger==='data_change'&&state.runs[0]?.day===day&&state.runs[0]?.policy===POLICY) state.runs[0]=run;
       else state.runs.unshift(run);
       return run;
-    });
-  }
-  async saveManual(code, price, allowance) {
-    validateManual(price, allowance);
-    return this.mutate(state => {
-      const product = state.products.find(p => p.code === code);
-      if (!product) throw new Error('Không tìm thấy sản phẩm');
-      if (!Number.isSafeInteger(product.p0) || product.p0 < 600e6) throw new Error('Chỉ nhập giá tay cho nhóm P0 từ 600 triệu');
-      if (!product.active || !(product.stock > 0)) throw new Error('Chỉ lưu giá tay cho món còn tồn và đang kinh doanh');
-      const before = product.manualPricing ? structuredClone(product.manualPricing) : null;
-      const after = { price, allowance, updatedAt: this.clock().toISOString() };
-      product.manualPricing = after;
-      state.manualEdits ||= [];
-      state.manualEdits.unshift({ id: randomUUID(), code, name: product.name, at: after.updatedAt,
-        before, after: structuredClone(after), label: 'Đã lưu giá tay — chỉ mô phỏng' });
-      return after;
     });
   }
 }

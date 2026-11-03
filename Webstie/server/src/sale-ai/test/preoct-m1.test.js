@@ -8,7 +8,7 @@ const day=age=>new Date(Date.parse('2026-11-01')+age*86400000).toISOString().sli
 // Products created after the epoch count age from their own creation day.
 const from=(start,age)=>new Date(Date.parse(start)+age*86400000).toISOString().slice(0,10);
 test('July-October batch starts M1 on November 1 for both types',()=>{
- assert.equal(POLICY,'baoq-2026-10-30-hide-before-jul-v10');
+ assert.equal(POLICY,'baoq-2026-11-02-hide-600m-v11');
  for(const name of ['Túi','Túi !']) for(const [age,m] of [[0,1],[14,1],[15,2],[29,2],[30,3],[75,6],[150,6]]) {
   const r=calculate(item({name}),day(age));assert.equal(r.age,age);assert.equal(r.m,m);assert.equal(r.saleStartDate,'2026-11-01');
  }
@@ -36,7 +36,7 @@ test('M1 markdown starts from P0 once and sale rights follow actual M',()=>{
  assert.equal(calculate(item({currentPrice:r.price}),day(0)).price,r.price);
  const m3=calculate(item(),day(30));assert.equal(m3.price,32.4e6);assert.equal(m3.allowance,972000);
  assert.equal(calculate(item(),day(45)).allowance,0);
- const manual=calculate(item({p0:700e6,manualPricing:{price:665e6,allowance:19950000}}),day(75));assert.equal(manual.m,6);assert.equal(manual.price,665e6);
+ const manual=calculate(item({p0:700e6,manualPricing:{price:665e6,allowance:19950000}}),day(75));assert.equal(manual.m,6);assert.equal(manual.price,null);assert.equal(manual.excludedReason,'over_600m');
 });
 test('paged results expose the normalized Kiot date without exposing raw fields',()=>{
  const row=calculate(item(),day(0));

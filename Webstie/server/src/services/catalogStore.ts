@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { createCatalogFetcher, loadConnectionConfig, fold } from '../config/shared.js';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
@@ -27,7 +27,6 @@ export function parseProductsQuery(input: unknown): ProductsQuery {
   return result.data;
 }
 
-const fold = (value: string) => value.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
 const imagesOf = (detail?: Detail): string[] => Array.isArray(detail?.images) ? detail.images.filter((image): image is string => typeof image === 'string') : [];
 const dateOf = (value: unknown): string | null => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : null;
 
@@ -137,10 +136,6 @@ export function createCatalogStore({ fetchAll, now = Date.now, sources = allSour
   };
 }
 
-const require = createRequire(import.meta.url);
-const bossRoot = fileURLToPath(new URL('../../../BossTele/', import.meta.url));
-const { createCatalogFetcher } = require(`${bossRoot}/lib/product-search.js`) as { createCatalogFetcher: (config: unknown) => FetchAll };
-const { loadConnectionConfig } = require(`${bossRoot}/lib/connection-config.js`) as { loadConnectionConfig: (root: string) => unknown };
 let fetcher: FetchAll | undefined;
 // Server-only file (gitignored server/data/): it holds branch cost, which products() strips per user as before.
 const snapshotFile = fileURLToPath(new URL('../../data/catalog-cache.json', import.meta.url));
@@ -149,6 +144,6 @@ export const catalogStore = createCatalogStore({ sources: ['kiotviet'], snapshot
   load: () => JSON.parse(readFileSync(snapshotFile, 'utf8')) as CatalogSnapshot,
   save: value => { mkdirSync(dirname(snapshotFile), { recursive: true }); writeFileSync(snapshotFile, JSON.stringify(value)); },
 }, fetchAll: async source => {
-  fetcher ??= createCatalogFetcher(loadConnectionConfig(bossRoot));
+  fetcher ??= createCatalogFetcher(loadConnectionConfig());
   return fetcher(source);
 } });

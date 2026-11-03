@@ -64,7 +64,7 @@ test('rollback restores every verified product; one edited by hand is skipped on
  const back=await f.live.commitRestore(r.id,true);
  assert.equal(f.products[0].notes,edited);assert.deepEqual(f.sapos[0],sapoEdited);
  assert.equal(f.products[1].currentPrice,35e6);assert.equal(f.sapos[1].variants[0].price,35e6);
- assert.equal(back.outcome,'success');assert.match(summaryText(back.summary,back),/Kiot: thành công 1 sản phẩm. Sapo: thành công 1 sản phẩm. Không gửi cập nhật 1 sản phẩm/);
+ assert.equal(back.outcome,'success');assert.equal(summaryText(back.summary,back),'Khôi phục — 1/2 thành công · 1 chưa gửi');
  f.products[1].notes+=' sửa';await assert.rejects(f.live.prepareRestore(u.id),/không có món nào khôi phục được|đã có yêu cầu khôi phục/);
 });
 test('partial update restores only verified successful platform',async()=>{

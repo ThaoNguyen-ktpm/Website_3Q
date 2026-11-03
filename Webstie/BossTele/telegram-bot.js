@@ -8,14 +8,14 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { createChatSession } = require('./lib/chat-session');
-const { createProductSearch, createCatalogFetcher } = require('./lib/product-search');
+const { createProductSearch, createCatalogFetcher } = require('../shared/product-search');
 const { stockGaps, stockGapText } = require('./lib/stock-gap');
-const { loadConnectionConfig } = require('./lib/connection-config');
+const { loadConnectionConfig } = require('../shared/connection-config');
 const { parseCommand, REJECT } = require('./lib/chat-commands');
 const { storeQuestion } = require('./lib/telegram-product-guard');
 const { render } = require('./chat');
 const { createSalePricer } = require('./sale-price');
-const { extractSkus, matchingSkus, skuChoice } = require('./lib/sku');
+const { extractSkus, matchingSkus, skuChoice } = require('../shared/sku');
 const { createMemory } = require('./lib/boss-memory');
 const { createPriceFeedback } = require('./lib/price-feedback');
 const { createAccess } = require('./lib/telegram-access');
@@ -79,6 +79,7 @@ const SYSTEM = [
   'catalog.js là danh mục KiotViet giống trang web, mới nhất trước; total là tổng số món khớp, cost là giá vốn cao nhất giữa các chi nhánh; reserved > 0 là món khách đã cọc giữ: báo "đang giữ cho khách", không nói còn hàng để bán cho người khác.',
   'Chỉ dùng node search-products.js --source kiotviet --sku <SKU> khi cần kiểm tồn trực tiếp một SKU.',
   'Không bịa SKU, giá, tồn. Không sửa file, không ghi lên KiotViet/Sapo.',
+  'Tra danh sách mặc định dùng node catalog.js ... --in-stock; nếu không có món còn hàng thì chạy lại đúng truy vấn không có --in-stock để đếm và trả "Có N món … nhưng đều đã hết hàng", không ghi SKU hay gửi thẻ. Hỏi đúng hàng hết hoặc theo SKU thì không thêm --in-stock.',
   'Khi trả lời danh sách sản phẩm: dòng 1 là một câu tóm tắt, ví dụ "Có 233 túi Chanel phù hợp (hiện 10 món mới nhất):".',
   'Dòng 2 ghi "SKU:" rồi các SKU cách nhau dấu phẩy, đúng số món người hỏi muốn (mặc định 10, tối đa 10). Không ghi tên, giá, tồn: bot tự gửi thẻ ảnh có đủ thông tin.',
   'Nếu total lớn hơn số đã hiện thì dòng 3: Nhắn "mẫu khác" để xem thêm. Với "mẫu khác" thì gọi lại cùng điều kiện với --offset tăng 10.',
@@ -115,8 +116,8 @@ function askClaude(question, { sessionId, resume, notes = [], context = '' }, ti
   });
 }
 
-const vnd = value => `${Math.round(value).toLocaleString('vi-VN')}đ`;
-const fold = text => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
+const { vnd } = require('../shared/money');
+const { fold } = require('../shared/text');
 // "giá sale", "quyền sale", "giảm giá", "markdown": answered with the Sale AI formula, never called "giá chốt" (PRICE-SYSTEM is not set).
 // "nên bán giá nhiêu hợp lý" asks for a selling price too; the Sale AI price is the answer the shop uses.
 const saleIntent = text => /\bsale\b|\bgiam gia\b|\bgia giam\b|\bmarkdown\b|\bnen ban\b|\bhop ly\b/.test(fold(text));
@@ -140,7 +141,7 @@ const countIntent = text => /\b(bao nhieu|may)\s+(cai|mon|chiec|con|san pham|sp|
 // "nên thu giá bao nhiêu", "giá thu", "thu vào 45tr được không" — not "doanh thu", "thứ 2", "thứ mấy" (folded "thu").
 const buyIntent = text => /\bnen thu\b|\bgia thu\b|\bthu mua\b|(?<!doanh )\bthu (?:vao |lai )?(?:duoc )?(?:gia )?(?:bao nhieu|nhieu|nhiu|bn\b|\d+(?:[.,]\d+)?\s*(?:tr|trieu|cu)(?![a-z]))/.test(fold(text));
 const closeIntent = text => /\bgia chot\b|\bchot gia\b|\bkhach tra\b|\bchot duoc\b|\bchot bao nhieu\b/.test(fold(text));
-const tr = value => `${(value / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}tr`;
+const { tr } = require('../shared/money');
 const percent = (part, base) => `${(Math.round(part / base * 1000) / 10).toLocaleString('vi-VN')}%`;
 /** "58tr", "58,5 triệu", "58tr5", "58.000.000", or a bare 1–999 (triệu); SKUs and percentages are ignored. */
 function parseMoney(text) {
@@ -557,11 +558,11 @@ async function main() {
   if (!token || !allowFrom.length) throw new Error('Thiếu token bot hoặc danh sách người được phép trong ~/.claude/channels/telegram.');
   const api = telegramApi(token);
   let backend;
-  const newSession = () => createChatSession({ search: async options => (backend ||= createProductSearch(loadConnectionConfig()))(options) });
+  const newSession = () => createChatSession({ search: async options => (backend ||= createProductSearch(loadConnectionConfig(__dirname)))(options) });
   const access = createAccess();
   // Case 9: Sapo Web list (read-only) against the Kiot snapshot the website keeps.
   const stockGap = async () => {
-    const sapo = await createCatalogFetcher(loadConnectionConfig())('sapo-web');
+    const sapo = await createCatalogFetcher(loadConnectionConfig(__dirname))('sapo-web');
     if (sapo.status !== 'ok') throw new Error(sapo.message);
     const snapshot = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'server', 'data', 'catalog-cache.json'), 'utf8'));
     return stockGapText(stockGaps(snapshot.rows?.kiotviet ?? [], sapo.items), { syncedAt: snapshot.syncedAt });

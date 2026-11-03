@@ -4,7 +4,7 @@ import {calculate,POLICY} from '../lib/pricing.js';
 const p=extra=>({code:'15D',name:'Túi',createdAt:'2026-10-16',p0:35e6,currentPrice:35e6,active:true,stock:1,...extra});
 const at=age=>new Date(Date.parse('2026-10-16')+age*86400000).toISOString().slice(0,10);
 test('new ordinary products step every 15 days from M0 and cap at M6',()=>{
- assert.equal(POLICY,'baoq-2026-10-30-hide-before-jul-v10');
+ assert.equal(POLICY,'baoq-2026-11-02-hide-600m-v11');
  for(const [age,m] of [[0,0],[14,0],[15,1],[29,1],[30,2],[44,2],[45,3],[59,3],[60,4],[74,4],[75,5],[89,5],[90,6],[240,6]])assert.equal(calculate(p(),at(age)).m,m);
 });
 test('new hottrend has exactly 45 days in M0 then 15-day steps',()=>{

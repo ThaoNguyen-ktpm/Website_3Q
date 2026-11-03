@@ -1,5 +1,5 @@
 /** UI-only fixture router. NOT authentication, authorization, a source adapter or a real API. */
-import demo from './demo-data.json';
+import demo from './demo-data.json' with {type:'json'};
 type Row = Record<string,string|number>;
 const grants:Record<string,string[]>={ceo:['overview','transactions','inventory','errors','costs'],cofounder:[],inventory:['inventory'],sales:['transactions']};
 const collections:Record<string,Row[]>={transactions:demo.transactions,inventory:demo.inventory,errors:demo.errors,costs:demo.costs};

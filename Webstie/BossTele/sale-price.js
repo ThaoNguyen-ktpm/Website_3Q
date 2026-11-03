@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { cost } = require('./catalog');
-const { extractSkus, matchingSkus, skuChoice } = require('./lib/sku');
+const { extractSkus, matchingSkus, skuChoice } = require('../shared/sku');
 
 const BRANCH = 44466; // Sale AI prices only stock at "Chi nhánh trung tâm".
 const defaults = {
@@ -68,7 +68,8 @@ function createSalePricer({ saleDir = defaults.saleDir, dataDir = saleDir === de
       const result = pricing.calculate(product, day);
       return { sku, name: product.name, day, type: result.type, ageDays: result.ageDays, m: result.m, p0: product.p0,
         price: result.price, allowance: result.allowance, net: result.net, currentPrice: product.currentPrice,
-        stock: product.stock, cost: row ? cost(row) : null, status: result.status, reasons: result.reasons, p0Source: saved?.p0 ? 'sale-ai' : 'kiot-now' };
+        stock: product.stock, cost: row ? cost(row) : null, status: result.status,
+        reasons: result.excludedReason==='over_600m'?['không giảm (giá gốc từ 600 triệu)']:result.reasons, p0Source: saved?.p0 ? 'sale-ai' : 'kiot-now' };
     });
     return { day, policy: sale.policy, formulaPolicy: pricing.POLICY, saleLoadedAt: sale.loadedAt, rows };
   };

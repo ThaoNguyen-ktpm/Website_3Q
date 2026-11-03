@@ -37,7 +37,7 @@ Các file này hướng dẫn vai trò và lưu bàn giao; chúng không tự kh
 
 ## Website sau TASK-110
 
-Giao diện duy nhất ở `Webstie/frontend/`, cổng 8787; API cổng 4000. Chạy dev/build/test tại `Webstie/`; build/test gốc gồm frontend và server. Frontend có lockfile độc lập: cài bằng `npm ci --prefix frontend`. Tài liệu nằm trong Điều hành → Quản lý, dùng API và quyền tài liệu hiện có. Kiểm thử đăng nhập Google, link dùng một lần, tài liệu và LAN cần bằng chứng trình duyệt riêng; không thay thế bằng typecheck.
+Giao diện duy nhất ở `Webstie/frontend/`, cổng 8787; API cổng 4000. Chạy dev/build/test tại `Webstie/`; build gồm frontend và server; test chung gồm `shared/`, frontend, server và Sale AI. BossTele chạy test riêng bằng `npm test` tại `Webstie/BossTele` khi sửa BossTele hoặc bot lỗi, không nằm trong test chung. Frontend có lockfile độc lập: cài bằng `npm ci --prefix frontend`. Tài liệu nằm trong Điều hành → Quản lý, dùng API và quyền tài liệu hiện có. Kiểm thử đăng nhập Google, link dùng một lần, tài liệu và LAN cần bằng chứng trình duyệt riêng; không thay thế bằng typecheck.
 
 ## Sale AI sau TASK-104
 

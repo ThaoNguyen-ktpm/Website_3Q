@@ -1,0 +1,150 @@
+{
+  "label": "after-published",
+  "trusted": true,
+  "products": 4800,
+  "items": 1311,
+  "pages": 59,
+  "delayMs": {
+    "page": 600,
+    "put": 700,
+    "listModified": 400
+  },
+  "outcome": "success",
+  "calls": {
+    "all": 0,
+    "modified": 28,
+    "put": 27
+  },
+  "prepareMs": 397.9400000000005,
+  "totalMs": 38585.375100000005,
+  "initialReadMs": 405,
+  "saveMs": 5635.217600000004,
+  "cleanupMs": 1453.9087999999974,
+  "saves": [
+    {
+      "ms": 139.38310000000092,
+      "cleanup": false
+    },
+    {
+      "ms": 216.10959999999977,
+      "cleanup": false
+    },
+    {
+      "ms": 58.276200000000244,
+      "cleanup": false
+    },
+    {
+      "ms": 119.6929999999993,
+      "cleanup": false
+    },
+    {
+      "ms": 149.68730000000141,
+      "cleanup": false
+    },
+    {
+      "ms": 115.90710000000036,
+      "cleanup": false
+    },
+    {
+      "ms": 133.19439999999668,
+      "cleanup": false
+    },
+    {
+      "ms": 139.71099999999933,
+      "cleanup": false
+    },
+    {
+      "ms": 127.6697000000022,
+      "cleanup": false
+    },
+    {
+      "ms": 115.21150000000125,
+      "cleanup": false
+    },
+    {
+      "ms": 163.0649999999987,
+      "cleanup": false
+    },
+    {
+      "ms": 124.29060000000027,
+      "cleanup": false
+    },
+    {
+      "ms": 145.23500000000058,
+      "cleanup": false
+    },
+    {
+      "ms": 141.38810000000012,
+      "cleanup": false
+    },
+    {
+      "ms": 145.96949999999924,
+      "cleanup": false
+    },
+    {
+      "ms": 160.63690000000133,
+      "cleanup": false
+    },
+    {
+      "ms": 149.99239999999918,
+      "cleanup": false
+    },
+    {
+      "ms": 155.0002999999997,
+      "cleanup": false
+    },
+    {
+      "ms": 151.03919999999925,
+      "cleanup": false
+    },
+    {
+      "ms": 151.07419999999547,
+      "cleanup": false
+    },
+    {
+      "ms": 148.65439999999944,
+      "cleanup": false
+    },
+    {
+      "ms": 143.45069999999396,
+      "cleanup": false
+    },
+    {
+      "ms": 142.3666000000012,
+      "cleanup": false
+    },
+    {
+      "ms": 144.8099000000002,
+      "cleanup": false
+    },
+    {
+      "ms": 140.971000000005,
+      "cleanup": false
+    },
+    {
+      "ms": 123.77939999999944,
+      "cleanup": false
+    },
+    {
+      "ms": 140.10540000000037,
+      "cleanup": false
+    },
+    {
+      "ms": 136.78010000000359,
+      "cleanup": false
+    },
+    {
+      "ms": 141.0017000000007,
+      "cleanup": false
+    },
+    {
+      "ms": 1709.7414000000063,
+      "cleanup": true
+    }
+  ],
+  "journalBytes": 1713821,
+  "storeGrowthBytes": -3284252,
+  "reachableGrowthBytes": 23188484,
+  "bytesWritten": 57923163,
+  "tempDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task126-after-published-7vPm4T"
+}

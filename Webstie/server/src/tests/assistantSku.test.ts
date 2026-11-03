@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { extractSkus, matchingSkus, skuChoice } from '../services/assistant/sku.js';
+import { extractSkus, matchingSkus, skuChoice } from '../config/shared.js';
 
 it('extracts complete uppercase codes, excluding embedded and short codes', () => {
   expect(extractSkus('sp025211_kg SP025306_29102026 (SP000009) XSP025211_KG SP025211KG SP123'))

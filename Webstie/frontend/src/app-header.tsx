@@ -1,11 +1,10 @@
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Close} from './ui';
-import {PRICE,MANAGE} from './apps';
+import {PRICE,MANAGE,V2_OVERVIEW,V2_REPORTS,V2_PENDING} from './apps';
 // Header v2: espresso bar (56px) with the original logo centred (CSS crop of the JPEG, no raster change) and a two-level
 // navigation drawer built on a native modal <dialog> (focus trap, Escape, inert page). Contract kept for tests and
 // developers: .apps-trigger opens the menu, #apps-menu holds the top-level buttons, "Điều hành" goes to the overview.
-const OPS:[string,string][]=[['overview','Tổng quan điều hành'],['transactions','Thu–bán'],['inventory','Hàng tồn kho'],['errors','Kiểm tra'],['costs','Chi phí']];
-const NC:[string,string][]=[['reconcile','Tổng quan đối soát'],['consignment','Ký gửi'],['cash','Tiền & đối chiếu'],['close','Chốt kỳ & điều chỉnh'],['settings','Thiết lập & nguồn']];
+const OPS=V2_REPORTS,NC=V2_PENDING;
 // can: the signed-in person's permissions; Price System and Quản lý list only the pages they may open (Bảo 2026-10-27).
 // reports: Admin sees the demo reports (Bảo 2026-10-27); Điều hành is listed only when one of its pages is open to this person.
 export default function AppHeader({children,nav,overview,page,can,reports}:{children:ReactNode;nav:(page:string)=>void;overview:string;page:string;can:(permission:string)=>boolean;reports:boolean}){
@@ -20,11 +19,11 @@ export default function AppHeader({children,nav,overview,page,can,reports}:{chil
  const pricePage=PRICE.some(([k])=>k===page);
  const opsPage=[...OPS,...NC,...MANAGE].some(([k])=>k===page);
  const opener=(key:'ops'|'price',label:string)=><button className="icon-btn" data-sub={key} type="button" aria-label={`Mở mục con của ${label}`} aria-expanded={level===2&&sub===key} onClick={()=>toLevel(2,key)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></button>;
- const item=(key:string,label:string,current:boolean,sub=false,small?:string)=><li className={`nav-item${sub?' nav-sub':''}`} key={key}><button type="button" className="nav-link" aria-current={current?'page':undefined} onClick={()=>go(key)}>{label}</button>{small&&<small>{small}</small>}</li>;
+ const item=(key:string,label:string,current:boolean,sub=false,small?:string)=><li className={`nav-item${sub?' nav-sub':''}`} key={key}>{key.startsWith('v2-')?<a className="nav-link" href={`#page=${key}`} aria-current={current?'page':undefined} onClick={()=>hide()}>{label}</a>:<button type="button" className="nav-link" aria-current={current?'page':undefined} onClick={()=>go(key)}>{label}</button>}{small&&<small>{small}</small>}</li>;
  return <><header className={`site-header on-dark${scrolled?' is-scrolled':''}`}>
   <button className="menu-btn apps-trigger" ref={trigger} type="button" aria-haspopup="dialog" aria-expanded={open} aria-controls="apps-menu-dialog" onClick={show}>
    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5h16M2 10h16M2 15h10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg><span className="menu-label">Menu</span></button>
-  <button className="brand" type="button" onClick={()=>nav('portal')} aria-label="BAOQ Luxury, Trang chủ"><img className="wordmark-img" src="/brand/baoq-wordmark.png" alt="" width="200" height="46"/></button>
+  <button className="brand" type="button" onClick={()=>nav('portal')} aria-label="BAOQ Luxury, Trang chủ"><span className="wordmark"><img src="/brand/baoq-logo-original.jpg" alt="" width="2048" height="2048"/></span></button>
   <div className="header-right">{children}</div></header>
   <dialog className="nav-drawer on-dark" ref={dlg} id="apps-menu-dialog" aria-label="Menu" onClose={()=>{setOpen(false);setLevel(1)}} onClick={e=>{if(e.target===dlg.current)hide()}} onCancel={e=>{if(level===2){e.preventDefault();toLevel(1)}}}>
    <div className="drawer-top"><span style={{fontSize:14,color:'var(--on-dark-muted)'}}>Điều hướng</span><button className="icon-btn" type="button" aria-label="Đóng menu" onClick={hide}><Close/></button></div>
@@ -33,7 +32,7 @@ export default function AppHeader({children,nav,overview,page,can,reports}:{chil
      <nav id="apps-menu" aria-label="Điều hướng ứng dụng">
       <div className="nav-group"><h2>Làm việc</h2><ul>{item('portal','Trang chủ',page==='portal')}{item('tasks','Công việc',page==='tasks')}</ul></div>
       <div className="nav-group"><h2>Quản trị</h2><ul>
-       {(reports||manage.length>0)&&<li className="nav-item"><button type="button" className="nav-link" aria-current={opsPage?'page':undefined} onClick={()=>go(overview)}>Điều hành</button>
+       {(reports||manage.length>0)&&<li className="nav-item">{reports?<a className="nav-link" href={V2_OVERVIEW} aria-current={opsPage?'page':undefined} onClick={hide}>Điều hành</a>:<button type="button" className="nav-link" aria-current={opsPage?'page':undefined} onClick={()=>go(overview)}>Điều hành</button>}
         {opener('ops','Điều hành')}</li>}
        {/* Only one Price System page open to this person (staff: Tìm kiếm): list that page by its own name. */}
        {price.length>1&&<li className="nav-item"><button type="button" className="nav-link" aria-current={pricePage?'page':undefined} onClick={()=>go(price[0][0])}>Price System</button>{opener('price','Price System')}</li>}
@@ -46,9 +45,10 @@ export default function AppHeader({children,nav,overview,page,can,reports}:{chil
      {sub==='price'?<><h2 className="level-title">Price System</h2>
      <nav aria-label="Mục con Price System"><div className="nav-group"><ul>{price.map(([k,l])=>item(k,l,page===k,true))}</ul></div></nav></>
      :<><h2 className="level-title">Điều hành</h2>
-     <nav aria-label="Mục con Điều hành">{manage.length>0&&<div className="nav-group"><h2>Quản lý</h2><ul>{manage.map(([k,l])=>item(k,l,page===k,true))}</ul></div>}
-      {reports&&<><div className="nav-group"><h2>Báo cáo (demo)</h2><ul>{OPS.map(([k,l])=>item(k,l,page===k,true))}</ul></div>
-      <div className="nav-group"><h2>Chưa kết nối nguồn</h2><ul>{NC.map(([k,l])=>item(k,l,page===k,true,'Chưa kết nối'))}</ul></div></>}</nav></>}</div>
+     <nav aria-label="Mục con Điều hành">{reports&&<div className="nav-group"><h2>Báo cáo</h2><ul>{OPS.map(([k,l])=>item(k,l,page===k,true))}</ul></div>}
+      {manage.length>0&&<div className="nav-group"><h2>Quản lý</h2><ul>{manage.map(([k,l])=>item(k,l,page===k,true,'THẬT'))}</ul></div>}
+      {reports&&<><details className="nav-group" open={NC.some(([k])=>k===page)}><summary>Chưa kết nối nguồn</summary><ul>{NC.map(([k,l])=>item(k,l,page===k,true,'Chưa kết nối'))}</ul></details></>}
+      <div className="nav-group"><h2>Khác</h2><ul>{item('policy','Chính sách',page==='policy',true)}{item('portal','← Trang chủ',page==='portal',true)}</ul></div></nav></>}</div>
    </div>
    <p className="drawer-foot">Price System, Nhân viên và Nhật ký dùng dữ liệu thật. Các mục còn lại là bản demo.</p>
   </dialog></>;

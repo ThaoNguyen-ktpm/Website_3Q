@@ -2,8 +2,8 @@
 
 const readline = require('node:readline');
 const { createChatSession } = require('./lib/chat-session');
-const { createProductSearch } = require('./lib/product-search');
-const { loadConnectionConfig } = require('./lib/connection-config');
+const { createProductSearch } = require('../shared/product-search');
+const { loadConnectionConfig } = require('../shared/connection-config');
 const { HELP } = require('./lib/chat-commands');
 
 function safeText(value) {
@@ -34,7 +34,7 @@ function render(response) {
 async function runChat({ input = process.stdin, output = process.stdout, session } = {}) {
   let backend;
   session ||= createChatSession({ search: async options => {
-    backend ||= createProductSearch(loadConnectionConfig());
+    backend ||= createProductSearch(loadConnectionConfig(__dirname));
     return backend(options);
   } });
   output.write(`BossTele — tìm sản phẩm và tính giá bằng code. AI tắt.\n${HELP}\n`);

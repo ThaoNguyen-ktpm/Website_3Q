@@ -17,6 +17,23 @@ export async function fixture(count=2){
  const sim=new Simulator(store,{load:async()=>[]},clock);await sim.initialize();const live=new LiveService(sim,kiot,clock);sim.live=live;live.sapo=sapo;live.requireJoint=true;live.timingSink=()=>{};await live.refresh();sim.state.mapping={verified:true};const run=await sim.run();
  return {sim,live,sapo,sc,kiot,products,sapos,store,calls,run,prepare:codes=>live.prepare(run.id,codes||products.map(p=>p.code))};
 }
+
+test('TASK-118 null description writes notes, verifies and restores empty description',async()=>{
+ const f=await fixture(1);f.sapos[0].content=null;
+ const p=await f.prepare(),u=await f.live.commit(p.id,true);assert.equal(u.outcome,'success');
+ assert.match(f.sapos[0].content,/BAOQ/);
+ const restore=await f.live.prepareRestore(u.id);assert.equal((await f.live.commitRestore(restore.id,true)).outcome,'success');
+ assert.equal(f.sapos[0].content??'','');assert.equal(f.sapos[0].variants[0].price,35e6);
+});
+
+test('TASK-118 zero on any Sapo variant skips both platforms',async()=>{
+ const f=await fixture(1);f.sapos[0].variants[1].price=0;
+ const p=await f.prepare(),u=await f.live.commit(p.id,true);
+ assert.equal(u.items[0].status,'skipped_sapo_zero_price');assert.deepEqual(f.calls,[]);
+ const saved=await f.store.read();saved.updates[0].attempts[0].status='running';await f.store.write(saved);
+ const reopened=new Simulator(f.store,{load:async()=>[]},f.sim.clock);await reopened.initialize();
+ assert.equal(reopened.state.updates[0].items[0].status,'skipped_sapo_zero_price');assert.equal(reopened.state.updates[0].platformSummary.sapo.failed,0);
+});
 test('read-only preview works before mapping and never creates a commit or saves state',async()=>{
  const f=await fixture(1);f.sapo.state.mapping=null;f.sim.state.mapping=null;
  const before=structuredClone(f.sim.state),sapoBefore=structuredClone(f.sapo.state);
@@ -45,9 +62,9 @@ test('preview rejects a stale catalog and a changed Kiot product',async()=>{
  const f=await fixture(1);f.sapo.state.catalogBinding='old';
  await assert.rejects(f.live.prepare(f.run.id,['SP000009'],{previewOnly:true}),/chỉ mục/);
  f.sapo.state.catalogBinding='fake';f.products[0].currentPrice++;
- await assert.rejects(f.live.prepare(f.run.id,['SP000009'],{previewOnly:true}),/Kiot đã thay đổi \(giá\); bấm Tải lại từ Kiot/);
+ await assert.rejects(f.live.prepare(f.run.id,['SP000009'],{previewOnly:true}),/Kiot đã thay đổi \(giá(?:;[^)]*)?\); bấm Tải lại từ Kiot/);
  f.products[0].code='SP000009_23092026';f.products[0].name+=' x';
- await assert.rejects(f.live.prepare(f.run.id,['SP000009'],{previewOnly:true}),/Kiot đã thay đổi \(mã thành SP000009_23092026, tên, giá\)/);
+ await assert.rejects(f.live.prepare(f.run.id,['SP000009'],{previewOnly:true}),/Kiot đã thay đổi \(mã thành SP000009_23092026, tên, giá(?:;[^)]*)?\); bấm Tải lại từ Kiot/);
  assert.equal(f.calls.length,0);
 });
 test('SP000009 uses different IDs, only selected product changes, checkpoints precede both PUTs',async()=>{

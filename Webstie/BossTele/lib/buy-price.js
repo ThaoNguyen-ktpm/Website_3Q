@@ -9,8 +9,8 @@ const path = require('node:path');
 
 const CONFIG_FILE = path.join(__dirname, '..', 'price-tiers.json');
 const loadConfig = (file = CONFIG_FILE) => JSON.parse(fs.readFileSync(file, 'utf8'));
-const fold = text => String(text ?? '').normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
-const tr = value => `${(value / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}tr`;
+const { fold } = require('../../shared/text');
+const { tr } = require('../../shared/money');
 const percent = rate => `${(Math.round(rate * 1000) / 10).toLocaleString('vi-VN')}%`;
 
 /** Highest purchase price that keeps the tier's profit when sold at `sale`, rounded down to 100.000đ. */

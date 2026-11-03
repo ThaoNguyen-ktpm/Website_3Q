@@ -55,3 +55,17 @@ Sale AI là lõi JS trong máy chủ Express (`Webstie/server/src/sale-ai/`), AP
 Test lõi: `node --test *.test.js` tại `Webstie/server/src/sale-ai/test`, hoặc `npm run test:sale-ai` tại server. `npm test` server chạy Vitest riêng rồi test lõi; không để Vitest quét node:test. Build chép JS và public vào dist.
 
 Đánh số task phải tính cả `D:\BaoQ-AI\tasks` cũ; không tái sử dụng số đã có ở đó. Kho cũ giữ nguyên để lưu trữ. TASK-104 chưa cho phép kiểm thử ghi/khôi phục thật và không bật batch sản xuất. Đọc result/review để biết phần chưa xác minh trên máy đang chạy.
+
+## Báo máy đang làm việc (Bảo yêu cầu 31/10/2026)
+
+Bảo có 2 máy cùng mạng wifi; mỗi máy có thể chạy web/bot riêng. Để Bảo không nhầm:
+
+| Máy | Tên máy (`hostname`) | IP wifi gần nhất |
+|---|---|---|
+| **Laptop** HP Victus Gaming 16-r0xxx | `DESKTOP-4G5GOSR` | 192.168.110.213 (31/10) |
+| **PC** | chưa ghi (cập nhật khi biết) | 192.168.110.33 (31/10) |
+
+- Đầu mỗi phiên, và trước khi bật/tắt/khởi động lại web, bot, Sale AI, văn phòng 3D: chạy `hostname` và kiểm IP (`ipconfig`).
+- Mọi câu trả lời có chạy, dừng hay kiểm server phải mở đầu bằng một dòng: **"Máy: Laptop (DESKTOP-4G5GOSR)"** hoặc **"Máy: PC (…)"**. Tên lạ thì ghi đúng tên và hỏi Bảo.
+- Bot Telegram BossTele chỉ được chạy ở **một máy** cùng lúc. Trước khi bật bot, xem máy kia có đang chạy không; thấy log xung đột Telegram (409 / `terminated by other getUpdates`) thì dừng ngay bản vừa bật và báo Bảo.
+- Laptop có luật chuyển cổng Windows `127.0.0.1:8787 → 192.168.110.33:8787` (`netsh interface portproxy show all`): mở `localhost:8787` trên laptop có thể đang xem web của PC. Báo rõ khi gặp; không tự sửa luật này (cần quyền Admin, hỏi Bảo).

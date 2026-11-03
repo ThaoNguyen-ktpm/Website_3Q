@@ -5,7 +5,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const fold = text => String(text ?? '').normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
+const { fold } = require('../../shared/text');
 const words = name => new Set(fold(name).split(/[^a-z0-9]+/).filter(word => word.length >= 3 && !/^\d+$/.test(word)));
 
 function createPriceFeedback(file = path.join(__dirname, '..', 'data', 'price-feedback.jsonl')) {

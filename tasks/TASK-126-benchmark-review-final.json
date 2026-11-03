@@ -1,0 +1,150 @@
+{
+  "label": "review-final",
+  "trusted": true,
+  "products": 4800,
+  "items": 1311,
+  "pages": 59,
+  "delayMs": {
+    "page": 600,
+    "put": 700,
+    "listModified": 400
+  },
+  "outcome": "success",
+  "calls": {
+    "all": 0,
+    "modified": 28,
+    "put": 27
+  },
+  "prepareMs": 1688.7431999999972,
+  "totalMs": 57469.61069999999,
+  "initialReadMs": 407,
+  "saveMs": 18763.949499999988,
+  "cleanupMs": 8606.995200000005,
+  "saves": [
+    {
+      "ms": 412.70720000000074,
+      "cleanup": false
+    },
+    {
+      "ms": 193.48059999999896,
+      "cleanup": false
+    },
+    {
+      "ms": 175.7983000000022,
+      "cleanup": false
+    },
+    {
+      "ms": 304.77920000000086,
+      "cleanup": false
+    },
+    {
+      "ms": 292.060300000001,
+      "cleanup": false
+    },
+    {
+      "ms": 249.51070000000254,
+      "cleanup": false
+    },
+    {
+      "ms": 309.01710000000094,
+      "cleanup": false
+    },
+    {
+      "ms": 231.64450000000215,
+      "cleanup": false
+    },
+    {
+      "ms": 355.90669999999955,
+      "cleanup": false
+    },
+    {
+      "ms": 366.4202000000005,
+      "cleanup": false
+    },
+    {
+      "ms": 368.75190000000293,
+      "cleanup": false
+    },
+    {
+      "ms": 327.7839000000022,
+      "cleanup": false
+    },
+    {
+      "ms": 330.4132000000027,
+      "cleanup": false
+    },
+    {
+      "ms": 278.2111999999979,
+      "cleanup": false
+    },
+    {
+      "ms": 269.51890000000276,
+      "cleanup": false
+    },
+    {
+      "ms": 276.7207000000053,
+      "cleanup": false
+    },
+    {
+      "ms": 392.13239999999496,
+      "cleanup": false
+    },
+    {
+      "ms": 349.76800000000367,
+      "cleanup": false
+    },
+    {
+      "ms": 459.08430000000226,
+      "cleanup": false
+    },
+    {
+      "ms": 360.06150000000343,
+      "cleanup": false
+    },
+    {
+      "ms": 356.95730000000185,
+      "cleanup": false
+    },
+    {
+      "ms": 407.5080999999991,
+      "cleanup": false
+    },
+    {
+      "ms": 359.5694000000003,
+      "cleanup": false
+    },
+    {
+      "ms": 321.4846999999936,
+      "cleanup": false
+    },
+    {
+      "ms": 427.5748999999996,
+      "cleanup": false
+    },
+    {
+      "ms": 390.0431000000026,
+      "cleanup": false
+    },
+    {
+      "ms": 387.1224999999977,
+      "cleanup": false
+    },
+    {
+      "ms": 423.14860000000044,
+      "cleanup": false
+    },
+    {
+      "ms": 395.605899999995,
+      "cleanup": false
+    },
+    {
+      "ms": 9402.897499999992,
+      "cleanup": true
+    }
+  ],
+  "journalBytes": 1713820,
+  "storeGrowthBytes": 10481539,
+  "reachableGrowthBytes": 36954275,
+  "bytesWritten": 37112474,
+  "tempDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task126-review-final-UoCQwX"
+}

@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { extractSkus, matchingSkus } = require('../lib/sku');
+const { extractSkus, matchingSkus } = require('../../shared/sku');
 const { createBot } = require('../telegram-bot');
 
 test('recognizes full codes without matching inside alphanumeric strings', () => {

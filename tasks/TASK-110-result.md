@@ -80,3 +80,5 @@ Hai lần gọi lệnh phụ sai cwd dừng ở ENOENT trước bước cần l�
 - Không chạy npm run dev để kiểm cổng: các tiến trình cũ có thể tiếp tục giữ cổng cũ cho tới khi Claude xử lý; thay đổi script chỉ áp dụng cho lần chạy mới.
 - Không có Caddy CLI trên PATH nên chưa chạy `caddy validate`; cú pháp matcher đối chiếu [tài liệu Caddy](https://caddyserver.com/docs/caddyfile/matchers), cần kiểm chứng deploy thực tế.
 - Claude cần review và nghiệm thu độc lập trước khi ghi `verified`.
+
+Bản sao `tasks/TASK-110-backup/` đã xóa theo TASK-128; có thể khôi phục từ Git.

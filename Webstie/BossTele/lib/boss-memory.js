@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const MAX_NOTES = 50, MAX_NOTE = 300, MAX_TURNS = 20;
-const fold = text => text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
+const { fold } = require('../../shared/text');
 
 function createMemory(dir = path.join(__dirname, '..', 'data', 'memory')) {
   const notesFile = path.join(dir, 'BOSS.md');

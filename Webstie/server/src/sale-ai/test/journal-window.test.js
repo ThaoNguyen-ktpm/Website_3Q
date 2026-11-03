@@ -39,7 +39,7 @@ test('errors are recorded in history while the other products continue; summary 
  const u=await f.live.commit(p.id,true);
  const saved=(await f.store.read()).updates[0].items.find(i=>i.code==='SP000009').platforms.kiot;
  assert.deepEqual([saved.status,saved.error,saved.requestSent],['write_failed','Kiot trả HTTP 429',true]);
- assert.equal(summaryText(u.summary,u),'Đã cập nhật thành công 1/2 sản phẩm. Lỗi 1 sản phẩm.');
+ assert.equal(summaryText(u.summary,u),'1/2 thành công · 1 lỗi khi ghi');
  const ok=await fixture(2),q=await ok.prepare(),v=await ok.live.commit(q.id,true);
- assert.equal(summaryText(v.summary,v),'Đã cập nhật thành công 2/2 sản phẩm.');
+ assert.equal(summaryText(v.summary,v),'2/2 thành công');
 });

@@ -1,15 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SapoClient,SapoService,sapoNote,validateSapoProduct} from '../lib/sapo.js';
+import {SapoClient,SapoService,sapoNote,sapoFingerprint,validateSapoProduct} from '../lib/sapo.js';
 const memory=()=>{let disk;return {read:async()=>structuredClone(disk),write:async s=>{disk=structuredClone(s);}};};
 const product={id:91211362,content:'<b>Nội dung gốc</b>',variants:[{id:900,sku:'SP000009',price:'35000000'},{id:901,sku:'OTHER',price:'100'}]};
+test('TASK-118 null and empty HTML share fingerprint; restore explicitly sends empty HTML',async()=>{
+ const empty=validateSapoProduct({...product,content:null});assert.equal(empty.content,'');
+ assert.equal(sapoFingerprint({...empty,content:null}),sapoFingerprint(empty));
+ let body;const c=new SapoClient({shop:'fixture.mysapo.net',key:'fixture',secret:'fixture'},async(_url,opt)=>{body=JSON.parse(opt.body);return {ok:true,json:async()=>({})};});
+ await c.restore(empty.id,empty.variants,null);assert.equal(body.product.content,'');
+});
 test('catalog tolerates unrelated empty descriptions, zero prices and absent SKU, selected reads remain strict',async()=>{
  const other={id:123,content:null,variants:[{id:456,sku:null,price:0},{id:457,sku:'ZERO',price:0}]};
  const s=new SapoService({all:async()=>[product,other],product:async id=>id===123?other:product},memory(),'catalog');
  await s.initialize();assert.equal((await s.refresh()).count,2);
  assert.equal((await s.prepare('SP000009',{previewOnly:true})).variantId,900);
  await assert.rejects(s.prepare('ZERO',{previewOnly:true}),/cấu trúc|phiên bản/);
- assert.throws(()=>validateSapoProduct({...product,variants:[{id:900,sku:'ZERO',price:0}]}),/phiên bản/);
+ // TASK-118: zero is valid input for skip classification; malformed prices still fail.
+ assert.equal(validateSapoProduct({...product,variants:[{id:900,sku:'ZERO',price:0}]}).variants[0].price,0);
+ for(const price of [-1,'bad',null,''])assert.throws(()=>validateSapoProduct({...product,variants:[{id:900,sku:'ZERO',price}]}),/phiên bản/);
 });
 test('Kiot code with a suffix finds the Sapo SKU before "_" when the exact SKU is absent',async()=>{
  const client={all:async()=>[structuredClone(product)],product:async()=>structuredClone(product)};

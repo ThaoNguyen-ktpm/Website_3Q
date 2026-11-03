@@ -8,6 +8,17 @@
         "--mcp"
       ],
       "alwaysLoad": true
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "C:/Users/Admin/.local/bin/serena.exe",
+      "args": [
+        "start-mcp-server",
+        "--context",
+        "claude-code",
+        "--project-from-cwd"
+      ],
+      "env": {}
     }
   }
 }

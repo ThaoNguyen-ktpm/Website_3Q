@@ -6,6 +6,7 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {createSaleAi} from '../core.js';
 import {normalizeProduct} from '../lib/kiot.js';
+import {jobResult} from './job-result.js';
 
 const memory=(initial=null)=>{let value=initial;return {read:async()=>structuredClone(value),write:async next=>{value=structuredClone(next);}};};
 const products=[{id:10,variants:[{id:20,sku:'SP000009'}]}];
@@ -14,14 +15,14 @@ async function request(sale,path,method='GET',body={}) {
  const req=Readable.from(method==='POST'?[JSON.stringify(body)]:[]);
  Object.assign(req,{url:path,method,headers:{'content-type':'application/json'}});
  let status,data;await sale.handler(req,{writeHead(code){status=code;},end(bytes){data=JSON.parse(bytes);}});
- return {status,data};
+ return status===202?jobResult(sale,data.id):{status,data};
 }
-async function fixture({catalog={products,catalogBinding:'fixture'},configured=true,all}={}) {
+async function fixture({catalog={products,catalogBinding:'fixture'},configured=true,all,readSapoOnStartup=true}={}) {
  const calls=[];
  const kiotProduct=normalizeProduct({id:1,code:'SP000009',name:'Túi',basePrice:35e6,createdDate:'2026-12-03',isActive:true,inventories:[{branchId:44466,onHand:1}]});
  const forbidden=async()=>{calls.push('PUT');throw Error('Unexpected write');};
  const sc={configured,all:async()=>{calls.push('GET Sapo');return all?all():structuredClone(products);},update:forbidden,restore:forbidden};
- const sale=await createSaleAi({fixture:true,store:memory(),liveStore:memory(),sapoStore:memory(catalog),clock:()=>new Date('2027-01-22T03:00:00Z'),client:{all:async()=>{calls.push('GET Kiot');return [kiotProduct];},update:forbidden},sapoClient:sc});
+ const sale=await createSaleAi({fixture:true,store:memory(),liveStore:memory(),sapoStore:memory(catalog),clock:()=>new Date('2027-01-22T03:00:00Z'),client:{all:async()=>{calls.push('GET Kiot');return [kiotProduct];},update:forbidden},sapoClient:sc,readSapoOnStartup});
  return {sale,calls,sc};
 }
 test('Kiot reload reads Sapo each time, clears prepared even for unchanged catalogs, and sends no PUT',async()=>{
@@ -63,10 +64,19 @@ test('empty configured Sapo starts one background read without delaying core rea
  assert.equal(sale.sapo.status().ready,false);
  await until(()=>calls.length===1);
  assert.equal((await request(sale,'/api/run','POST')).status,409);
+ assert.equal((await request(sale,'/api/kiot/refresh','POST')).status,409);
  assert.equal((await request(sale,'/api/status')).data.busy,true);
  release();await until(()=>sale.sapo.status().ready);
  await until(()=>!sale.real.busy);await delay(30);
  assert.deepEqual(calls,['GET Sapo']);
+});
+test('explicitly disabling startup Sapo read leaves Kiot reload responsible for the index',async()=>{
+ const {sale,calls}=await fixture({catalog:null,readSapoOnStartup:false});
+ await delay(30);
+ assert.equal(sale.sapo.status().ready,false);assert.deepEqual(calls,[]);
+ assert.equal((await request(sale,'/api/status')).data.busy,false);
+ assert.equal((await request(sale,'/api/kiot/refresh','POST')).status,200);
+ assert.equal(sale.sapo.status().ready,true);assert.deepEqual(calls,['GET Kiot','GET Sapo']);
 });
 test('background startup waits for an active mutation, then reads only once',async()=>{
  const {sale,calls}=await fixture({catalog:null});

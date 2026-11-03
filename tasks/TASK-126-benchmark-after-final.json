@@ -1,0 +1,26 @@
+{
+  "label": "after-final",
+  "trusted": true,
+  "products": 4800,
+  "items": 1311,
+  "pages": 59,
+  "delayMs": {
+    "page": 600,
+    "put": 700,
+    "listModified": 400
+  },
+  "outcome": "success",
+  "calls": {
+    "all": 0,
+    "modified": 28,
+    "put": 27
+  },
+  "prepareMs": 417.7685999999994,
+  "totalMs": 43605.2974,
+  "initialReadMs": 414,
+  "saveMs": 10105.349399999988,
+  "journalBytes": 1713821,
+  "storeGrowthBytes": -3284252,
+  "bytesWritten": 57923163,
+  "tempDir": "C:\\Users\\Admin\\AppData\\Local\\Temp\\task126-after-final-WgfE79"
+}

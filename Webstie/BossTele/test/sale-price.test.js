@@ -59,12 +59,19 @@ test('new Kiot items use the current price as P0; sold-out and unknown items exp
 test('pre-July items explain không giảm without an error or sale price', { skip: !hasSaleAi }, async () => {
   const paths = fixture([saved('SP5', 35000000, '2026-03-15'), saved('SP6', 35000000, '2026-06-30', 'Túi !')], []);
   const { rows, formulaPolicy } = await createSalePricer({ ...paths, today: '2027-01-15' })(['SP5', 'SP6']);
-  assert.equal(formulaPolicy, 'baoq-2026-10-30-hide-before-jul-v10');
+  assert.equal(formulaPolicy, 'baoq-2026-11-02-hide-600m-v11');
   for (const row of rows) {
     assert.equal(row.status, 'excluded');
     assert.match(row.reasons.join(), /không giảm/);
     assert.deepEqual([row.m, row.price, row.allowance, row.net], [null, null, null, null]);
   }
+});
+
+test('items from 600m explain no markdown even with old approved prices', { skip: !hasSaleAi }, async () => {
+  const paths=fixture([{...saved('SP600',600e6,'2026-07-01'),manualPricing:{price:580e6,allowance:0}}],[]);
+  const {rows}=await createSalePricer({...paths,today:'2026-11-02'})(['SP600']);
+  assert.equal(rows[0].status,'excluded');assert.equal(rows[0].price,null);
+  assert.match(rows[0].reasons.join(),/không giảm \(giá gốc từ 600 triệu\)/);
 });
 
 test('July-October hot items use November batch steps without the 45-day delay', { skip: !hasSaleAi }, async () => {

@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {createConnection} from 'node:net';
 import {acquireMaintenanceLock} from './store-lock.js';
+import {journalChildren} from './journal-storage.js';
 const hash=data=>createHash('sha256').update(data).digest('hex');
 const digestPattern=/^[a-f0-9]{64}$/;
 const storeNames=['kiot-state.store','sapo-state.store','state.store'];
@@ -21,6 +22,11 @@ async function verifiedBlob(blobs,digest){
  const bytes=await readFile(path);if(hash(bytes)!==digest)throw Error('Blob hash mismatch: '+digest);
  return {value:JSON.parse(bytes.toString('utf8')),bytes:bytes.length};
 }
+async function eachBlob(values,fn){
+ let cursor=0;
+ const results=await Promise.allSettled(Array.from({length:Math.min(8,values.length)},async()=>{while(cursor<values.length)await fn(values[cursor++]);}));
+ const failed=results.find(r=>r.status==='rejected');if(failed)throw failed.reason;
+}
 export async function audit(root,names=storeNames){
  root=resolve(root);await safePath(root);
  const stores=[];
@@ -34,19 +40,31 @@ export async function audit(root,names=storeNames){
   const manifestPath=join(directory,'manifest.json');await safePath(manifestPath);
   const manifestBytes=await readFile(manifestPath),manifest=JSON.parse(manifestBytes.toString('utf8'));
   if(manifest.format!=='baoq-split-v1'||!manifest.metadata||!manifest.indexes||typeof manifest.indexes!=='object'||Array.isArray(manifest.indexes)||!manifest.indexes.products||(name!=='sapo-state.store'&&(!manifest.indexes.runs||manifest.metadata.version!==1)))throw Error('Invalid manifest');
-  const referenced=new Set(),counts={};
-  for(const [collection,digest] of Object.entries(manifest.indexes)){
+  const referenced=new Set(),counts={},scannedIndexes=new Set(),scannedUpdates=new Set();
+  const recovery=manifest.recoveryIndexes??[];
+  if(!Array.isArray(recovery)||recovery.some(indexes=>!indexes||typeof indexes!=='object'||Array.isArray(indexes)))throw Error('Invalid recovery indexes');
+  for(const indexes of [manifest.indexes,...recovery])for(const [collection,digest] of Object.entries(indexes)){
    if(!collections.has(collection))throw Error('Invalid manifest collection');
+   const indexKey=collection+':'+digest;if(scannedIndexes.has(indexKey))continue;scannedIndexes.add(indexKey);
    const index=await verifiedBlob(blobs,digest);if(!Array.isArray(index.value))throw Error('Invalid index');
-   referenced.add(digest);counts[collection]=index.value.length;
-   for(const ref of index.value){if(!digestPattern.test(ref))throw Error('Invalid record reference');referenced.add(ref);}
+   referenced.add(digest);if(indexes===manifest.indexes)counts[collection]=index.value.length;
+   for(const ref of index.value){
+    if(!digestPattern.test(ref))throw Error('Invalid record reference');referenced.add(ref);
+    if(collection==='updates'&&!scannedUpdates.has(ref)){
+     scannedUpdates.add(ref);
+     const record=await verifiedBlob(blobs,ref);
+     for(const child of journalChildren(record.value)){
+      const chunk=await verifiedBlob(blobs,child);if(!Array.isArray(chunk.value)||chunk.value.length>50)throw Error('Invalid journal chunk');referenced.add(child);
+     }
+    }
+   }
   }
-  let keptBytes=0;for(const digest of referenced)keptBytes+=(await verifiedBlob(blobs,digest)).bytes;
+  let keptBytes=0;await eachBlob([...referenced],async digest=>{const blob=await verifiedBlob(blobs,digest);keptBytes+=blob.bytes;});
   const candidates=[];
-  for(const entry of await readdir(blobs,{withFileTypes:true})){
+  await eachBlob(await readdir(blobs,{withFileTypes:true}),async entry=>{
    if(!entry.isFile()||!/^([a-f0-9]{64})\.json$/.test(entry.name))throw Error('Invalid blob entry/link: '+entry.name);
    if(!referenced.has(entry.name.slice(0,-5))){const blob=await verifiedBlob(blobs,entry.name.slice(0,-5));candidates.push({name:entry.name,bytes:blob.bytes});}
-  }
+  });
   candidates.sort((a,b)=>a.name.localeCompare(b.name));
   if(hash(await readFile(manifestPath))!==hash(manifestBytes))throw Error('Manifest changed during audit');
   stores.push({name,manifestHash:hash(manifestBytes),counts,keptFiles:referenced.size,keptBytes,candidates});
@@ -78,4 +96,13 @@ export async function applyPlan(root,plan,{onLocked}={}){
  for(let i=0;i<current.stores.length;i++)if(current.stores[i].manifestHash!==after.stores[i].manifestHash||JSON.stringify(current.stores[i].counts)!==JSON.stringify(after.stores[i].counts))throw Error('Store changed after cleanup');
  return {deletedFiles,deletedBytes,after};
  }finally{for(const release of releases.reverse())await release();}
+}
+
+// Caller holds the store's writer lock from manifest publication through sweep.
+// Unlike the offline plan/apply workflow, no unlock window requires repeated audits.
+export async function cleanupLocked(directory){
+ const root=dirname(directory),name=basename(directory),plan=await audit(root,[name]);
+ const store=plan.stores[0];
+ if(hash(await readFile(join(directory,'manifest.json')))!==store.manifestHash)throw Error('Manifest changed during cleanup');
+ await eachBlob(store.candidates,candidate=>unlink(join(directory,'blobs',candidate.name)));
 }

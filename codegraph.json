@@ -3,12 +3,10 @@
     ".agents/skills/",
     ".claude/skills/",
     ".claude/worktrees/",
-    "BossTele/.claude/skills/",
-    "BossTele/vendor/",
-    ".taste-skill/"
-  ],
-  "deprioritize": [
+    "Webstie/BossTele/.claude/skills/",
+    "Webstie/BossTele/vendor/",
+    ".taste-skill/",
     "tasks/",
-    "BossTele/tasks/"
+    "Webstie/BossTele/tasks/"
   ]
 }

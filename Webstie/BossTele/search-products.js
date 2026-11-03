@@ -1,7 +1,7 @@
 'use strict';
 
-const { createProductSearch, configurationStatus } = require('./lib/product-search');
-const { loadConnectionConfig } = require('./lib/connection-config');
+const { createProductSearch, configurationStatus } = require('../shared/product-search');
+const { loadConnectionConfig } = require('../shared/connection-config');
 
 function parseArgs(args) {
   const parsed = {};
@@ -24,7 +24,7 @@ async function main(args = process.argv.slice(2)) {
       console.log('node search-products.js --source kiotviet|sapo-web|sapo-pos|all --name "Chanel"\nnode search-products.js --source all --sku SP000001\nnode search-products.js --status\nTùy chọn: --page 1, --max-pages 20 (quét SKU Sapo Web).');
       return;
     }
-    const config = loadConnectionConfig();
+    const config = loadConnectionConfig(__dirname);
     if (flags.status) { console.log(JSON.stringify(configurationStatus(config), null, 2)); return; }
     const results = await createProductSearch(config)({
       source: flags.source || 'all', kind: flags.sku !== undefined ? 'sku' : 'name', query: flags.sku ?? flags.name,

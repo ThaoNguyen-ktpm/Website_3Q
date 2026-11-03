@@ -1,5 +1,4 @@
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { createProductSearch, loadConnectionConfig } from '../config/shared.js';
 import { z } from 'zod';
 import { ApiError } from '../middlewares/errorHandler.js';
 
@@ -34,12 +33,6 @@ export function parseCatalogQuery(input: unknown): CatalogQuery {
   return parsed.data;
 }
 
-// Both src/services and dist/services are two directories below server/.
-const require = createRequire(import.meta.url);
-const bossRoot = fileURLToPath(new URL('../../../BossTele/', import.meta.url));
-const { createProductSearch } = require(`${bossRoot}/lib/product-search.js`) as { createProductSearch: Dependencies['createSearch'] };
-const { loadConnectionConfig } = require(`${bossRoot}/lib/connection-config.js`) as { loadConnectionConfig: (root: string) => unknown };
-
 export function createCatalogSearch(dependencies: Dependencies) {
   let search: Search | undefined;
   return async (query: CatalogQuery, canViewCost: boolean) => {
@@ -63,4 +56,4 @@ export function createCatalogSearch(dependencies: Dependencies) {
   };
 }
 
-export const searchCatalog = createCatalogSearch({ loadConfig: () => loadConnectionConfig(bossRoot), createSearch: createProductSearch });
+export const searchCatalog = createCatalogSearch({ loadConfig: loadConnectionConfig, createSearch: createProductSearch });

@@ -8,7 +8,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const SYNCED = path.join(os.homedir(), '.claude', 'skills', 'synced');
-const fold = text => String(text ?? '').normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
+const { fold } = require('../../shared/text');
 const LABELS = { 'baoq-up-kiot': 'lên Kiot', 'dang-san-pham-baoq': 'đăng web', 'dang-giay-baoq': 'đăng web (giày)' };
 const DRAFT_ONLY = [
   'CHẾ ĐỘ CHỈ SOẠN NHÁP (Bảo 20/10/2026): bạn trả lời Bảo qua Telegram. Không ghi, tạo, sửa hay đăng gì trên KiotViet, Sapo,',

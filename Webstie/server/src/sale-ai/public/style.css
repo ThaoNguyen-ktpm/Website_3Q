@@ -154,6 +154,8 @@ html.embedded, .embedded body { overflow: hidden; }
 .progress-pause{margin:0;padding:8px 12px;border-radius:7px;color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
 .update-progress p.muted{margin:0;font-size:12px}
 .retry-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}
+.history-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.history-filters button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
 
 /* Bảo 2026-10-21: approved results layout — compact stats, one data line, one toolbar row, one note line. */
 .update-progress[hidden] { display: none; }

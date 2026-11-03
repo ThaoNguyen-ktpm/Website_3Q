@@ -3,17 +3,17 @@ import Tasks from './tasks';
 import AppHeader from './app-header';
 import HomeView from './home';
 import PolicyView from './policy';
-import {OpsBand,OpsSide,OpsTabs,Overview,AlertSheet,labels,DATA_PAGES,type Row,type Summary} from './dashboard';
-import {money,Toast,Close} from './ui';
-import {simulatedApi} from './simulated-api';
+import {OpsBand,OpsSide,OpsTabs} from './dashboard';
+import {Toast} from './ui';
 import type {User} from './auth';
-import {PRICE,MANAGE,type AppPage} from './apps';
+import {PRICE,MANAGE,V2_OVERVIEW,v2Label,legacyV2Page,type AppPage} from './apps';
 import {SaleAi,CatalogSearch} from './price-system';
 import {Team,AuditLogs,initials} from './staff';
 import {Icon} from './ui';
 import Assistant from './assistant';
 import {allowedPage as mayOpen} from './access';
 import {readRecent} from './recent';
+import {V2Frame} from './v2-frame';
 // Loaded only after sign-in (see main.tsx).
 const Documents=lazy(()=>import('./documents'));
 const pageOf=(page:string)=>[...PRICE,...MANAGE].find(([k])=>k===page);
@@ -34,21 +34,15 @@ function Account({user,onLogout}:{user:User;onLogout:()=>void}){
 }
 // "Mở gần đây" on the home page: the last pages opened in this browser (labels only, no data).
 const NoAccess=()=><section className="card empty-card"><h2>Bạn chưa có quyền xem mục này</h2><p>Nhờ quản lý cấp quyền trong Điều hành → Nhân viên.</p></section>;
-const fields:Record<string,string>={week:'Tuần demo',id:'Mã',source:'Nguồn',original_id:'ID gốc',business_at:'Ngày nghiệp vụ',synced_at:'Ngày đồng bộ',channel:'Kênh',sale:'Sale',amount:'Số tiền',cost:'Giá vốn',sku:'SKU',kind:'Loại',name:'Tên',age_days:'Tuổi tồn (ngày)',value:'Giá trị',issue:'Nội dung',record:'Bản ghi liên quan',severity:'Mức độ',category:'Nhóm chi phí',money_impact:'Ảnh hưởng tiền',repair_steps:'Cách xử lý',completion:'Điều kiện hoàn thành'};
-const HIDDEN=['business_at','synced_at','original_id','repair_steps','completion'],MONEY=['amount','cost','value','money_impact'];
-const NC_TEXT:Record<string,string>={reconcile:'Tổng hợp',consignment:'Ký gửi · Hồ sơ ký gửi · Phân bổ',cash:'Ngân hàng · Khoản thu · Phân bổ',close:'Sổ chốt · Điều chỉnh',settings:'Thiết lập · Danh mục · Từ điển · Hướng dẫn'};
-const api = simulatedApi;
 export default function App({user,onLogout}:{user:User;onLogout:()=>void}){
  const [route,setRoute]=useState(new URLSearchParams(location.hash.slice(1)));
- const [me,setMe]=useState<{role:string;grants:string[]}|null>(null),[error,setError]=useState(''),[summary,setSummary]=useState<Summary|null>(null),[rows,setRows]=useState<Row[]>([]),[detail,setDetail]=useState<Row|null>(null),[loading,setLoading]=useState(false);
- const [errors,setErrors]=useState<Row[]>([]),[inventoryCount,setInventoryCount]=useState(0);
- const dialog=useRef<HTMLDialogElement>(null);const page=route.get('page')||'portal',period=route.get('period')||'',field=route.get('field')||'',value=route.get('value')||'',record=route.get('record')||'',alert=route.get('alert')||'';
+ const page=legacyV2Page(route.get('page')||'portal');
  // replace=true rewrites the current history entry (filters, closing deep-linked sheets) instead of adding one
  function go(next:Record<string,string>,replace=false){const p=new URLSearchParams(location.hash.slice(1));for(const [k,v] of Object.entries(next)){v?p.set(k,v):p.delete(k)}
   if(replace){history.replaceState(history.state,'','#'+p.toString());setRoute(p)}else location.hash=p.toString();}
- function nav(target:string,f='',v=''){go({page:target,field:f,value:v,record:'',task:'',taskView:'',taskFilter:'',alert:'',group:'',homeFilter:'',homeDept:'',homeView:''});window.scrollTo(0,0)}
+ function nav(target:string){const next=new URLSearchParams({page:legacyV2Page(target)});location.hash=next.toString();window.scrollTo(0,0)}
  const can=(permission:string)=>user.permissions.includes(permission);
- const pageLabel=pageOf(page)?.[1]||(Object.hasOwn(labels,page)?labels[page]:'')||(page==='tasks'?'Công việc':page==='policy'?'Chính sách':'');
+ const pageLabel=pageOf(page)?.[1]||v2Label(page)||(page==='tasks'?'Công việc':page==='policy'?'Chính sách':'');
  useEffect(()=>{if(page==='portal'||!pageLabel)return;try{localStorage.setItem('baoq-recent',JSON.stringify([{page,label:pageLabel,at:new Date().toISOString()},...readRecent().filter(r=>r.page!==page)].slice(0,4)))}catch{}},[page,pageLabel]);
  // Bảo 2026-10-27 (A): only Admin opens the demo reports; Điều hành starts at the first page this person may open.
  const admin=user.role==='ADMIN';
@@ -56,31 +50,10 @@ export default function App({user,onLogout}:{user:User;onLogout:()=>void}){
  const allowed=(list:AppPage[])=>list.filter(([,,permission])=>can(permission)).map(([k,l]):[string,string]=>[k,l]);
  const real=pageOf(page);
  const realContent=page==='sale'?<SaleAi/>:page==='search'?<CatalogSearch/>:page==='team'?<Team user={user}/>:page==='audit'?<AuditLogs/>:page==='documents'?<Suspense fallback={<p role="status">Đang mở tài liệu…</p>}><Documents canManage={can('documents.manage')}/></Suspense>:null;
- const overview=admin?'overview':MANAGE.find(([,,p])=>can(p))?.[0]||'portal';
- useEffect(()=>{const h=()=>setRoute(new URLSearchParams(location.hash.slice(1)));window.addEventListener('hashchange',h);// The demo reports read sample data as the simulated CEO; only Admin opens them.
-  if(admin)api('me').catch(()=>api('demo/session',{method:'POST',body:JSON.stringify({role:'ceo'})})).then(setMe).catch(()=>{});return()=>window.removeEventListener('hashchange',h)},[]);
- useEffect(()=>{let active=true;setError('');setSummary(null);setRows([]);setDetail(null);setErrors([]);if(!me||!(page in labels))return;setLoading(true);const query=new URLSearchParams({period,field,value});
-  const task=page==='overview'?api('overview?'+query).then(d=>{if(active)setSummary(d)}):DATA_PAGES.includes(page)?api('records/'+page+'?'+query).then(d=>{if(active){setRows(d.rows);if(d.summary)setSummary(d.summary)}}):Promise.resolve();
-  // the overview's alert list and aging count come from the same simulated tables (roles without the grant simply get none)
-  if(page==='overview'&&period){api('records/errors?period='+period).then(d=>{if(active)setErrors(d.rows)}).catch(()=>{});api('records/inventory?period='+period).then(d=>{if(active)setInventoryCount(d.rows.length)}).catch(()=>{})}
-  task.catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[page,period,field,value,me]);
- useEffect(()=>{let active=true;setDetail(null);if(record&&me)api(`record/${page}/${record}`).then(d=>{if(active)setDetail(d.record)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[record,page,me]);
- useEffect(()=>{if(detail)dialog.current?.showModal();else dialog.current?.close()},[detail]);
- const periodSelect=<label className="period role-select"><span className="vh-sm">Kỳ dữ liệu</span><select aria-label="Kỳ dữ liệu" value={period} onChange={e=>go({period:e.target.value,record:''})}><option value="">Chưa chọn kỳ</option><option value="2026-10">Tháng 10 / 2026 · Demo</option></select></label>;
- const crumbs=page==='tasks'?<span aria-current="page">Công việc</span>:<><a href={`#page=${overview}`}>Điều hành</a><span aria-hidden="true">/</span><span aria-current="page">{labels[page]}</span></>;
- function opsContent(){
-  if(!me)return <section className="card empty-card"><h2>Chọn vai trò demo để bắt đầu.</h2><p>Vai trò chỉ mô phỏng giao diện, không phải bảo mật.</p></section>;
-  if(loading)return <p role="status">Đang tải…</p>;
-  if(error)return null;
-  if(!DATA_PAGES.includes(page))return <section className="card"><div className="card-head"><h2>Chưa kết nối nguồn</h2><p>{NC_TEXT[page]}</p></div><p>Chưa có kỳ và số dư thật được xác minh. Quy tắc đối soát chờ bộ fixture từ nguồn trước khi triển khai.</p></section>;
-  if(!period)return <section className="card empty-card"><h2>Chưa chọn kỳ dữ liệu</h2><p>Chọn tháng demo để xem biểu đồ và số liệu tổng hợp. Không có số dư thật được nhập.</p><button className="btn btn-primary" type="button" onClick={()=>go({period:'2026-10',record:''})}>Xem biểu đồ demo · Tháng 10/2026</button></section>;
-  if(page==='overview')return summary?<Overview summary={summary} nav={nav} go={go} errors={errors} inventoryCount={inventoryCount}/>:null;
-  const cols=Object.keys(rows[0]||{}).filter(k=>!HIDDEN.includes(k));
-  return <section className="card"><div className="card-head"><h2>{labels[page]} <span className="count-pill">{rows.length}</span></h2>{field&&<button className="chip-clear" type="button" onClick={()=>go({field:'',value:'',record:''})}>Bỏ lọc: {fields[field]} = {value} <Close/></button>}</div>
-   {page==='costs'&&summary&&<p className="formula">Doanh thu {money(summary.revenue)} − Giá vốn {money(summary.cogs)} − Vận hành {money(summary.operating)} = Kết quả demo <strong>{money(summary.result)}</strong>.<br/>Tổng chi phí: {money(summary.total_cost)}. Chi phí vận hành: {money(rows.reduce((s,r)=>s+Number(r.amount),0))}. <button className="link-btn" type="button" onClick={()=>nav('transactions')}>Xem giá vốn theo giao dịch</button></p>}
-   <div className="table-scroll"><table><thead><tr>{cols.map(k=><th key={k} className={MONEY.includes(k)?'r':undefined}>{fields[k]||k}</th>)}<th>Chi tiết</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}>{cols.map(k=><td key={k} className={MONEY.includes(k)?'r num':undefined}>{MONEY.includes(k)?money(Number(r[k])):String(r[k])}</td>)}<td><button className="open-btn" type="button" onClick={()=>go({record:String(r.id)})}>Mở {r.id}</button></td></tr>)}</tbody></table></div>
-   {!rows.length&&<p>Không có bản ghi phù hợp.</p>}</section>;
- }
+ const overview=admin?'v2-dashboard':MANAGE.find(([,,p])=>can(p))?.[0]||'portal';
+ useEffect(()=>{const h=()=>setRoute(new URLSearchParams(location.hash.slice(1)));window.addEventListener('hashchange',h);return()=>window.removeEventListener('hashchange',h)},[]);
+ useEffect(()=>{const old=route.get('page');if(old&&legacyV2Page(old)!==old)go({page:legacyV2Page(old)},true)},[route]);
+ const crumbs=page==='tasks'?<span aria-current="page">Công việc</span>:<><a href={`#page=${overview}`}>Điều hành</a><span aria-hidden="true">/</span><span aria-current="page">{pageLabel}</span></>;
  const header=<AppHeader nav={nav} overview={overview} page={page} can={can} reports={admin}><Account user={user} onLogout={onLogout}/></AppHeader>;
  let body:React.ReactNode;
  if(!allowedPage(page))body=<NoAccess/>;
@@ -99,7 +72,7 @@ export default function App({user,onLogout}:{user:User;onLogout:()=>void}){
   const tiles:{href?:string;icon:string;title:string;text:string;tag:string;real?:boolean}[]=[
    ...(price.length>1?[{href:`#page=${price[0][0]}`,icon:'sale',title:'Price System',text:'Sale AI và tra cứu sản phẩm Kiot + Sapo.',tag:'Dữ liệu thật',real:true}]
     :price.length===1?[{href:`#page=${price[0][0]}`,icon:price[0][0],title:price[0][1],text:price[0][0]==='search'?'Tra cứu sản phẩm Kiot + Sapo.':'Tính và cập nhật giá sale Kiot + Sapo.',tag:'Dữ liệu thật',real:true}]:[]),
-   ...(admin||manage.length?[{href:`#page=${overview}`,icon:'overview',title:'Điều hành',text:admin?'Nhân viên, nhật ký và báo cáo tổng quan.':manage.map(([,l])=>l).join(', ')+'.',tag:manage.length?`${manage.map(([,l])=>l).join(', ')}: dữ liệu thật`:'Báo cáo demo',real:manage.length>0}]:[]),
+   ...(admin||manage.length?[{href:admin?V2_OVERVIEW:`#page=${overview}`,icon:'overview',title:'Điều hành',text:admin?'Tổng quan V2, KPI Sale và Hàng hóa/Kho.':manage.map(([,l])=>l).join(', ')+'.',tag:admin?'KPI: dữ liệu thật · Tổng quan/Kho: demo':`${manage.map(([,l])=>l).join(', ')}: dữ liệu thật`,real:admin||manage.length>0}]:[]),
    {href:'#page=tasks&taskView=list',icon:'tasks',title:'Công việc',text:'Giao việc, checklist và hạn hoàn thành.',tag:'Mở danh sách'},
    {icon:'nc',title:'Studio · Marketing',text:'Ảnh, nội dung và kênh bán.',tag:'Sắp có'}];
   const recent=readRecent().filter(r=>allowedPage(r.page)).slice(0,3),when=(at:string)=>{const d=new Date(at);return `${d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})} · ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`};
@@ -116,17 +89,12 @@ export default function App({user,onLogout}:{user:User;onLogout:()=>void}){
    <li><button type="button" className="side-link side-btn" aria-current={route.get('taskView')==='notifications'?'page':undefined} onClick={()=>go({task:'',taskView:'notifications'})}><span>Thông báo Telegram</span></button></li>
    <li><button type="button" className="side-link side-btn" onClick={()=>nav('portal')}><span>← Trang chủ</span></button></li></ul></nav></aside>
    <div className="ops-main legacy"><Tasks route={route} go={go}/></div></div></>;
- else if(page in labels&&!admin)body=<><OpsBand title={labels[page]} crumbs={crumbs}/>
-  <OpsTabs page={page} nav={nav} manage={allowed(MANAGE)} reports={false}/>
-  <div className="ops-layout"><OpsSide page={page} nav={nav} warnings={0} manage={allowed(MANAGE)} reports={false}/><div className="ops-main"><NoAccess/></div></div></>;
- else body=<><OpsBand title={labels[page]||'Ứng dụng'} crumbs={crumbs} overviewTarget={page!=='overview'&&me?.grants.includes('overview')?'overview':undefined} actions={DATA_PAGES.includes(page)?periodSelect:undefined}/>
-  <OpsTabs page={page} nav={nav} manage={allowed(MANAGE)}/>
-  <div className="ops-layout"><OpsSide page={page} nav={nav} warnings={summary?.warning_count||0} manage={allowed(MANAGE)}/>
-   <div className="ops-main">
-    {error&&<p className="error" role="alert">{error}</p>}{opsContent()}</div></div>
-  <AlertSheet error={errors.find(e=>e.id===alert)||null} close={()=>go({alert:''})} go={go}/></>;
+ else if(v2Label(page))body=<><OpsBand title={pageLabel} crumbs={crumbs}/>
+  <OpsTabs page={page} nav={nav} manage={allowed(MANAGE)} reports={admin}/>
+  <div className="ops-layout"><OpsSide page={page} nav={nav} warnings={0} manage={allowed(MANAGE)} reports={admin}/>
+   <div className="ops-main"><V2Frame page={page} route={route} onRoute={hash=>{location.hash=hash}}/></div></div></>;
+ else body=<NoAccess/>;
  return <>{header}<main id="main">{body}</main>
-  <dialog className="rec-dialog" ref={dialog} onCancel={e=>{e.preventDefault();go({record:''})}}><div className="dl-head"><h2>Chi tiết bản ghi</h2><button className="icon-btn" type="button" onClick={()=>go({record:''})} aria-label="Đóng chi tiết"><Close/></button></div><span className="chip-demo">DỮ LIỆU DEMO</span><dl>{detail&&Object.entries(detail).map(([k,v])=><React.Fragment key={k}><dt>{fields[k]||k}</dt><dd>{MONEY.includes(k)?money(Number(v)):String(v)}</dd></React.Fragment>)}</dl></dialog>
   <Assistant page={page} telegram={user.role==='ADMIN'}/>
   <Toast undoLabel="Hoàn tác"/></>;
 }

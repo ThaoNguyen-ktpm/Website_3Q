@@ -13,12 +13,13 @@ import {executeBatchJoint} from './batch-joint.js';
 import {sapoNote,sapoSku} from './sapo.js';
 import {prepareRestore,commitRestore} from './restore.js';
 import {stopsPlatform} from './update-errors.js';
+import {fingerprint} from './kiot-fingerprint.js';
+export {fingerprint} from './kiot-fingerprint.js';
 
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 // Bảo 2026-10-27: name what changed on Kiot since the last load (2,000+ codes got a _ddmmyyyy/_KG suffix on 21-27/10), not only that something did.
 const CHANGE_LABELS=[['code','mã'],['name','tên'],['currentPrice','giá'],['notes','mô tả'],['stock','tồn'],['active','trạng thái bán']];
-export const kiotChanges=(before,fresh)=>CHANGE_LABELS.filter(([key])=>String(before?.[key]??'')!==String(fresh[key]??'')).map(([key,label])=>key==='code'?`mã thành ${fresh.code}`:label).join(', ')||'thông tin khác';
-export const fingerprint = p => digest([p.id,p.code,p.name,p.currentPrice,p.notes,p.createdAt,p.active,p.stock,p.modifiedDate,p.inventoryMissing,p.activeMissing,p.taxPresent,p.rawFields]);
+export const kiotChanges=(before,fresh)=>CHANGE_LABELS.filter(([key])=>String(before?.[key]??'')!==String(fresh[key]??'')).map(([key,label])=>key==='code'?`mã thành ${fresh.code}`:label).join(', ')||'thông tin khác (tên/mô tả/tồn kho)';
 const localKey = p => digest([p.p0,p.manualPricing]);
 const escape = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function liveNote(existing, row, eventKey, at) {
@@ -37,11 +38,34 @@ export class LiveService {
   }
   stage(stage,processed=this.operation?.processed||0) {if(this.operation?.running)Object.assign(this.operation,{stage,processed});}
   async timed(method,fn) {
+    if(this.sim.halted)throw Error('Sale AI đã dừng vì lỗi nghiêm trọng');
     const scope=this.sim.liveScope,start=performance.now();
     try{return await fn();}finally{if(scope){const ms=performance.now()-start;scope.timings.networkMs+=ms;scope.timings.requests.push({method,path:'/products/:id',ms});}}
   }
   readProduct(id){return this.timed('GET',()=>this.client.product(id));}
   sendUpdate(product,body){return this.timed('PUT',()=>this.client.update(product,body));}
+  checkKiotSnapshot(state,item,fresh) {
+    if(fresh.id===item.id&&fingerprint(fresh)===item.row.liveBase)return;
+    // Price-only no-ops tolerate the write timestamp, never changes to other fields.
+    if(this.kiotDescription===false&&fresh.id===item.id&&fresh.currentPrice===item.row.price){
+      const before=item.before;
+      if(before&&fingerprint({...before,currentPrice:fresh.currentPrice,modifiedDate:fresh.modifiedDate})===fingerprint(fresh))return;
+      const ownWrite=(state.updates||[]).some(u=>u.mode!=='restore-joint-v1'&&(u.items||[]).some(i=>i.id===item.id&&i.platforms?.kiot?.status==='done'&&i.platforms.kiot.afterProduct&&(i.platforms.kiot.afterFingerprint??fingerprint(i.platforms.kiot.afterProduct))===fingerprint(fresh)));
+      if(ownWrite)return;
+    }
+    const price=fresh.currentPrice!==item.row.price?`; giá Kiot hiện ${money(fresh.currentPrice)}, dự kiến ${money(item.row.price)}`:'';
+    throw Error(`Kiot đã thay đổi (${kiotChanges(item.before,fresh)}${price}); bấm Tải lại từ Kiot rồi kiểm thử lại`);
+  }
+  syncKiotProduct(state,fresh,id) {
+    if(fresh.id!==id)throw Error('Kiot trả sai ID sản phẩm khi xác minh');
+    const local=state.products.find(p=>p.id===id);
+    if(local)Object.assign(local,fresh,{liveReadAt:this.clock().toISOString()});
+  }
+  skipCorrectKiot(state,item,fresh) {
+    this.syncKiotProduct(state,fresh,item.id);
+    const result=item.platforms?.kiot||item;
+    Object.assign(result,{status:'unchanged',requestSent:false,error:null,verifiedAt:this.clock().toISOString()});
+  }
   async transaction(kind,codes,fn) {
     const chosen=new Set(codes),ids=this.sim.state.products.filter(p=>chosen.has(p.code)).map(p=>p.id);
     const start=performance.now(),scope={codes,ids,timings:{cloneMs:0,saveMs:0,publishMs:0,networkMs:0,authMs:0,requests:[]}};let active=false;
@@ -67,7 +91,7 @@ export class LiveService {
     const scope=this.sim.liveScope,previous=this.operation?.stage;
     this.stage('Đang lưu nhật ký');
     const start=performance.now();
-    const published=scope?liveDraft(state,scope):null;
+    const published=scope?liveDraft(state,scope,this.sim.state):null;
     if(scope)scope.timings.publishMs+=performance.now()-start;
     const saving=performance.now();
     await this.sim.store.write(published||state,{stableRuns:true,...(scope?{immutable:true}:{})});
@@ -82,10 +106,12 @@ export class LiveService {
     return this.sim.mutate(async state=>{
       this.progress={running:true,loaded:0,total:0,error:null};
       try {
+        const kiotReadAt=this.clock().toISOString();
         const downloaded=await this.client.all(p=>Object.assign(this.progress,p));
         const fresh=downloaded.filter(inStock);
         const current=new Map(state.products.map(p=>[p.id,p]));
         state.lastCheckedAt=this.clock().toISOString();
+        state.kiotReadAt=kiotReadAt;
         // Identity is Kiot ID / SP code, never the name. Keep out-of-stock cycle
         // records separately so a restock does not initialize P0 again.
         const old=new Map([...(state.archivedProducts||[]),...state.products].map(p=>[p.id,p]));
@@ -107,7 +133,15 @@ export class LiveService {
         state.pricedOnly=true;
         state.importStats={...(this.client.lastImport||{read:downloaded.length}),kept:state.products.length,missingPrice:mergedProducts.length-state.products.length};
         state.stockOnly=true;
-        if(onlyWhenChanged&&!changed) return {count:state.products.length,at:state.loadedAt,changed:false};
+        if(onlyWhenChanged&&!changed) {
+          // Publish a new current snapshot even when an old table had no trusted read cursor.
+          const run=state.runs[0];
+          if(run?.dataset==='real'&&run.dataRevision===state.dataRevision){
+            const byId=new Map(state.products.map(p=>[p.id,p]));
+            state.runs=[{...run,rows:run.rows.map(row=>byId.has(row.id)?{...row,liveReadAt:kiotReadAt}:row)},...state.runs.slice(1)];
+          }
+          return {count:state.products.length,at:state.loadedAt,changed:false};
+        }
         state.dataRevision=(state.dataRevision||0)+1;state.loadedAt=this.clock().toISOString();state.dataset='real';
         // Any reload requires a fresh simulation before preparing writes.
         state.prepared=[];
@@ -125,9 +159,9 @@ export class LiveService {
     });
   }
   snapshot(row,product,state) {
-    return {...row,id:product.id,notesBefore:product.notes||'',liveBase:fingerprint(product),localKey:localKey(product),dataRevision:state.dataRevision};
+    return {...row,id:product.id,notesBefore:product.notes||'',liveBase:fingerprint(product),liveReadAt:product.liveReadAt||state.kiotReadAt||null,localKey:localKey(product),dataRevision:state.dataRevision};
   }
-  async prepare(runId,codes,{previewOnly=false,continueOnError=false,excludedCodes=[],batch}={}) {
+  async prepare(runId,codes,{previewOnly=false,continueOnError=false,excludedCodes=[],batch,localOnly=false}={}) {
     // TASK-102: page updates (continue on error) check from list reads and write Kiot in bulk; restore keeps the old engine.
     batch??=this.batchWrites===true&&continueOnError&&!previewOnly&&typeof this.client.listModified==='function'&&typeof this.client.updateMany==='function';
     // Validate before creating a selected-record draft.
@@ -141,7 +175,7 @@ export class LiveService {
       if(!run||run.policy!==POLICY||run.day!==today||run.customDate||run.dataset!=='real'||run.dataRevision!==state.dataRevision) throw new Error('Cần kiểm thử dữ liệu thật mới nhất cho hôm nay');
       const skipped=[],unchanged=[];
       let listAt=null,kiotList=null,sapoList=null;
-      if(batch){
+      if(batch&&!localOnly){
         listAt=this.clock().toISOString();this.stage('Đang đọc danh sách Kiot');
         kiotList=new Map((await this.timed('GET LIST',()=>this.client.all())).map(p=>[p.id,p]));
         if(useSapo){this.stage('Đang đọc danh sách Sapo');sapoList=new Map((await this.timed('SAPO LIST',()=>this.sapo.client.all())).map(p=>[p.id,p]));}
@@ -155,20 +189,20 @@ export class LiveService {
        try{
         const row=run.rows.find(r=>r.code===code),local=state.products.find(p=>p.code===code);
         if(!row||!local||row.status!=='simulated'||row.localKey!==localKey(local)) throw new Error(`${code}: dữ liệu chưa đủ điều kiện; cần kiểm thử lại`);
-        const fresh=batch?kiotList.get(local.id):await this.readProduct(local.id);
+        const fresh=localOnly?local:batch?kiotList.get(local.id):await this.readProduct(local.id);
         if(!fresh)throw new Error(`${code}: Kiot không còn trong danh sách (hết hàng hoặc ngừng bán)`);
         this.stage('Đang đối chiếu',(this.operation?.processed||0)+1);
-        if(fingerprint(fresh)!==row.liveBase) throw new Error(`${code}: Kiot đã thay đổi (${kiotChanges(local,fresh)}); bấm Tải lại từ Kiot rồi kiểm thử lại`);
+        this.checkKiotSnapshot(state,{id:local.id,before:local,row},fresh);
         if(fresh.taxPresent) throw new Error(`${code}: cần đối chiếu giá/thuế trước khi ghi`);
         const key=digest([POLICY,local.id,local.p0,row.m,row.price,row.allowance]);
         const item={code,id:local.id,name:local.name,before:structuredClone(fresh),row:structuredClone(row),key,
           notePreview:liveNote(fresh.notes,row,key,'Thời điểm áp dụng sẽ được ghi khi thực hiện')};
-        if(useSapo){item.sapo=batch?this.sapo.prepareFrom(item.code,sapoList):await this.sapo.prepare(item.code,{previewOnly});
+        if(useSapo){item.sapo=localOnly?this.sapo.resolve(item.code):batch?this.sapo.prepareFrom(item.code,sapoList):await this.sapo.prepare(item.code,{previewOnly});
           // Found by the code before "_": another Kiot product on the same base would write the same Sapo variant.
-          if(item.sapo.code!==code&&state.products.some(p=>p.id!==local.id&&sapoSku(p.code)===item.sapo.code))throw new Error(`${code}: Kiot có mã khác cùng gốc ${item.sapo.code} — chưa thể cập nhật Sapo chung`);if(this.sapoDescription===false){item.sapo.keepContent=true;item.sapo.notePreview=item.sapo.before.content;}else item.sapo.notePreview=sapoNote(item.sapo.before.content,item.row,item.notePreview);}
-        if(batch){
+          if(item.sapo.code!==code&&state.products.some(p=>p.id!==local.id&&sapoSku(p.code)===item.sapo.code))throw new Error(`${code}: Kiot có mã khác cùng gốc ${item.sapo.code} — chưa thể cập nhật Sapo chung`);if(this.sapoDescription===false){item.sapo.keepContent=true;item.sapo.notePreview=item.sapo.before?.content;}else if(!localOnly)item.sapo.notePreview=sapoNote(item.sapo.before.content,item.row,item.notePreview);}
+        if(batch&&!localOnly&&(this.kiotDescription!==false||useSapo)){
           // Send only the side that is still wrong; a product right on both sides is not sent at all.
-          const kiotOk=fresh.currentPrice===row.price&&String(fresh.notes||'').includes(`data-baoq-event="${key}"`);
+          const kiotOk=fresh.currentPrice===row.price&&(this.kiotDescription===false||String(fresh.notes||'').includes(`data-baoq-event="${key}"`));
           const sapoVariant=item.sapo?.before.variants.find(v=>v.id===item.sapo.variantId);
           const sapoOk=!useSapo||(sapoVariant?.price===row.price&&(this.sapoDescription===false||String(item.sapo.before.content||'').includes(key)));
           if(kiotOk&&sapoOk){unchanged.push(code);return null;}
@@ -181,8 +215,13 @@ export class LiveService {
        }
       })).filter(Boolean);
       if(previewOnly)return {previewOnly:true,items,day:today};
-      const prepared={id:randomUUID(),runId,policy:POLICY,at:this.clock().toISOString(),day:today,revision:state.dataRevision,items,skipped,continueOnError,status:'prepared',joint:useSapo,...(useSapo||this.sapoWrite===false?{platforms:useSapo?['kiot','sapo']:['kiot']}:{})};
-      if(batch){prepared.batch=true;prepared.listAt=listAt;prepared.unchanged=unchanged.length;}
+      const prepared={id:randomUUID(),runId,policy:POLICY,at:this.clock().toISOString(),day:today,revision:state.dataRevision,items,skipped,continueOnError,status:'prepared',kiotDescription:this.kiotDescription!==false,joint:useSapo,...(useSapo||this.sapoWrite===false?{platforms:useSapo?['kiot','sapo']:['kiot']}:{})};
+      if(localOnly)prepared.localOnly=true;
+      if(batch){
+        const cursors=items.map(i=>Date.parse(i.row.liveReadAt));
+        prepared.batch=true;prepared.listAt=localOnly?(cursors.length&&cursors.every(t=>Number.isFinite(t)&&t<=this.clock().getTime())?new Date(Math.min(...cursors)).toISOString():null):listAt;
+        prepared.unchanged=unchanged.length;prepared.unchangedCodes=unchanged;
+      }
       state.prepared=[prepared];return prepared;
     };
     return previewOnly?build(this.sim.state):this.transaction('prepare',codes,build);
@@ -195,19 +234,25 @@ export class LiveService {
       const prepared=state.prepared?.find(p=>p.id===id);
       if(prepared?.kind==='restore')throw Error('Dùng chức năng khôi phục cho bản xác nhận này');
       if(this.requireJoint&&!prepared?.joint)throw Error('Cần xác nhận mới cho Kiot + Sapo');
+      if((prepared?.joint||prepared?.platforms?.includes('sapo'))&&this.sapoWrite===false)throw Error('Sapo đã tắt; cần xác nhận lại lượt chỉ giá Kiot');
+      if(this.kiotDescription===false&&prepared?.kiotDescription!==false)throw Error('Đã tắt ghi mô tả Kiot; cần xác nhận lại lượt chỉ giá Kiot');
       if(prepared?.joint)this.sapo.requireVerified();
       if(!prepared||this.clock().getTime()-Date.parse(prepared.at)>300000||prepared.policy!==POLICY||prepared.status!=='prepared'||prepared.day!==vietnamTime(this.clock()).date||prepared.revision!==state.dataRevision) throw new Error('Lượt xác nhận không còn hợp lệ; kiểm thử lại');
       prepared.status='consumed';
       // Kiot-only confirmations still use the verified per-platform engine so they keep restore snapshots.
       const platforms=prepared.platforms||(prepared.joint?['kiot','sapo']:null);
-      const update={id:randomUUID(),at:this.clock().toISOString(),label:prepared.joint?'Cập nhật Kiot + Sapo':'Cập nhật Kiot',mode:platforms?'joint-v1':'stop-v1',...(platforms?{restoreVersion:1}:{}),...(prepared.joint?{sapoBinding:this.sapo.binding}:{}),items:prepared.items.map(item=>({...item,status:'journaled',actualAt:null,error:null,...(platforms?{platforms:Object.fromEntries(platforms.map(name=>[name,{status:'journaled'}]))}:{})}))};
+      const update={id:randomUUID(),at:this.clock().toISOString(),label:prepared.joint?'Cập nhật Kiot + Sapo':prepared.kiotDescription===false?'Cập nhật giá Kiot':'Cập nhật Kiot',kiotDescription:prepared.kiotDescription!==false,mode:platforms?'joint-v1':'stop-v1',...(platforms?{restoreVersion:1}:{}),...(prepared.joint?{sapoBinding:this.sapo.binding}:{}),items:prepared.items.map(item=>({...item,status:'journaled',actualAt:null,error:null,...(platforms?{platforms:Object.fromEntries(platforms.map(name=>[name,{status:'journaled'}]))}:{})}))};
       update.attempts=[{id:randomUUID(),at:this.clock().toISOString(),kind:'commit',status:'running'}];
+      if(platforms?.length===1&&platforms[0]==='kiot'&&prepared.kiotDescription===false)update.journalVersion=2;
       update.continueOnError=prepared.continueOnError===true;update.skipped=structuredClone(prepared.skipped||[]);update.targets=platforms;
-      if(prepared.batch&&platforms){update.batch=true;update.listAt=prepared.listAt;update.unchanged=prepared.unchanged||0;
+      if(prepared.localOnly)update.localOnly=true;
+      if(prepared.batch&&platforms){update.batch=true;update.listAt=prepared.listAt;update.unchanged=prepared.unchanged||0;update.unchangedCodes=structuredClone(prepared.unchangedCodes||[]);
         // A side already right at the check counts as done and is never sent (restore skips it).
         for(const item of update.items)for(const name of item.alreadyOk||[])if(item.platforms[name])item.platforms[name]={status:'done',skipped:true,alreadyOk:true};}
       scope.updateId=update.id;
-      state.updates||=[];state.updates.unshift(update);await this.checkpoint(state,update);
+      // The background job owns this confirmation; its restore snapshots now live in the journal.
+      if(prepared.localOnly)state.prepared=[];
+      state.updates||=[];state.updates.unshift(update);if(!update.batch)await this.checkpoint(state,update);
       if(platforms)await (update.batch?executeBatchJoint:executeJoint)(this,state,update);else await executeBatch(this,state,update);
       await this.finishAttempt(state,update);
       return update;
@@ -217,18 +262,21 @@ export class LiveService {
     const attempt=update.attempts.at(-1);
     attempt.summary=updateSummary(update.items);attempt.items=reportItems(update.items);
     attempt.status='completed';attempt.completedAt=this.clock().toISOString();
+    update.issueCount=issueCount(update);
     this.syncVerifiedTable(state,update);
-    await this.checkpoint(state,update);
+    if(!update.batch)await this.checkpoint(state,update);
   }
   syncVerifiedTable(state,update) {
-    const verified=new Set(update.items.filter(i=>i.platforms?.kiot?.status==='done'&&!i.platforms.kiot.skipped).map(i=>i.id));
+    // Only the simulator's table provider may publish a new current table.
+    if(this.sim.live!==this)return;
+    const verified=new Map(update.items.filter(i=>i.platforms?['done','unchanged'].includes(i.platforms.kiot?.status)&&!i.platforms.kiot.skipped:['done','unchanged'].includes(i.status)).map(i=>[i.id,i.platforms?.kiot?.status||i.status]));
     const run=state.runs[0],today=vietnamTime(this.clock()).date;
     if(!verified.size||!run||run.customDate||run.day!==today||run.policy!==POLICY||run.dataRevision!==state.dataRevision)return;
     const products=new Map(state.products.map(p=>[p.id,p]));
     const revision=(state.dataRevision||0)+1;
     const rows=run.rows.map(row=>verified.has(row.id)&&products.has(row.id)?{
       ...this.snapshot(calculate(products.get(row.id),today),products.get(row.id),{dataRevision:revision}),
-      writeStatus:update.mode==='restore-joint-v1'?'restored':'updated'
+      writeStatus:update.mode==='restore-joint-v1'?'restored':verified.get(row.id)==='unchanged'?'unchanged':'updated'
     }:{...row,dataRevision:revision});
     // New immutable current snapshot; old simulation and write journals retain their before-images.
     state.dataRevision=revision;

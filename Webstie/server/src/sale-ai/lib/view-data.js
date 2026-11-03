@@ -1,8 +1,8 @@
-import { updateSummary, reportItems, summaryText, failureReason } from './update-report.js';
+import { reportItems, summaryText, failureReason, updateReport, reportRows, reportStatus } from './update-report.js';
 
 const pick = (value, keys) => Object.fromEntries(keys.filter(key => value?.[key] !== undefined).map(key => [key,value[key]]));
-const rowFields = ['id','code','name','type','age','m','createdDateVN','p0','currentPrice','price','allowance','net','status','reasons','notesBefore','notePreview','pricingMode','writeStatus'];
-const runFields = ['id','at','day','customDate','trigger','policy','dataRevision','dataset','hiddenBeforeNoMarkdownCount'];
+const rowFields = ['id','code','name','type','age','m','createdDateVN','p0','currentPrice','price','allowance','net','status','reasons','notesBefore','notePreview','pricingMode','writeStatus','liveReadAt'];
+const runFields = ['id','at','day','customDate','trigger','policy','dataRevision','dataset','hiddenBeforeNoMarkdownCount','hiddenOver600mCount'];
 const productFields = ['id','code','name','currentPrice','createdAt','active','stock'];
 const caches = new WeakMap();
 const dayFormat = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Ho_Chi_Minh'});
@@ -29,7 +29,7 @@ function cached(state, revision) {
   const runs=state.runs||[], products=state.products||[];
   data={revision,metrics:{products:products.length,inStock:products.filter(p=>p.active&&p.stock>0).length,hottrend:products.filter(p=>p.type==='hottrend').length,waiting:(runs[0]?.rows||[]).filter(r=>r.status==='waiting').length},
     history:[...runs.map(run=>({kind:'simulation',id:run.id,at:run.at,day:run.day,run:{...pick(run,runFields),rowCount:run.rows.length}})),
-      ...(state.updates||[]).map(update=>({kind:'update',id:update.id,at:update.at,day:dayFormat.format(new Date(update.at)),update:{...pick(update,['id','at','mode','outcome','platformSummary','issueCount','trigger','error']),canRestore:update.restoreVersion===1&&update.items.some(i=>Object.values(i.platforms||{}).some(p=>p.status==='done'))&&!update.items.some(i=>Object.values(i.platforms||{}).some(p=>['unknown','sending'].includes(p.status)))&&!(state.updates||[]).some(u=>u.mode==='restore-joint-v1'&&u.sourceId===update.id&&u.items.some(i=>Object.values(i.platforms||{}).some(p=>p.requestSent))),summary:updateSummary(update.items)}}))].sort((a,b)=>Date.parse(b.at)-Date.parse(a.at))};
+      ...(state.updates||[]).map(update=>({kind:'update',id:update.id,at:update.at,day:dayFormat.format(new Date(update.at)),update:{...pick(update,['id','at','mode','kiotDescription','outcome','platformSummary','issueCount','trigger','error']),hasSapo:update.items.some(i=>i.platforms?.sapo),canRestore:update.restoreVersion===1&&update.items.some(i=>Object.values(i.platforms||{}).some(p=>p.status==='done'))&&!update.items.some(i=>Object.values(i.platforms||{}).some(p=>['unknown','sending'].includes(p.status)))&&!(state.updates||[]).some(u=>u.mode==='restore-joint-v1'&&u.sourceId===update.id&&u.items.some(i=>Object.values(i.platforms||{}).some(p=>p.requestSent))),summary:updateReport(update),message:summaryText(null,update)}}))].sort((a,b)=>Date.parse(b.at)-Date.parse(a.at))};
   caches.set(state,data);return data;
 }
 export function viewData(state,params,{revision,today,dataset,busy,progress}) {
@@ -60,12 +60,16 @@ export function viewData(state,params,{revision,today,dataset,busy,progress}) {
 export function updateDetail(state,id,params) {
   const update=(state.updates||[]).find(u=>u.id===id);
   if(!update)throw Object.assign(new Error('Không tìm thấy lượt cập nhật'),{status:404});
-  const attempt=params.get('attempt');let items=update.items||[];
+  const attempt=params.get('attempt');let items=reportRows(update);
   if(attempt!==null){const index=Number(attempt);if(!Number.isSafeInteger(index)||index<0||!update.attempts?.[index])throw Object.assign(new Error('Không tìm thấy lần thử'),{status:404});items=update.attempts[index].items||[];}
-  if(params.get('errorsOnly')==='true')items=[...items.filter(p=>p.status!=='done'),...(attempt===null?update.skipped||[]:[])].filter((p,i,all)=>all.findIndex(x=>x.code===p.code)===i);
+  const filter=params.get('filter')||(params.get('errorsOnly')==='true'?'issues':'all');
+  if(!['all','success','issues','unchanged','skipped_sapo_zero_price'].includes(filter))throw Object.assign(new Error('Bộ lọc lịch sử không hợp lệ'),{status:400});
+  if(filter==='success')items=items.filter(p=>reportStatus(p)==='done');
+  if(filter==='issues')items=items.filter(p=>!['done','unchanged','skipped_sapo_zero_price'].includes(reportStatus(p)));
+  if(['unchanged','skipped_sapo_zero_price'].includes(filter))items=items.filter(p=>reportStatus(p)===filter);
   const pagination=paginate(items,params);
-  pagination.items=pagination.items.map(p=>pick(p.row||p.before?reportItems([p])[0]:({...p,error:failureReason(p)}),['id','code','name','beforePrice','price','status','error','stage','failureStage','rollbackResult','platforms']));
-  return {update:{...pick(update,['id','at','mode','outcome']),summary:updateSummary(update.items),message:summaryText(updateSummary(update.items),update)},pagination,
+  pagination.items=pagination.items.map(p=>({...pick(p.row||p.before?reportItems([p])[0]:({...p,error:failureReason(p)}),['id','code','name','beforePrice','price','status','error','stage','failureStage','rollbackResult','platforms']),reportStatus:reportStatus(p)}));
+  return {update:{...pick(update,['id','at','mode','outcome']),summary:updateReport(update),message:summaryText(null,update)},pagination,
     attempts:(update.attempts||[]).map((a,index)=>({index,at:a.at,failed:(a.items||[]).filter(p=>p.status!=='done').length})).filter(a=>a.failed)};
 }
 

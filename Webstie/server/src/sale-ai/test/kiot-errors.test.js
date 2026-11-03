@@ -13,7 +13,7 @@ test('connect timeout preserves safe code, GET path and phase without secret tex
 test('GET retries a closed socket once on a fresh connection; PUT never retries',async()=>{
   for(const method of ['GET','PUT']){
     let calls=0;const client=new KiotClient({credentials,fetcher:async(url,options)=>{
-      calls++;assert.equal(options.headers.Connection,'close');
+      calls++;assert.equal(options.headers.Connection,undefined);
       if(calls===1)throw Object.assign(new TypeError('fetch failed'),{cause:{code:'UND_ERR_SOCKET'}});
       return {ok:true,status:200,json:async()=>({id:1,code:'TEST'})};
     }});client.token='FAKE';client.expires=Date.now()+60000;
@@ -30,7 +30,7 @@ test('real local HTTP socket closed before response recovers with GET only',asyn
   const server=http.createServer((req,res)=>{calls++;connections.push(req.headers.connection);if(calls===1){req.socket.destroy();return;}res.setHeader('Content-Type','application/json');res.end(JSON.stringify({id:1,code:'TEST',name:'Mẫu',basePrice:5}));});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
   const client=new KiotClient({credentials,fetcher:async(url,options)=>fetch(base+'/product',options)});client.token='FAKE';client.expires=Date.now()+60000;
-  try {const p=await client.product(1);assert.equal(p.code,'TEST');assert.equal(calls,2);assert.deepEqual(connections,['close','close']);}
+  try {const p=await client.product(1);assert.equal(p.code,'TEST');assert.equal(calls,2);assert.deepEqual(connections,['keep-alive','keep-alive']);}
   finally{await new Promise(r=>server.close(r));}
 });
 test('socket reset, DNS and response timeout remain distinguishable, never retry PUT',async()=>{

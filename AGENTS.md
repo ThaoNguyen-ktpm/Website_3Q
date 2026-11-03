@@ -37,14 +37,14 @@
 - Dùng trạng thái `ready_for_review` khi bàn giao cho Claude; chỉ ghi `verified` khi có kết quả kiểm tra độc lập. Nếu chưa review, nói rõ code đã hoàn tất nhưng chưa được Claude kiểm tra.
 
 ## Kiểm tra
-- Website: `npm run build` và `npm test` tại `D:\Website_3Q\Webstie`.
+- Website: `npm run build` và `npm test` tại `D:\Website_3Q\Webstie`; test chung gồm shared, frontend, server và Sale AI, không gồm BossTele.
 - BossTele: `npm test` tại `D:\Website_3Q\Webstie\BossTele`.
 - Sale AI: `node --test *.test.js` tại `Webstie/server/src/sale-ai/test` (hoặc `npm run test:sale-ai` tại server); Vitest loại thư mục test lõi này.
 
 ## Bản đồ repo
 Chỉ ghi cấp thư mục. Khi thêm, xóa hoặc đổi vai trò một thư mục dưới đây, cập nhật mục này trong cùng thay đổi.
 
-- `Webstie/`: thư mục chính của ứng dụng; `npm run dev`, `npm run build`, `npm test` chạy tại đây. Build/test gốc gồm server và frontend; frontend có lockfile riêng, dùng `npm ci --prefix frontend` khi cài đặt.
+- `Webstie/`: thư mục chính của ứng dụng; `npm run dev`, `npm run build`, `npm test` chạy tại đây. Build gốc gồm server và frontend; test chung gồm shared, frontend, server và Sale AI; frontend có lockfile riêng, dùng `npm ci --prefix frontend` khi cài đặt.
 - `Webstie/server/`: API Express + Prisma (TypeScript), test bằng Vitest + supertest.
   - `src/routes/` → `src/controllers/` → `src/services/` → `src/models/` (truy cập Prisma).
   - `src/middlewares/`: xác thực, phân quyền, giới hạn tần suất, kiểm tra cùng nguồn, xử lý lỗi.
@@ -53,8 +53,10 @@ Chỉ ghi cấp thư mục. Khi thêm, xóa hoặc đổi vai trò một thư m�
 - `Webstie/frontend/`: giao diện web duy nhất, React + Vite + TypeScript, cổng 8787; `src/` chứa các trang và thành phần dùng chung.
   - `src/api/`: gọi API server; Tài liệu dùng quyền `documents.view` và `documents.manage`.
   - `public/`: tài nguyên tĩnh, thương hiệu.
+- `Webstie/shared/`: module CommonJS dùng chung cho web và BossTele (kết nối, tra sản phẩm, tính giá); `test/` dùng node:test. Khóa vẫn ở `Webstie/BossTele/.env`.
 - `Webstie/BossTele/`: công cụ Node >= 22 riêng (tìm sản phẩm, chat, định giá, bộ lọc Telegram). `lib/` logic, `test/` test, `docs/` tài liệu. `vendor/` là submodule, không sửa.
 - `Webstie/server/src/sale-ai/`: lõi JS và giao diện cũ Sale AI, chạy trong Express; không có tiến trình riêng. Kho ở `Webstie/server/data/sale-ai/`, không mang dữ liệu cũ.
+- `Webstie/server/src/v2/`: tài nguyên Điều hành V2, phục vụ `/v2/` sau đăng nhập, chỉ Admin; snapshot KPI ở `Webstie/server/data/v2/`, ngoài thư mục tĩnh.
 - `tasks/`: spec, result, review từ `TASK-009`. `Webstie/BossTele/tasks/`: lưu trữ `TASK-001` đến `TASK-008`.
 - `server/data/`: PDF gốc, chỉ mục tài liệu JSON và cache mô hình embedding cục bộ; không đưa vào Git.
 - `PRODUCT.md`, `DESIGN.md`: mô tả sản phẩm và hệ thống thiết kế giao diện.
@@ -84,4 +86,15 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
 
+## Serena (Bảo 2026-11-02)
+
+MCP `serena` (Serena 2, công cụ `serena_repl`, đọc code bằng language server TypeScript; cấu hình `.serena/project.yml`).
+- Tra cứu, đọc code, phạm vi ảnh hưởng: dùng CodeGraph trước (nhanh hơn).
+- Dùng Serena khi cần chính xác theo ngữ nghĩa: tìm mọi chỗ dùng một hàm/biến (`s.lsp.find_referencing_symbols`), tìm định nghĩa, đổi tên hoặc chuyển symbol qua nhiều file. Gọi `s.info("lsp")` / `s.info("edit")` để xem cách dùng.
+- Lần gọi đầu mỗi phiên mất vài giây để khởi động language server. Không có Serena thì làm như cũ.
+
 TASK-104: số task Sale AI tính cả lịch sử `D:\BaoQ-AI\tasks`; tra cả hai nơi trước khi chọn số mới. Không xóa kho lưu trữ cũ.
+
+## Báo máy đang làm việc (31/10/2026)
+
+Laptop = `DESKTOP-4G5GOSR`; máy khác là PC. Báo cáo kết quả có chạy lệnh trên máy thì ghi dòng đầu "Máy: Laptop (DESKTOP-4G5GOSR)" hoặc "Máy: PC (<hostname>)". Không bật bot Telegram nếu chưa chắc máy kia đã tắt bot.

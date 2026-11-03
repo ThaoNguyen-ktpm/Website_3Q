@@ -7,7 +7,7 @@ const path = require('node:path');
 
 const SNAPSHOT = path.join(__dirname, '..', 'server', 'data', 'catalog-cache.json');
 const SORTS = ['newest', 'cheap', 'expensive'];
-const fold = text => String(text ?? '').normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
+const { fold } = require('../shared/text');
 // KiotViet uses 0 for products without a selling price.
 const priced = price => (typeof price === 'number' && price > 0 ? price : 0);
 const created = row => Date.parse(row.detail?.createdDate ?? '') || 0;
