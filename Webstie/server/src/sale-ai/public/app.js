@@ -1,4 +1,4 @@
-import { renderLiveResults, renderHistory, showUpdateDetails, clearLiveSelection, notifyUpdate } from './live-ui.js';
+import { renderLiveResults, renderHistory, showUpdateDetails, clearLiveSelection, notifyUpdate, renderAutoUpdate, renderApproval } from './live-ui.js';
 import { ageCell } from './age-cell.js';
 
 // Website_3Q frames this page with ?embed=1 (Bảo 2026-10-19, TASK-035): dark purple theme without the own menu, and the page
@@ -28,7 +28,7 @@ const context=()=>{
   const source=state.dataset;
   return {esc,money,dateTime,pagedTable,api:(path,body,options={})=>api(path,body,{dataset:source,...options}),action,message,query,mFilter,loading:loadedKey!==requestKey(),canWrite:()=>!pending&&!state.busy&&loadedKey===requestKey()&&dataset===source,beginOperation:()=>{pending=true;},endOperation:()=>{pending=false;},acceptUpdate:async()=>{if(dataset===source)await loadView();},openUpdateHistory:id=>{showUpdateDetails({dataset:source},id,context());}};
 };
-const pages = Object.fromEntries(['results','history','edits'].map(key=>[key,{page:1,size:10}]));
+const pages = Object.fromEntries(['results','history','edits','pending','legacy'].map(key=>[key,{page:1,size:10}]));
 let resultsRunId;
 let controller,requestSequence=0,loadedKey='',searchTimer;
 function requestKey(){return JSON.stringify([dataset,view,selectedRun,query,mFilter,pages]);}
@@ -41,16 +41,18 @@ async function loadView(focusTarget){
   const sequence=++requestSequence,key=requestKey(),source=dataset;
   lockOldView();
   const pager=pages[view==='history'?'history':'results'];
-  const params=new URLSearchParams({view,page:pager.page,size:pager.size,q:query,edits_page:pages.edits.page,edits_size:pages.edits.size});
+  const params=new URLSearchParams({view,page:pager.page,size:pager.size,q:query,edits_page:pages.edits.page,edits_size:pages.edits.size,pending_page:pages.pending.page,pending_size:pages.pending.size,legacy_page:pages.legacy.page,legacy_size:pages.legacy.size});
   if(source==='real'&&view==='results'&&mFilter!=='')params.set('m',mFilter);
   if(selectedRun)params.set('run',selectedRun);
   try{
     const data=await api('/api/view?'+params,undefined,{signal:controller.signal,dataset:source});
     if(sequence!==requestSequence||key!==requestKey())return false;
     state=data;
+    if(embedded&&Number.isSafeInteger(data.approvalCount))window.parent.postMessage({type:'baoq-sale-ai-approval-count',count:data.approvalCount},location.origin);
     if(source==='real'&&data.job?.kind==='update')observedJob=data.job.id;
     if(data.pagination)Object.assign(pager,{page:data.pagination.page,size:data.pagination.size});
     if(data.editsPagination)Object.assign(pages.edits,{page:data.editsPagination.page,size:data.editsPagination.size});
+    for(const group of ['pending','legacy'])if(data[group])Object.assign(pages[group],{page:data[group].page,size:data[group].size});
     loadedKey=requestKey();render();syncUrl();$('#content').setAttribute('aria-busy','false');
     if(focusTarget)$('#content').querySelector(focusTarget)?.focus();
     return true;
@@ -63,7 +65,7 @@ async function ensureView(){
 }
 function readUrl() {
   const params = new URL(location.href).searchParams;
-  view = ['results','history'].includes(params.get('view')) ? params.get('view') : 'results';
+  view = ['results','history','approval'].includes(params.get('view')) ? params.get('view') : 'results';
   dataset = params.get('dataset') === 'sample' ? 'sample' : 'real';
   query = params.get('q') || ''; selectedRun = params.get('run') || null;
   const nextM=dataset==='real'?(params.get('m')??''):'';
@@ -99,7 +101,7 @@ function announcePage(key) {$('#page-status').textContent=`${key==='history'?'L�
 readUrl();
 function pagedTable(headers, items, row, key) {
   const pager = pages[key] ||= {page:1,size:10};
-  const remote=key==='edits'?state.editsPagination:state.pagination;
+  const remote=['pending','legacy'].includes(key)?state[key]:key==='edits'?state.editsPagination:state.pagination;
   const total=remote?.total??items.length;
   const totalPages = remote?.totalPages??Math.max(1,Math.ceil(items.length/pager.size));
   pager.page = Math.min(Math.max(1,pager.page),totalPages);
@@ -131,7 +133,7 @@ async function api(path, body, options={}) {
   // Relative to the page: /api/… standalone, /sale-ai/api/… inside Website_3Q (TASK-035).
   let response,data;
   try {
-    response = await fetch(path.replace(/^\//,'')+querySuffix+'dataset='+source, {...(body === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,dataset:source})}),signal:options.signal});
+    response = await fetch(path.replace(/^\//,'')+querySuffix+'dataset='+source, {...(body === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(path==='/api/auto-update/settings'?body:{...body,dataset:source})}),signal:options.signal});
     data = await response.json();
   }catch(error){
     if(error.name==='AbortError')throw error;
@@ -192,7 +194,10 @@ function render(){
     if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
     b.href=viewUrl(b.dataset.view);
   });
-  $('#title').textContent={results:'Bảng giá sale',history:'Lịch sử'}[view];
+  $('#title').textContent={results:'Bảng giá sale',history:'Lịch sử',approval:'Duyệt'}[view];
+  $('#page-description').textContent=view==='approval'?'Món giảm xuống dưới giá vốn: chỉ ghi lên Kiot khi bấm Duyệt.':'Kiểm tra giá trước khi ghi lên Kiot + Sapo.';
+  $('#auto-update').hidden=dataset!=='real'||view!=='results';
+  if(dataset==='real')renderAutoUpdate(state.autoUpdate,$('#auto-update'),context());
   // Bảo 2026-10-21: the Kiot data line and its reload button only belong to Kết quả, not Lịch sử.
   $('#data-bar').hidden=view==='history';
   $('#header-metrics').hidden=view!=='results';
@@ -226,6 +231,11 @@ function render(){
     $('#content').innerHTML=`<p class="muted result-caption">Kết quả ${run?.customDate?'lịch sử':'hiện hành'} · Chỉ mô phỏng</p>`+(run?`<p class="muted">${esc(run.day)} · ${dateTime(run.at)} · ${run.trigger==='schedule'?'Theo lịch':'Bấm chạy'} · Đã mô phỏng</p>`+pagedTable(['Sản phẩm','Tuổi / M / Ngày tạo Kiot','P0 / Giá mẫu','Giá dự kiến','Quyền sale','Kết quả / Ghi chú dự kiến'],run.rows,r=>`<tr><td><b>${esc(r.code)}</b><span class="small">${esc(r.name)}</span><span class="badge">${r.type == null ? 'Chưa xác định trong lượt này' : typeLabel(r.type)}</span></td><td>${ageCell(r,esc)}</td><td class="money">${money(r.p0)}<span class="small">Giá mẫu: ${money(r.currentPrice)}</span></td><td class="money">${money(r.price)}${r.pricingMode==='manual'?'<span class="small">Giá tay duyệt riêng</span>':''}</td><td class="money">${money(r.allowance)}</td><td><span class="${r.status==='waiting'?'wait':'muted'}">${r.reasons.length?r.reasons.map(esc).join('<br>'):'Đã mô phỏng'}</span>${r.notePreview?`<details><summary>Xem ghi chú</summary><pre>${esc(r.notePreview)}</pre></details>`:''}</td></tr>`, 'results'):`<div class="empty">Bảng sẽ tự chuẩn bị kết quả khi mở trang.</div>`);
     }
   }
+  if(view==='approval'){
+    renderApproval(state,$('#content'),context());
+    const search=$('#approval-search');search.oninput=event=>{clearTimeout(searchTimer);if(event?.isComposing)return;query=search.value;pages.pending.page=pages.legacy.page=1;syncUrl();lockOldView();searchTimer=setTimeout(()=>loadView('#approval-search'),150);};
+    search.oncompositionend=()=>search.oninput();
+  }
   if(view==='history')renderHistory(state,$('#content'),context(),dataset==='real');
   document.querySelectorAll('[data-run]').forEach(b=>b.onclick=()=>{selectedRun=b.dataset.run;navigate('results');});
   if(view==='history' && state.manualEdits?.length) $('#content').insertAdjacentHTML('beforeend', '<h2 class="manual-history-title">Lịch sử nhập giá tay — chỉ mô phỏng</h2>'+pagedTable(['Sản phẩm / Thời điểm','Giá bán trước → sau','Quyền sale trước → sau'],state.manualEdits,e=>`<tr><td>${esc(e.code)} · ${esc(e.name)}<span class="small">${dateTime(e.at)}</span></td><td>${money(e.before?.price)} → ${money(e.after.price)}</td><td>${money(e.before?.allowance)} → ${money(e.after.allowance)}</td></tr>`, 'edits'));
@@ -242,7 +252,7 @@ window.addEventListener('popstate',()=>{
 $('#refresh').onclick=()=>action(async()=>{await api('/api/kiot/refresh',{});selectedRun=null;message('Đã tải dữ liệu và cập nhật bảng.');});
 if(await loadView()){if(!state.busy)await ensureView();}
 // TASK-102: progress of a page update written in lots, from /api/status every 3 s.
-function renderProgress(op){
+function renderProgress(op,autoRunning=false){
   const box=$('#update-progress');if(!box)return;
   if(!op){box.hidden=true;box.innerHTML='';return;}
   const b=op.batch||{total:op.total,done:Math.min(...Object.values(op.platforms||{all:{processed:op.processed}}).map(p=>p.processed)),failed:0,unknown:0},finished=Math.min(b.total,b.done+b.failed+b.unknown),percent=b.total?Math.floor(finished*100/b.total):0;
@@ -250,7 +260,7 @@ function renderProgress(op){
   const eta=b.etaSeconds==null?'Đang ước tính thời gian…':`Còn khoảng ${Math.max(1,Math.ceil(b.etaSeconds/60))} phút · dự kiến xong lúc ${time(Date.now()+b.etaSeconds*1000)}`;
   const bar=(label,p)=>p?`<div class="progress-row"><span>${label}</span><progress max="${p.total||1}" value="${p.processed}"></progress><span>${p.processed}/${p.total}</span></div>`:'';
   box.hidden=false;
-  box.innerHTML=`<div class="progress-head"><b>Đang kiểm tra và cập nhật ${count(b.total)} món · ${count(finished)}/${count(b.total)} · ${percent}%</b><span>${eta}</span></div>
+  box.innerHTML=`<div class="progress-head"><b>${autoRunning?'Tự động cập nhật · ':''}Đang kiểm tra và cập nhật ${count(b.total)} món · ${count(finished)}/${count(b.total)} · ${percent}%</b><span>${eta}</span></div>
     <progress class="progress-main" max="100" value="${percent}"></progress>
     <ol class="progress-steps"><li class="done">Kiểm tra điều kiện</li><li class="current">${op.batch?`Ghi và xác minh lô ${b.lot}/${b.lots}`:'Ghi và xác minh từng món'}</li><li>Lưu lịch sử</li></ol>
     ${b.pause?`<p class="progress-pause">${b.pause.side==='kiot'?'Kiot':'Sapo'} báo quá giới hạn — tạm nghỉ đến ${time(b.pause.until,true)} rồi tự chạy tiếp.</p>`:''}
@@ -262,9 +272,16 @@ setInterval(async()=>{
   if(polling)return;polling=true;
   try {
     const status=await api('/api/status');
+    if(status.autoUpdate&&state&&dataset==='real'){
+      state.busy=state.busy||status.busy;
+      if(typeof embedded!=='undefined'&&embedded&&Number.isSafeInteger(status.approvalCount))window.parent.postMessage({type:'baoq-sale-ai-approval-count',count:status.approvalCount},location.origin);
+      state.autoUpdate=status.autoUpdate;
+      renderAutoUpdate(status.autoUpdate,$('#auto-update'),context());
+      if(status.busy)$('#results-area')?.querySelectorAll('button,input[type="checkbox"]').forEach(e=>e.disabled=true);
+    }
     statusOffline=false;
     if(status.job?.status==='running'&&status.job.kind==='update')observedJob=status.job.id;
-    renderProgress(dataset==='real'&&status.operation?.running&&status.operation.source===dataset?status.operation:null);
+    renderProgress(dataset==='real'&&status.operation?.running&&status.operation.source===dataset?status.operation:null,status.autoUpdate?.running);
     if(dataset==='real') {
       if(status.operation?.running&&status.operation.source===dataset){
         const text=status.operation.platforms?Object.entries(status.operation.platforms).map(([name,p])=>(name==='kiot'?'Kiot':'Sapo')+': '+(name==='sapo'&&status.sapoWait?'Đang chờ giới hạn Sapo…':p.stage)+' · '+p.processed+'/'+p.total+' sản phẩm').join(' | '):(status.sapoWait?'Đang chờ giới hạn Sapo…':status.operation.stage)+' · '+status.operation.processed+'/'+status.operation.total+' sản phẩm';
@@ -286,6 +303,7 @@ setInterval(async()=>{
     if(status.revision===state?.revision&&!state?.busy)return;
     if(await loadView())message('Bảng đã cập nhật dữ liệu mới.');
   } catch(error){
+    if(typeof embedded!=='undefined'&&embedded)window.parent.postMessage({type:'baoq-sale-ai-approval-count',count:null},location.origin);
     if(error.name!=='AbortError'&&!statusOffline){
       statusOffline=true;message(error.message,true);
       const box=$('#update-progress');if(box){box.hidden=false;box.textContent=error.message;}

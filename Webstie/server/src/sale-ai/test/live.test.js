@@ -20,7 +20,7 @@ test('unpriced products archived after recovery; valid price returns identity/P0
 });
 
 const clone=structuredClone;
-const raw=(id=1)=>({id,code:'REAL-'+id,name:'Túi '+id,basePrice:35e6,createdDate:'2026-12-03T17:39:24.6030000',isActive:true,description:'<p>Ghi chú gốc !</p>',inventories:[{branchId:44466,onHand:1}],categoryId:123});
+const raw=(id=1)=>({id,code:'REAL-'+id,name:'Túi '+id,basePrice:35e6,createdDate:'2026-12-03T17:39:24.6030000',isActive:true,description:'<p>Ghi chú gốc !</p>',inventories:[{branchId:44466,cost:1,onHand:1}],categoryId:123});
 const now=()=>new Date('2027-01-20T03:00:00Z');
 async function fixture() {
   let saved=null;
@@ -118,7 +118,7 @@ test('stock filter uses branch 44466, keeps separate SPs with identical names an
   const rows=[raw(1),raw(2),raw(3),raw(4),raw(5),raw(6),raw(7)];
   rows[0].name=rows[1].name='Tên trùng';rows[1].basePrice=50e6;rows[1].inventories[0].onHand=2;
   rows[2].inventories[0].onHand=0;rows[3].inventories[0].onHand=-1;
-  rows[4].inventories=[{branchId:999,onHand:10}];rows[5].isActive=false;rows[6].inventories[0].onHand=null;
+  rows[4].inventories=[{branchId:999,cost:1,onHand:10}];rows[5].isActive=false;rows[6].inventories[0].onHand=null;
   const client=new KiotClient();client.request=async path=>{assert.match(path,/BranchIds=44466/);assert.match(path,/isActive=true/);return {total:rows.length,data:rows};};
   const result=await client.all();assert.deepEqual(result.map(p=>p.code),['REAL-1','REAL-2']);assert.equal(result[1].stock,2);assert.deepEqual(client.lastImport,{read:7,kept:2,filtered:5});
   assert.equal(result[0].name,result[1].name);assert.notEqual(result[0].id,result[1].id);

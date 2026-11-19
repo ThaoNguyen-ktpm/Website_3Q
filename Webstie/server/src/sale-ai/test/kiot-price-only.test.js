@@ -23,7 +23,7 @@ async function request(sale,path,body){
  let status,data;await sale.handler(req,{writeHead:code=>{status=code;},end:raw=>{data=JSON.parse(raw);}});return {status,body:data};
 }
 async function fixture({batch=false,corrupt=false}={}){
- const products=[1,2].map(id=>normalizeProduct({id,code:'SP'+id,name:'Túi '+id,basePrice:35e6,createdDate:'2026-09-01',isActive:true,description:'<b>Gốc '+id+'</b>',inventories:[{branchId:44466,onHand:1}]}));
+ const products=[1,2].map(id=>normalizeProduct({id,code:'SP'+id,name:'Túi '+id,basePrice:35e6,createdDate:'2026-09-01',isActive:true,description:'<b>Gốc '+id+'</b>',inventories:[{branchId:44466,cost:1,onHand:1}]}));
  const calls=[],sapoCalls=[];
  const apply=(p,fields)=>{calls.push(structuredClone(fields));assert.deepEqual(Object.keys(fields),['basePrice']);const actual=products.find(x=>x.id===p.id);actual.currentPrice=fields.basePrice;if(corrupt)actual.notes='mô tả bị đổi';};
  const client={all:async()=>structuredClone(products),product:async id=>structuredClone(products.find(p=>p.id===id)),update:async(p,fields)=>apply(p,fields),

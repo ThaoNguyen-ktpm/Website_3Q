@@ -7,7 +7,7 @@ import {summaryText} from '../lib/update-report.js';
 const clone=structuredClone, clock=()=>new Date('2027-01-20T03:00:00Z');
 async function fixture(count=3) {
   let disk=null;const store={read:async()=>clone(disk),write:async s=>{disk=clone(s);}};
-  const products=Array.from({length:count},(_,i)=>normalizeProduct({id:i+1,code:'B-'+(i+1),name:'Mẫu '+(i+1),basePrice:35e6,createdDate:'2026-12-03',isActive:true,description:'Ghi chú cũ',inventories:[{branchId:44466,onHand:1}]}));
+  const products=Array.from({length:count},(_,i)=>normalizeProduct({id:i+1,code:'B-'+(i+1),name:'Mẫu '+(i+1),basePrice:35e6,createdDate:'2026-12-03',isActive:true,description:'Ghi chú cũ',inventories:[{branchId:44466,cost:1,onHand:1}]}));
   const original=clone(products),calls=[];
   const apply=(id,fields)=>{const p=products.find(p=>p.id===id);if('basePrice' in fields)p.currentPrice=fields.basePrice;if('description' in fields)p.notes=fields.description;};
   const client={all:async()=>clone(products),product:async id=>clone(products.find(p=>p.id===id)),update:async(p,fields)=>{
@@ -34,7 +34,7 @@ test('closed socket on pre-write GET recovers through KiotClient and permits exa
   const adapter=new KiotClient({credentials:{retailer:'baoqluxury',client:'FAKE',secret:'FAKE'},fetcher:async(url,options)=>{
     assert.equal(options.method,'GET');assert.equal(options.headers.Connection,undefined);
     if(++reads===2)throw Object.assign(new TypeError('fetch failed'),{cause:{code:'UND_ERR_SOCKET'}});
-    const p=f.products[0];return {ok:true,status:200,json:async()=>({id:p.id,code:p.code,name:p.name,basePrice:p.currentPrice,createdDate:p.createdAt,isActive:p.active,description:p.notes,inventories:[{branchId:44466,onHand:p.stock}]})};
+    const p=f.products[0];return {ok:true,status:200,json:async()=>({id:p.id,code:p.code,name:p.name,basePrice:p.currentPrice,createdDate:p.createdAt,isActive:p.active,description:p.notes,inventories:[{branchId:44466,cost:1,onHand:p.stock}]})};
   }});adapter.token='FAKE';adapter.expires=Date.now()+60000;
   f.client.product=id=>adapter.product(id);
   const u=await f.live.commit(f.proposal.id,true);

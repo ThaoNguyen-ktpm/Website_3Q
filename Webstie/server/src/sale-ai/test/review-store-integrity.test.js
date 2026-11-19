@@ -15,7 +15,7 @@ async function temporary(fn){
  const dir=await mkdtemp(join(tmpdir(),'saleai-review-'));
  try{await fn(dir);}finally{await rm(dir,{recursive:true,force:true});}
 }
-const state=()=>({version:1,cycleVersion:2,policy:POLICY,products:[{id:1,code:'SP1',name:'Túi',currentPrice:35e6}],runs:[],updates:[],prepared:[]});
+const state=()=>({version:1,cycleVersion:2,policy:POLICY,products:[{id:1,code:'SP1',name:'Túi',cost:1,currentPrice:35e6}],runs:[],updates:[],prepared:[]});
 
 test('mixed old/new journals and compressed runs have deterministic audits and apply safely',()=>temporary(async dir=>{
  const store=new SplitStore(join(dir,'kiot-state.json')),s=state();
@@ -43,7 +43,7 @@ test('mixed old/new journals and compressed runs have deterministic audits and a
 }));
 
 test('disk-backed background update returns complete refreshed API rows and skips repeat selection',()=>temporary(async dir=>{
- const products=[1,2].map(id=>normalizeProduct({id,code:'SP'+id,name:'Túi '+id,basePrice:35e6,createdDate:'2026-09-01',description:'Kiot gốc',isActive:true,inventories:[{branchId:44466,onHand:1}]}));
+ const products=[1,2].map(id=>normalizeProduct({id,code:'SP'+id,name:'Túi '+id,basePrice:35e6,createdDate:'2026-09-01',description:'Kiot gốc',isActive:true,inventories:[{branchId:44466,cost:1,onHand:1}]}));
  const writes=[];let modified=[];
  const client={all:async()=>structuredClone(products),listModified:async()=>structuredClone(modified),
   updateMany:async entries=>{modified=[];for(const {product,fields} of entries){const actual=products.find(p=>p.id===product.id);actual.currentPrice=fields.basePrice;modified.push(actual);writes.push(actual.code);}}};

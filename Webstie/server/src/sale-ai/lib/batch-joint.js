@@ -40,9 +40,9 @@ export async function executeBatchJoint(service,state,update){
  for(const item of update.items){
   const pending=Object.values(item.platforms).filter(p=>p.status!=='done');if(!pending.length)continue;
   try{
-   const local=state.products.find(p=>p.id===item.id);const row=calculate(local,today);
+   const local=state.products.find(p=>p.id===item.id);const row=service.preflightRow(state,update,item,calculate(local,today));
    const key=createHash('sha256').update(JSON.stringify([local.p0,local.manualPricing])).digest('hex');
-   if(state.policy!==POLICY||key!==item.row.localKey||row.status!=='simulated'||row.price!==item.row.price||row.allowance!==item.row.allowance)throw Error('Điều kiện hoặc mốc M thay đổi');
+   if(state.policy!==POLICY||key!==item.row.localKey||row.price!==item.row.price||row.allowance!==item.row.allowance)throw Error('Điều kiện hoặc mốc M thay đổi');
    for(const p of pending)p.status='ready';
   }catch(e){for(const p of pending){p.status='preflight_failed';p.error=e.message;}}
  }

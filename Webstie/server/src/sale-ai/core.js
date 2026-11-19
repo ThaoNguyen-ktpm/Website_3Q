@@ -1,3 +1,4 @@
+import {approvalGroups} from './lib/approval.js';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
@@ -13,8 +14,10 @@ import { viewData, updateDetail, filterResultRows } from './lib/view-data.js';
 import {SapoClient,SapoService} from './lib/sapo.js';
 import {mkdir,access} from 'node:fs/promises';
 import {audit,applyPlan} from './lib/store-cleanup.js';
+import {Store} from './lib/store.js';
+import {AutoUpdate,autoSelection,AUTO_UPDATE_LIMIT} from './lib/auto-update.js';
 /** @param {any} [options] JS compatibility boundary; core validation remains unchanged. */
-export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data/sale-ai/', import.meta.url)), store, source = {load:async()=>[]}, clock, liveStore, client, sapoClient, sapoStore, fixture=false, sapoWrite=true, sapoDescription=false, kiotDescription=true, batchWrites=false, readSapoOnStartup: startupSapoRead=true } = {}) {
+export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data/sale-ai/', import.meta.url)), store, source = {load:async()=>[]}, clock, liveStore, client, sapoClient, sapoStore, autoStore, fixture=false, sapoWrite=true, sapoDescription=false, kiotDescription=true, batchWrites=false, readSapoOnStartup: startupSapoRead=true } = {}) {
   if(fixture&&(!store||!liveStore||!sapoStore||!client||!sapoClient||client instanceof KiotClient||sapoClient instanceof SapoClient))throw Error('Fixture phải dùng hai client giả lập và ba store riêng');
   if(!fixture&&sapoClient&&!(sapoClient instanceof SapoClient))throw Error('Client Sapo giả lập chỉ dùng trong fixture riêng');
   const root = dirname(fileURLToPath(import.meta.url));
@@ -36,11 +39,15 @@ export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data
     },recover:async()=>{const recovery=new Simulator(original,{load:async()=>[]});await recovery.recoverInterrupted();return recovery.state;}};
     return tracked;
   };
-  const revision=target=>`${session}:${target===real?'real':'sample'}:${counters.get(target.store)||0}${target===real?':'+JSON.stringify(sapo.status()):''}`;
+  const revision=target=>`${session}:${target===real?'real':'sample'}:${counters.get(target.store)||0}${target===real?':'+JSON.stringify(sapo.status())+':auto'+auto.revision:''}`;
   const simulator = new Simulator(track(store || new SplitStore(join(dataDir, 'state.json'))), source, clock);
   await simulator.initialize();
   const real = new Simulator(track(liveStore || new SplitStore(join(dirname(store?.path || join(dataDir,'state.json')), 'kiot-state.json'))), {load:async()=>[]}, clock);
   await real.initialize();real.state.dataset='real';
+  // Pathless fixtures must never write scheduler metadata into the production directory.
+  let fixtureAutoState;
+  const auto=new AutoUpdate(track(autoStore||(fixture?{read:async()=>fixtureAutoState,write:async s=>{fixtureAutoState=structuredClone(s);}}:new Store(join(dataDir,'auto-update.json')))),real.clock);
+  await auto.initialize();
   if (!real.state.pricedOnly) await real.mutate(state=>{
     for (const p of state.products) recoverP0(state,p,real.clock().toISOString());
     const eligible=p=>p.active&&p.stock>0&&validP0(p.p0)&&validP0(p.currentPrice);
@@ -100,6 +107,42 @@ export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data
     return result;
   };
   const refreshTable=()=>perform(refreshTableWork);
+  let checkingAuto=false;
+  const checkAutoUpdate=async()=>{
+    if(closing||fatal||checkingAuto||auto.running||!auto.due())return;
+    checkingAuto=true;
+    try{
+      if(operationBusy||simulator.busy||real.busy){await auto.claim('Bỏ qua: đang có lượt khác chạy · Không ghi Kiot · không thử lại trong ngày');return;}
+      // Reserve the same background lock before the durable claim, refresh or any network await.
+      auto.running=true;
+      return startJob('update',async()=>{
+        let event,phase='refresh';
+        try{
+          event=await auto.claim();if(!event)return {items:[],message:'Cài đặt lịch đã thay đổi — không ghi Kiot'};
+          // Scheduler is price-only even if a legacy/fixture configuration enables descriptions or Sapo.
+          if(live.sapoWrite!==false||live.kiotDescription!==false)throw Error('Lịch chỉ được ghi giá Kiot');
+          await refreshTableWork();
+          const selection=autoSelection(real.state);phase='update';
+          if(selection.total>AUTO_UPDATE_LIMIT){
+            await auto.finish(event,{message:`Dừng: số món bất thường (${selection.total.toLocaleString('vi-VN')}) — cần kiểm tra tay`});return auto.state.events.find(e=>e.id===event.id);
+          }
+          if(!selection.codes.length){
+            await auto.finish(event,{message:selection.total?'Không có món được phép ghi giá Kiot':'0 món cần đổi giá · không ghi Kiot',manualPriceSkips:selection.manualPriceSkips,unverifiedSkips:selection.unverifiedSkips});
+            return auto.state.events.find(e=>e.id===event.id);
+          }
+          const prepared=await live.prepare(real.state.runs[0].id,selection.codes,{localOnly:true,continueOnError:true,schedule:{id:event.id,manualPriceSkips:selection.manualPriceSkips,unverifiedSkips:selection.unverifiedSkips}});
+          const update=await live.commit(prepared.id,true);
+          await auto.finish(event,{journaled:true});return update;
+        }catch(error){
+          if(event&&!fatal){
+            const journaled=real.state.updates?.some(u=>u.scheduleId===event.id);
+            await auto.finish(event,{journaled,message:phase==='refresh'?'Lỗi: không tải lại được từ Kiot · không ghi Kiot':'Lỗi: lượt tự động chưa hoàn tất — kiểm tra Lịch sử trước khi cập nhật tiếp'});
+          }
+          throw error;
+        }finally{auto.running=false;}
+      });
+    }finally{checkingAuto=false;}
+  };
   const readSapoOnStartup=()=>{
     if(closing||!sapoWrite)return;
     if(!sapo.status().connected||sapo.status().ready)return;
@@ -113,22 +156,29 @@ export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data
     try {
       const url = new URL(req.url, 'http://sale-ai.local');
       const selected=url.searchParams.get('dataset')==='real'?real:simulator;
+      const visibleState=selected===real?auto.history(real.state):selected.state;
+      if(req.method==='GET'&&url.pathname==='/api/auto-update/settings')return respond(200,auto.status());
       if(req.method==='GET'&&url.pathname.startsWith('/api/jobs/')){const job=jobs.get(url.pathname.slice('/api/jobs/'.length));return respond(job?200:404,job||{error:'Không tìm thấy lượt nền; xem Lịch sử'});}
-      if (req.method === 'GET' && url.pathname === '/api/status') return respond(200,{busy:operationBusy||simulator.busy||real.busy,progress:live.progress,operation:live.operation,job:jobStatus(),sapoWait:sapo.client.rateLimitWait||null,lastTimings:live.lastTimings,runId:selected.state.runs[0]?.id,revision:revision(selected)});
-      if(req.method==='GET'&&url.pathname==='/api/view')return respond(200,{...viewData(selected.state,url.searchParams,{revision:revision(selected),today:vietnamTime(selected.clock()).date,dataset:selected===real?'real':'sample',busy:operationBusy||simulator.busy||real.busy,progress:live.progress}),...(selected===real?{operation:live.operation,job:jobStatus(),sapo:sapo.status(),sapoWrite:live.sapoWrite,sapoDescription:live.sapoDescription,kiotDescription:live.kiotDescription}:{})});
+      if (req.method === 'GET' && url.pathname === '/api/status') return respond(200,{approvalCount:approvalGroups(real.state).total,autoUpdate:auto.status(),busy:operationBusy||simulator.busy||real.busy,progress:live.progress,operation:live.operation,job:jobStatus(),sapoWait:sapo.client.rateLimitWait||null,lastTimings:live.lastTimings,runId:selected.state.runs[0]?.id,revision:revision(selected)});
+      if(req.method==='GET'&&url.pathname==='/api/view')return respond(200,{...viewData(visibleState,url.searchParams,{revision:revision(selected),today:vietnamTime(selected.clock()).date,dataset:selected===real?'real':'sample',busy:operationBusy||simulator.busy||real.busy,progress:live.progress}),...(selected===real?{autoUpdate:auto.status(),operation:live.operation,job:jobStatus(),sapo:sapo.status(),sapoWrite:live.sapoWrite,sapoDescription:live.sapoDescription,kiotDescription:live.kiotDescription}:{})});
       if(req.method==='GET'&&url.pathname==='/api/sapo/status')return respond(200,sapo.status());
+      if(req.method==='GET'&&url.pathname==='/api/kiot/approval-selection'){
+        const group=url.searchParams.get('group');if(!['pending','legacy'].includes(group))throw Error('Nhóm duyệt không hợp lệ');
+        const q=(url.searchParams.get('q')||'').toLowerCase(),groups=approvalGroups(real.state);
+        return respond(200,{runId:real.state.runs[0]?.id,items:groups[group].filter(r=>`${r.code} ${r.name}`.toLowerCase().includes(q)).map(r=>({code:r.code,currentPrice:r.currentPrice,cost:r.cost,price:r.price,belowCost:r.belowCost}))});
+      }
       if(req.method==='GET'&&url.pathname==='/api/kiot/selection'){
         const run=real.state.runs[0];if(!run||run.id!==url.searchParams.get('runId')||run.day!==vietnamTime(real.clock()).date||run.policy!==POLICY||run.customDate||run.dataRevision!==real.state.dataRevision)throw Error('Bảng đã thay đổi; tải lại trước khi chọn tất cả');
         const rows=filterResultRows(run.rows,url.searchParams);return respond(200,{runId:run.id,dataRevision:real.state.dataRevision,codes:rows.filter(r=>r.status==='simulated'&&!(live.sapoWrite===false&&live.kiotDescription===false&&r.currentPrice===r.price)).map(r=>r.code),excludedCodes:rows.filter(r=>r.status!=='simulated').map(r=>r.code)});
       }
       if(req.method==='GET'&&url.pathname==='/api/kiot/retry-selection'){
-        const source=(real.state.updates||[]).find(u=>u.id===url.searchParams.get('updateId'));if(!source)throw Object.assign(Error('Không tìm thấy lượt cập nhật'),{status:404});
+        const source=auto.history(real.state).updates.find(u=>u.id===url.searchParams.get('updateId'));if(!source)throw Object.assign(Error('Không tìm thấy lượt cập nhật'),{status:404});
         const run=real.state.runs[0];if(!run||run.day!==vietnamTime(real.clock()).date||run.policy!==POLICY||run.customDate||run.dataRevision!==real.state.dataRevision)throw Error('Bảng đã thay đổi; tải lại trước khi cập nhật lại');
-        const failed=[...new Set([...(source.items||[]).filter(i=>!['done','unchanged','skipped_sapo_zero_price'].includes(i.status)).map(i=>i.code),...(source.skipped||[]).map(s=>s.code)])];
+        const failed=[...new Set([...(source.items||[]).filter(i=>!['done','unchanged','skipped_sapo_zero_price','skipped_manual_price'].includes(i.status)).map(i=>i.code),...(source.skipped||[]).filter(i=>i.status!=='skipped_manual_price').map(s=>s.code)])];
         const rows=new Map(run.rows.map(r=>[r.code,r]));const codes=failed.filter(code=>rows.get(code)?.status==='simulated');
         return respond(200,{runId:run.id,dataRevision:real.state.dataRevision,total:failed.length,codes,notEligible:failed.length-codes.length});
       }
-      if(req.method==='GET'&&url.pathname.startsWith('/api/history/updates/'))return respond(200,updateDetail(selected.state,decodeURIComponent(url.pathname.slice('/api/history/updates/'.length)),url.searchParams));
+      if(req.method==='GET'&&url.pathname.startsWith('/api/history/updates/'))return respond(200,updateDetail(visibleState,decodeURIComponent(url.pathname.slice('/api/history/updates/'.length)),url.searchParams));
       if (req.method === 'GET' && url.pathname === '/api/state') {
         const {archivedProducts,...visibleState}=selected.state;
         return respond(200, { ...visibleState, archivedCount:archivedProducts?.length||0,products:selected.state.products.map(({rawSource,...p})=>p),dataset:selected===real?'real':'sample',
@@ -141,6 +191,10 @@ export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data
         const bodyLimit=['/api/kiot/update','/api/kiot/prepare','/api/kiot/preview'].includes(url.pathname)?1048576:16384;
         for await (const chunk of req) { raw += chunk; if (raw.length > bodyLimit) return respond(413, { error: 'Dữ liệu quá lớn' }); }
         const body = JSON.parse(raw || '{}');
+        if(url.pathname==='/api/auto-update/settings'){
+          if(closing||fatal)throw Object.assign(Error('Sale AI đang dừng; vui lòng thử lại sau'),{status:503});
+          return respond(200,await auto.configure(body,res.locals?.user));
+        }
         const target=body.dataset==='real'?real:simulator;
         if (url.pathname === '/api/run') return respond(200, await perform(()=>target.run(body.day)));
         if (url.pathname === '/api/manual-price') return respond(410, {error:'Chức năng nhập giá tay đã được gỡ bỏ'});
@@ -167,8 +221,9 @@ export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data
         if(url.pathname==='/api/sapo/refresh')return respond(202,startJob('sapo-refresh',()=>refreshSapo()));
         if(url.pathname==='/api/sapo/check')return respond(202,startJob('sapo-check',()=>sapo.check(body.code)));
         if(url.pathname==='/api/sapo/mapping')return respond(202,startJob('sapo-mapping',async()=>{await sapo.confirm(body);await real.mutate(s=>{s.prepared=[];});return {ok:true};}));
-        if (url.pathname === '/api/kiot/preview') return respond(202,startJob('preview',()=>live.prepare(body.runId,body.codes,{previewOnly:true})));
-        if (url.pathname === '/api/kiot/prepare') return respond(202,startJob('prepare',()=>live.prepare(body.runId,body.codes,{continueOnError:body.continueOnError===true,excludedCodes:body.excludedCodes||[]})));
+        if (url.pathname === '/api/kiot/preview') return respond(202,startJob('preview',()=>live.prepare(body.runId,body.codes,{previewOnly:true,approveBelowCost:body.approveBelowCost??false,restoreCost:body.restoreCost??false,by:res.locals?.user?.id??null})));
+        if (url.pathname === '/api/kiot/prepare') return respond(202,startJob('prepare',()=>live.prepare(body.runId,body.codes,{continueOnError:body.continueOnError===true,excludedCodes:body.excludedCodes||[],approveBelowCost:body.approveBelowCost??false,restoreCost:body.restoreCost??false,by:res.locals?.user?.id??null})));
+        if(url.pathname==='/api/kiot/keep-below-cost')return respond(202,startJob('keep-below-cost',()=>live.keepBelowCost(body.codes,body.confirmed,res.locals?.user?.id??null,body.items)));
         if (url.pathname === '/api/kiot/cancel') {await perform(()=>live.cancel(body.id));return respond(200,{ok:true});}
         if (url.pathname === '/api/kiot/restore/prepare') return respond(202,startJob('restore-prepare',()=>live.prepareRestore(body.sourceId)));
         if (url.pathname === '/api/kiot/restore/commit') return respond(202,startJob('restore',async()=>({...await live.commitRestore(body.id,body.confirmed),viewRevision:revision(real)})));
@@ -190,8 +245,8 @@ export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data
   const waitForJob=async id=>{const job=jobs.get(id);if(!job)throw Error('Không tìm thấy lượt nền');await job.finished;};
   const shutdown=async({timeoutMs=5000}={})=>{
     closing=true;const deadline=Date.now()+timeoutMs;
-    while((operationBusy||simulator.busy||real.busy)&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,Math.min(20,Math.max(0,deadline-Date.now()))));
-    return !operationBusy&&!simulator.busy&&!real.busy;
+    while((operationBusy||simulator.busy||real.busy||pendingWrites.size)&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,Math.min(20,Math.max(0,deadline-Date.now()))));
+    return !operationBusy&&!simulator.busy&&!real.busy&&!pendingWrites.size;
   };
   const interrupt=async()=>{
     closing=true;fatal=true;simulator.halted=true;real.halted=true;
@@ -200,5 +255,5 @@ export async function createSaleAi({ dataDir = fileURLToPath(new URL('../../data
     await Promise.allSettled([...pendingWrites]);
     for(const target of [simulator,real]){const recovered=await target.store.recover();if(recovered)target.state=recovered;}
   };
-  return { handler, simulator,real,live,sapo,refreshTable,waitForJob,shutdown,interrupt,keepCurrent:async()=>{if(!closing&&!operationBusy&&!simulator.busy&&!real.busy)await perform(async()=>{await ensureCurrent(simulator);await ensureCurrent(real);});} };
+  return { handler, simulator,real,live,sapo,refreshTable,waitForJob,shutdown,interrupt,checkAutoUpdate,keepCurrent:async()=>{if(!closing&&!operationBusy&&!simulator.busy&&!real.busy)await perform(async()=>{await ensureCurrent(simulator);await ensureCurrent(real);});} };
 }

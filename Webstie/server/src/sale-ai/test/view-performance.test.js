@@ -5,7 +5,7 @@ import {POLICY} from '../lib/pricing.js';
 import {viewData} from '../lib/view-data.js';
 const memory=()=>({read:async()=>null,write:async()=>{}});
 function fixture(count=5000){
- const products=Array.from({length:count},(_,i)=>({id:i+1,code:'DEMO'+i,name:i===4999?'Tên Chung Cuối':'Mẫu '+i,active:true,stock:1,p0:35e6,currentPrice:35e6,createdAt:'2026-10-13T12:00:00',type:'normal',notes:'',rawSource:{secret:'NEVER_SEND'}}));
+ const products=Array.from({length:count},(_,i)=>({id:i+1,code:'DEMO'+i,name:i===4999?'Tên Chung Cuối':'Mẫu '+i,active:true,stock:1,p0:35e6,cost:1,currentPrice:35e6,createdAt:'2026-10-13T12:00:00',type:'normal',notes:'',rawSource:{secret:'NEVER_SEND'}}));
  const rows=products.map(p=>({...p,status:'simulated',age:100,m:3,price:30e6,allowance:1e6,net:29e6,reasons:[],notesBefore:'Trước',notePreview:'Sau',liveBase:'PRIVATE',localKey:'PRIVATE'}));
  const items=rows.slice(0,23).map((r,i)=>({id:r.id,code:r.code,name:r.name,status:i%2?'write_failed':'done',before:{currentPrice:35e6,rawSource:{secret:'PRIVATE'}},row:r,error:i%2?'Lỗi mẫu':null}));
  return {version:1,cycleVersion:2,pricedOnly:true,policy:POLICY,dataRevision:1,products,runs:Array.from({length:17},(_,i)=>({id:'run'+i,day:'2027-01-21',at:'2027-01-21T02:00:00Z',policy:POLICY,dataRevision:1,dataset:'real',trigger:'schedule',rows})),updates:[{id:'up',at:'2027-01-21T03:00:00Z',outcome:'stopped',mode:'stop-v1',items,attempts:[{at:'2027-01-21T03:00:00Z',items:items.map(p=>({code:p.code,name:p.name,status:p.status,beforePrice:35e6,price:30e6,error:p.error}))}]}],manualEdits:[{id:'edit',code:'OLD',at:'2027-01-20',before:{price:1,allowance:2},after:{price:3,allowance:4}}],settings:{enabled:true,time:'09:00'},mapping:{verified:false,code:'DEMO4999'}};

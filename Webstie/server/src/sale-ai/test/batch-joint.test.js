@@ -15,7 +15,7 @@ const memory=()=>{let disk=null;return {read:async()=>structuredClone(disk),writ
 const PAGE_MS=400,LOT_PUT_MS=5000,SAPO_ITEM_MS=700;
 async function fixture(n,{shared=false}={}){
  let now=Date.parse('2027-01-22T03:00:00Z');const clock=()=>new Date(now);
- const products=Array.from({length:n},(_,i)=>normalizeProduct({id:i+1,code:'SP'+String(i+9).padStart(6,'0'),name:'Túi '+i,basePrice:35e6,createdDate:'2026-12-03',isActive:true,description:'Kiot gốc',inventories:[{branchId:44466,onHand:1}]}));
+ const products=Array.from({length:n},(_,i)=>normalizeProduct({id:i+1,code:'SP'+String(i+9).padStart(6,'0'),name:'Túi '+i,basePrice:35e6,createdDate:'2026-12-03',isActive:true,description:'Kiot gốc',inventories:[{branchId:44466,cost:1,onHand:1}]}));
  const byId=new Map(products.map(p=>[p.id,p])),modified=new Map(),counts={gets:0,listPages:0,lots:[],puts:0,sapoGets:0,sapoPuts:0};
  const edit=(p,fields)=>{Object.assign(p,fields);modified.set(p.id,now);};
  const kiot={

@@ -186,4 +186,29 @@ html.embedded, .embedded body { overflow: hidden; }
 #results-area > .result-actions { flex-wrap: nowrap; }
 #results-area > .result-actions .search { flex: 1 1 auto; width: auto; min-width: 160px; }
 .page-header #header-metrics { flex: 0 0 auto; }
+.auto-update{margin:4px 0 14px;padding:14px 18px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+.auto-update[hidden]{display:none}
+.auto-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.auto-row button{font-size:13px;padding:4px 10px}
+.auto-row label{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.auto-row input[type=time]{font:inherit;padding:3px 6px;max-width:100%;border:1px solid var(--line);border-radius:6px;color:var(--ink);background:var(--panel)}
+.auto-row .auto-switch{position:relative;flex:none;width:40px;height:22px;padding:0;border:0;border-radius:999px;background:var(--muted)}
+.auto-switch::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--panel);transition:left .15s}
+.auto-switch[aria-checked=true]{background:var(--accent)}
+.auto-switch[aria-checked=true]::after{left:21px}
+.auto-update button:disabled{opacity:.45;cursor:not-allowed}
+.auto-dot{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:none}
+.auto-dot.off{background:var(--muted)}
+.auto-dot.running{background:var(--warn)}
+.auto-tag{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--accent);white-space:nowrap}
+.auto-row #auto-note{font-size:13px}
+.auto-confirm-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}
+.auto-badge{font-size:11px;padding:1px 6px;border-radius:5px;background:var(--accent);color:var(--panel);font-weight:600}
+@media(prefers-reduced-motion:reduce){.auto-switch::after{transition:none}}
 @media (min-width: 1000px) { .page-header .metrics { flex-wrap: nowrap; } }
+
+/* TASK-139: approval uses the existing table and walnut theme. */
+.approval-group { margin-block: 2rem; }
+.approval-group td:last-child { min-width: 11rem; }
+.approval-loss { color: #a3341f; font-weight: 600; }
+.confirmation .table-wrap { max-height: 50vh; overflow: auto; }

@@ -9,7 +9,7 @@ import {createSaleAi} from '../core.js';
 export const memory=()=>{let disk=null;return {read:async()=>structuredClone(disk),write:async s=>{disk=structuredClone(s);}};};
 export async function fixture(count=2){
  const clock=()=>new Date('2027-01-22T03:00:00Z'),store=memory(),calls=[];
- const products=Array.from({length:count},(_,n)=>normalizeProduct({id:n+1,code:n===0?'SP000009':'SP000010',name:'Túi '+n,basePrice:35e6,createdDate:'2026-12-03',isActive:true,description:'Kiot gốc',inventories:[{branchId:44466,onHand:1}]}));
+ const products=Array.from({length:count},(_,n)=>normalizeProduct({id:n+1,code:n===0?'SP000009':'SP000010',name:'Túi '+n,basePrice:35e6,createdDate:'2026-12-03',isActive:true,description:'Kiot gốc',inventories:[{branchId:44466,cost:1,onHand:1}]}));
  const sapos=products.map((p,n)=>({id:91211362+n,content:'<b>HTML gốc</b>',variants:[{id:900+n,sku:p.code,price:35e6},{id:990+n,sku:'OTHER'+n,price:123}]}));
  const kiot={all:async()=>structuredClone(products),product:async id=>structuredClone(products.find(p=>p.id===id)),update:async(p,b)=>{calls.push('kiot:'+p.code);Object.assign(products.find(x=>x.id===p.id),{currentPrice:b.basePrice,notes:b.description});}};
  const sc={all:async()=>structuredClone(sapos),product:async id=>structuredClone(sapos.find(p=>p.id===id)),restore:async(id,variants,content)=>{calls.push('sapo:'+id);const p=sapos.find(p=>p.id===id);for(const v of variants)p.variants.find(x=>x.id===v.id).price=v.price;p.content=content;},update:async(id,vid,price,content)=>{calls.push('sapo:'+id);const p=sapos.find(p=>p.id===id);p.variants.find(v=>v.id===vid).price=price;if(content!==null)p.content=content;}};

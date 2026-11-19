@@ -5,7 +5,7 @@ import { rawFromWebRow } from '../lib/shared-catalog.js';
 
 const webRow = (id, onHand, extra = {}) => ({ source: 'kiotviet', productId: id, sku: `SP${id}`, name: 'Túi Chanel Full', price: 5000000, onHand,
   detail: { name: 'Túi Chanel', fullName: 'Túi Chanel Full', createdDate: '2026-10-01T09:00:00', isActive: true, description: '<p>Ghi chú</p>',
-    modifiedDate: '2026-10-02T09:00:00', categoryId: 7, taxPresent: false, inventories: [{ branchId: 44466, onHand }, { branchId: 9, onHand: 5 }], ...extra } });
+    modifiedDate: '2026-10-02T09:00:00', categoryId: 7, taxPresent: false, inventories: [{ branchId: 44466, onHand }, { branchId: 9, cost:1,onHand: 5 }], ...extra } });
 const kiotRaw = (id, onHand) => ({ id, code: `SP${id}`, name: 'Túi Chanel', fullName: 'Túi Chanel Full', basePrice: 5000000, createdDate: '2026-10-01T09:00:00',
   isActive: true, description: '<p>Ghi chú</p>', modifiedDate: '2026-10-02T09:00:00', categoryId: 7, inventories: [{ branchId: 44466, onHand }] });
 

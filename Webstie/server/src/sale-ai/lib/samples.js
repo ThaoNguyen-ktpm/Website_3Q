@@ -4,7 +4,7 @@ const screenshot = [
   ['SP000393', 'slp vinh', 25000000, 0, '2023-12-20T23:08'],
   ['SP000378', 'Váy gc', 12000000, 1, '2023-12-20T22:52'],
   ['SP000371', 'Quần Ess Vinh', 2000000, 1, '2023-12-20T22:41']
-].map(([code, name, currentPrice, stock, createdAt]) => ({ code, name, currentPrice, stock, createdAt,
+].map(([code, name, currentPrice, stock, createdAt]) => ({ cost:1, code, name, currentPrice, stock, createdAt,
   active: true, type: null, floor: null, notes: '', source: 'Từ ảnh — bản sao mẫu' }));
 const synthetic = [
   ['TEST-15', 'Túi giả định 15 triệu', 15000000, 'normal', null, '2026-10-16'],
@@ -13,7 +13,7 @@ const synthetic = [
   ['TEST-NEW', 'Mẫu giả định tạo sau mốc chung', 35000000, 'normal', null, '2026-08-10'],
   ['TEST-600', 'Mẫu giả định cần duyệt riêng', 600000000, 'normal', null, '2026-07-01'],
   ['TEST-MISSING', 'Mẫu giả định thiếu ngày', 9000000, 'normal', null, null]
-].map(([code, name, currentPrice, type, floor, createdAt]) => ({ code, name, currentPrice, type, floor, createdAt,
+].map(([code, name, currentPrice, type, floor, createdAt]) => ({ cost:1, code, name, currentPrice, type, floor, createdAt,
   stock: 1, active: true, source: 'Giả định kiểm thử', notes: 'Ghi chú gốc của mẫu; cần được giữ nguyên.' }));
 export class SampleSource {
   revision = '2026-10-29-jul-batch-v9';
@@ -28,5 +28,5 @@ const hottrendScreenshot = [
   ['SP024431', 'Vòng Cartier Love Small Model sz16 YG Certi 2023 3/10/2026 !', 96000000, '2026-10-03T14:28'],
   ['SP024404', 'Bông tai Van Cleef & Arpels Sweet Alhambra Onyx Vàng vàng Box Certi 30/9/2026-. !', 58000000, '2026-10-01T17:40'],
   ['SP024403', 'CỌC Dây chuyền Van Cleef & Arpels Vintage Alhambra Guilloché Vàng trắng Fullset Bill Certi 30/9/2026 !-.', 100000000, '2026-10-01T17:39']
-].map(([code, name, currentPrice, createdAt]) => ({ code, name, currentPrice, createdAt,
+].map(([code, name, currentPrice, createdAt]) => ({ cost:1, code, name, currentPrice, createdAt,
   stock: 1, active: true, floor: null, notes: '', source: 'Từ ảnh hottrend — bản sao mẫu' }));

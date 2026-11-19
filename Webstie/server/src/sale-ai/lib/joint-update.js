@@ -27,9 +27,9 @@ export async function executeJoint(service,state,update){
  // Same checks per product; Kiot and Sapo are read together and two products at a time (each catches its own error).
  await readPool(update.items,async item=>{
   try{
-   if(withSapo)service.sapo.requireVerified();const local=state.products.find(p=>p.id===item.id);const row=calculate(local,vietnamTime(service.clock()).date);
+   if(withSapo)service.sapo.requireVerified();const local=state.products.find(p=>p.id===item.id);const row=service.preflightRow(state,update,item,calculate(local,vietnamTime(service.clock()).date));
    const key=createHash('sha256').update(JSON.stringify([local.p0,local.manualPricing])).digest('hex');
-   if(state.policy!==POLICY||key!==item.row.localKey||row.status!=='simulated'||row.price!==item.row.price||row.allowance!==item.row.allowance)throw Error('Điều kiện hoặc mốc M thay đổi');
+   if(state.policy!==POLICY||key!==item.row.localKey||row.price!==item.row.price||row.allowance!==item.row.allowance)throw Error('Điều kiện hoặc mốc M thay đổi');
    // Background preparation has no remote snapshot; each worker reads at its send gate.
    if(update.localOnly){const vn=vietnamTime(service.clock());item.actualAt=`${vn.date} ${vn.time} (giờ Việt Nam)`;item.desiredNote=update.kiotDescription===false?item.before.notes:liveNote(item.before.notes,item.row,item.key,item.actualAt);for(const p of Object.values(item.platforms))p.status='ready';return;}
    const reads=await Promise.allSettled([

@@ -64,7 +64,9 @@ function networkError(error,path,method,ms,phase) {
 export const inStock = p => Number.isFinite(p.stock) && p.stock > 0 && p.active === true;
 export function normalizeProduct(raw) {
   const inventory = raw.inventories?.find(i => i.branchId === BRANCH);
+  const costs=(raw.inventories||[]).map(i=>i.cost).filter(c=>Number.isFinite(c)&&c>0);
   return { id: raw.id, code: raw.code, name: raw.fullName || raw.name, currentPrice: raw.basePrice,
+    cost:costs.length?Math.max(...costs):null,
     createdAt: raw.createdDate, active: raw.isActive === true, activeMissing: typeof raw.isActive !== 'boolean',
     stock: typeof inventory?.onHand === 'number' ? inventory.onHand : null,
     inventoryMissing: typeof inventory?.onHand !== 'number', notes: raw.description ?? '',

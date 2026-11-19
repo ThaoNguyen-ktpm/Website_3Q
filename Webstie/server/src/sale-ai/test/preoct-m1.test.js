@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {calculate,ageFields,POLICY} from '../lib/pricing.js';
 import {viewData} from '../lib/view-data.js';
 import {Simulator} from '../lib/service.js';
-const item=(extra={})=>({code:'OLD',name:'Túi',createdAt:'2026-09-30',p0:35e6,currentPrice:35e6,active:true,stock:1,notes:'<p>Mô tả gốc</p>',...extra});
+const item=(extra={})=>({code:'OLD',name:'Túi',createdAt:'2026-09-30',p0:35e6,cost:1,currentPrice:35e6,active:true,stock:1,notes:'<p>Mô tả gốc</p>',...extra});
 const day=age=>new Date(Date.parse('2026-11-01')+age*86400000).toISOString().slice(0,10);
 // Products created after the epoch count age from their own creation day.
 const from=(start,age)=>new Date(Date.parse(start)+age*86400000).toISOString().slice(0,10);
 test('July-October batch starts M1 on November 1 for both types',()=>{
- assert.equal(POLICY,'baoq-2026-11-02-hide-600m-v11');
+ assert.equal(POLICY,'baoq-2026-11-10-cost-approval-v12');
  for(const name of ['Túi','Túi !']) for(const [age,m] of [[0,1],[14,1],[15,2],[29,2],[30,3],[75,6],[150,6]]) {
   const r=calculate(item({name}),day(age));assert.equal(r.age,age);assert.equal(r.m,m);assert.equal(r.saleStartDate,'2026-11-01');
  }

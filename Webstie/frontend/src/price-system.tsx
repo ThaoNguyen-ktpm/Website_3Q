@@ -11,18 +11,20 @@ const saleAiUrl='/sale-ai/';
 export function SaleAi(){
  const [view,setView]=useState('results'),[status,setStatus]=useState('checking'),[attempt,setAttempt]=useState(0),[height,setHeight]=useState(900);
  const frame=useRef<HTMLIFrameElement>(null);
+ const [approvalCount,setApprovalCount]=useState<number|null>(null);
  // Sale AI reports its height and opened dialogs (only by message): grow the frame, scroll to dialogs.
  useEffect(()=>{const onMessage=(event:MessageEvent)=>{
   if(event.origin!==window.location.origin||event.source!==frame.current?.contentWindow)return;
   if(event.data?.type==='baoq-sale-ai-height'&&Number.isFinite(event.data.height))setHeight(Math.min(Math.max(Math.ceil(event.data.height),400),200000));
+  if(event.data?.type==='baoq-sale-ai-approval-count')setApprovalCount(Number.isSafeInteger(event.data.count)&&event.data.count>=0?event.data.count:null);
   if(event.data?.type==='baoq-sale-ai-dialog')frame.current?.scrollIntoView({behavior:'smooth',block:'start'});
  };window.addEventListener('message',onMessage);return()=>window.removeEventListener('message',onMessage)},[]);
  useEffect(()=>{let alive=true;setStatus('checking');
-  fetch(`${saleAiUrl}api/status?dataset=real`,{credentials:'include',cache:'no-store'}).then(response=>alive&&setStatus(response.ok?'ok':'down')).catch(()=>alive&&setStatus('down'));
+  fetch(`${saleAiUrl}api/status?dataset=real`,{credentials:'include',cache:'no-store'}).then(async response=>{if(!alive)return;setStatus(response.ok?'ok':'down');if(response.ok){const data=await response.json();if(alive)setApprovalCount(Number.isSafeInteger(data.approvalCount)&&data.approvalCount>=0?data.approvalCount:null);}else setApprovalCount(null);}).catch(()=>{if(alive){setStatus('down');setApprovalCount(null);}});
   return()=>{alive=false}},[attempt]);
  const embedSrc=`${saleAiUrl}?view=${view}&dataset=real&embed=1&theme=walnut`;
  return <section className="ws-stack">
-  <div className="seg" role="group" aria-label="Màn hình Sale AI">{[['results','Bảng giá sale'],['history','Lịch sử']].map(([id,label])=><button key={id} type="button" aria-pressed={view===id} onClick={()=>{setView(id);setAttempt(n=>n+1)}}>{label}</button>)}</div>
+  <div className="seg" role="group" aria-label="Màn hình Sale AI">{[['results','Bảng giá sale'],['history','Lịch sử'],['approval',approvalCount===null?'Duyệt':`Duyệt (${approvalCount})`]].map(([id,label])=><button key={id} type="button" aria-pressed={view===id} onClick={()=>{setView(id);setAttempt(n=>n+1)}}>{label}</button>)}</div>
   {status==='down'?<div className="ws-msg" role="alert"><p>Sale AI tạm thời không khả dụng. Vui lòng thử lại.</p><button className="btn btn-secondary" type="button" onClick={()=>setAttempt(n=>n+1)}>Thử lại</button></div>
    :status==='ok'?<iframe ref={frame} key={`${embedSrc}#${attempt}`} className="ws-frame" title="Sale AI" src={embedSrc} style={{height}}/>:<p className="ws-muted" role="status">Đang kết nối Sale AI…</p>}
  </section>;

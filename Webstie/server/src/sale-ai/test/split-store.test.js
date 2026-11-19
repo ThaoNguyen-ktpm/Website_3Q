@@ -50,7 +50,7 @@ test('corrupt manifests, missing records, invalid references and wrong hashes fa
 }));
 async function liveFixture(dir){
  const path=join(dir,'state.json'),store=new SplitStore(path),clock=()=>new Date('2027-01-21T04:00:00Z');
- let current=normalizeProduct({id:1,code:'ONE',name:'Mẫu',basePrice:35e6,isActive:true,createdDate:'2026-10-13T12:00:00',description:'Gốc',inventories:[{branchId:44466,onHand:1}]});
+ let current=normalizeProduct({id:1,code:'ONE',name:'Mẫu',basePrice:35e6,isActive:true,createdDate:'2026-10-13T12:00:00',description:'Gốc',inventories:[{branchId:44466,cost:1,onHand:1}]});
  const untouched={...current,id:2,code:'TWO',p0:35e6},product={...current,p0:35e6};const calls=[];
  const sim=new Simulator(store,{load:async()=>[]},clock);sim.state={...state(),products:[product,untouched],updates:state().updates,mapping:{verified:true},dataRevision:1};
  const client={product:async()=>{calls.push('GET');return structuredClone(current);},update:async(_,body)=>{calls.push('PUT');current={...current,currentPrice:body.basePrice,notes:body.description};}};

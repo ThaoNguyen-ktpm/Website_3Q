@@ -4,7 +4,7 @@ const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>value?.[key]!==unde
 const product=p=>p?{...pick(p,['id','code','name','currentPrice']),notesHash:p.notesHash??notesFingerprint(p.notes)}:p;
 // Only price-only journals omit descriptions. Old description/Sapo journals stay verbatim.
 export function journalItem(item){
- const out={...item,before:product(item.before),row:pick(item.row,['price','liveBase','localKey','m','allowance']),
+ const out={...item,before:product(item.before),row:pick(item.row,['price','cost','liveBase','localKey','m','allowance']),
   beforeFingerprint:item.beforeFingerprint??(item.before?fingerprint(item.before):undefined)};
  delete out.notePreview;delete out.desiredNote;
  out.platforms=Object.fromEntries(Object.entries(item.platforms||{}).map(([name,p])=>[name,{...p,...(p.afterProduct?{

@@ -15,7 +15,7 @@ async function finish(sale,id){
 }
 async function fixture(count=1,{batch=false}={}){
  let now=Date.parse('2026-11-16T03:00:00Z'),release;const gate=new Promise(r=>{release=r;});let hold=true;
- const products=Array.from({length:count},(_,n)=>normalizeProduct({id:n+1,code:'SP'+n,name:'Túi '+n,basePrice:35e6,createdDate:'2026-09-01',isActive:true,description:'Gốc',inventories:[{branchId:44466,onHand:1}]}));
+ const products=Array.from({length:count},(_,n)=>normalizeProduct({id:n+1,code:'SP'+n,name:'Túi '+n,basePrice:35e6,createdDate:'2026-09-01',isActive:true,description:'Gốc',inventories:[{branchId:44466,cost:1,onHand:1}]}));
  const sapos=products.map(p=>({id:p.id+5000,content:'Gốc Sapo',variants:[{id:p.id+9000,sku:p.code,price:35e6}]}));
  const reads={kiot:new Map(),sapo:new Map()},writes={kiot:new Set(),sapo:new Set()};
  const delayed=async()=>{if(hold)await gate;now+=500;await new Promise(setImmediate);};

@@ -10,7 +10,7 @@ const memory=()=>{let value;return {read:async()=>structuredClone(value),write:a
 // Test clients only. Advance a modeled network clock and yield once per request.
 async function fixture(n){
  let now=Date.parse('2026-11-16T03:00:00Z');const clock=()=>new Date(now),delay=async ms=>{now+=ms;await new Promise(setImmediate);};
- const products=Array.from({length:n},(_,i)=>normalizeProduct({id:i+1,code:'SP'+(i+1),name:'Túi '+i,basePrice:35e6,createdDate:'2026-09-01',description:'Gốc '+i,isActive:true,inventories:[{branchId:44466,onHand:1}]}));
+ const products=Array.from({length:n},(_,i)=>normalizeProduct({id:i+1,code:'SP'+(i+1),name:'Túi '+i,basePrice:35e6,createdDate:'2026-09-01',description:'Gốc '+i,isActive:true,inventories:[{branchId:44466,cost:1,onHand:1}]}));
  const calls={all:0,modified:0,single:0,sapo:0,lots:[]},changes=new Map();
  const edit=(id,fields)=>{Object.assign(products[id-1],fields);changes.set(id,now);};
  const client={

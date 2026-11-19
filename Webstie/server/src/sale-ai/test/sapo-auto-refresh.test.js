@@ -19,7 +19,7 @@ async function request(sale,path,method='GET',body={}) {
 }
 async function fixture({catalog={products,catalogBinding:'fixture'},configured=true,all,readSapoOnStartup=true}={}) {
  const calls=[];
- const kiotProduct=normalizeProduct({id:1,code:'SP000009',name:'Túi',basePrice:35e6,createdDate:'2026-12-03',isActive:true,inventories:[{branchId:44466,onHand:1}]});
+ const kiotProduct=normalizeProduct({id:1,code:'SP000009',name:'Túi',basePrice:35e6,createdDate:'2026-12-03',isActive:true,inventories:[{branchId:44466,cost:1,onHand:1}]});
  const forbidden=async()=>{calls.push('PUT');throw Error('Unexpected write');};
  const sc={configured,all:async()=>{calls.push('GET Sapo');return all?all():structuredClone(products);},update:forbidden,restore:forbidden};
  const sale=await createSaleAi({fixture:true,store:memory(),liveStore:memory(),sapoStore:memory(catalog),clock:()=>new Date('2027-01-22T03:00:00Z'),client:{all:async()=>{calls.push('GET Kiot');return [kiotProduct];},update:forbidden},sapoClient:sc,readSapoOnStartup});

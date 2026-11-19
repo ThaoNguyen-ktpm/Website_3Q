@@ -6,7 +6,7 @@ import {responseResult} from './job-result.js';
 const memory=()=>{let s=null;return {read:async()=>structuredClone(s),write:async value=>{s=structuredClone(value);}};};
 
 test('commit refreshes verified table rows without reloading; manual reload remains available; retry disabled',async()=>{
-  const row=normalizeProduct({id:1,code:'WRITE-1',name:'Mẫu',basePrice:35e6,isActive:true,createdDate:'2026-12-03',inventories:[{branchId:44466,onHand:1}],description:''});
+  const row=normalizeProduct({id:1,code:'WRITE-1',name:'Mẫu',basePrice:35e6,isActive:true,createdDate:'2026-12-03',inventories:[{branchId:44466,cost:1,onHand:1}],description:''});
   let reads=0,failNote=true,failReload=false;
   const client={all:async()=>{reads++;if(failReload)throw Error('Lỗi tải danh sách');return [structuredClone(row)];},product:async()=>structuredClone(row),update:async(p,v)=>{if(failNote)throw Error('Lỗi ghi chú');if('basePrice' in v)row.currentPrice=v.basePrice;if('description' in v)row.notes=v.description;},price:async(p,v)=>{row.currentPrice=v;},note:async(p,v)=>{if(failNote)throw Error('Lỗi ghi chú');row.notes=v;}};
   const app=await createTestApp({store:memory(),liveStore:memory(),client,clock:()=>new Date('2027-01-20T03:00:00Z')});
@@ -32,7 +32,7 @@ test('commit refreshes verified table rows without reloading; manual reload rema
   } finally {await new Promise(resolve=>app.server.close(resolve));}
 });
 async function setup(){
-  const rows=[normalizeProduct({id:1,code:'AUTO-1',name:'Mẫu',basePrice:35e6,isActive:true,createdDate:'2026-12-03T12:00:00',inventories:[{branchId:44466,onHand:1}],description:''})];
+  const rows=[normalizeProduct({id:1,code:'AUTO-1',name:'Mẫu',basePrice:35e6,isActive:true,createdDate:'2026-12-03T12:00:00',inventories:[{branchId:44466,cost:1,onHand:1}],description:''})];
   let fail=false;let calls=0;const client={all:async()=>{calls++;if(fail)throw Error('Mạng lỗi');return structuredClone(rows);},price:async()=>{throw Error('KHÔNG ĐƯỢC GHI');},note:async()=>{throw Error('KHÔNG ĐƯỢC GHI');}};
   const app=await createTestApp({store:memory(),liveStore:memory(),client,clock:()=>new Date('2027-01-20T03:00:00Z')});
   return {app,rows,client,fail:()=>{fail=true;},calls:()=>calls};

@@ -5,7 +5,7 @@ import { Simulator } from '../lib/service.js';
 import { LiveService } from '../lib/live.js';
 
 const item = (createdAt, hot = false, extra = {}) => ({ code: 'BATCH', name: hot ? 'Túi !' : 'Túi',
-  createdAt, p0: 35e6, currentPrice: 33e6, active: true, stock: 1, notes: 'Ghi chú gốc', ...extra });
+  createdAt, p0: 35e6, cost:1,currentPrice: 33e6, active: true, stock: 1, notes: 'Ghi chú gốc', ...extra });
 
 // Literal dates and expected steps from TASK-105, independent of the calculator.
 for (const [created, hot, day, m] of [

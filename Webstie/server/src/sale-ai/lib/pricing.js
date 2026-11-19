@@ -1,5 +1,5 @@
 // Bảo 2026-10-19 (TASK-039): start date moved from 13/10 to 01/10/2026; 15-day steps unchanged.
-export const POLICY = 'baoq-2026-11-02-hide-600m-v11';
+export const POLICY = 'baoq-2026-11-10-cost-approval-v12';
 export const START = '2026-10-01';
 export const NO_MARKDOWN_BEFORE = '2026-07-01';
 export const BATCH_FROM = '2026-07-01';
@@ -57,7 +57,7 @@ export function calculate(product, day) {
   if (!validDay(day)) throw new Error('Ngày xét không hợp lệ');
   const type = typeFromName(product.name);
   const result = { code: product.code, name: product.name, source: product.source,
-    p0: product.p0, currentPrice: product.currentPrice, type, createdAt: product.createdAt,
+    p0: product.p0, cost:product.cost??null, currentPrice: product.currentPrice, type, createdAt: product.createdAt,
     stock: product.stock, m: null, price: null, allowance: null, net: null, reasons: [], status: 'waiting' };
   Object.assign(result, ageFields(product, day));
   result.startDate = result.saleStartDate;
@@ -67,6 +67,8 @@ export function calculate(product, day) {
   }
   if (product.inventoryMissing || product.activeMissing) return { ...result, reasons: ['Thiếu trạng thái kinh doanh hoặc tồn kho chi nhánh'] };
   if (!product.active || !(product.stock > 0)) return { ...result, status: 'excluded', reasons: ['Bỏ qua: hết tồn hoặc ngừng kinh doanh'] };
+  if (!Number.isSafeInteger(product.cost)||product.cost<=0) return {...result,status:'excluded',excludedReason:'missing_cost',reasons:['Thiếu giá vốn trên Kiot: không tính']};
+  if (Number.isSafeInteger(product.p0)&&product.p0>0&&product.p0<=product.cost) return {...result,status:'excluded',excludedReason:'p0_not_above_cost',reasons:['Giá gốc không cao hơn giá vốn: không giảm']};
   if (!Number.isSafeInteger(product.p0) || product.p0 <= 0) result.reasons.push('Giá gốc P0 không hợp lệ');
   const created = creationDay(product.createdAt);
   if (!created) result.reasons.push('Thiếu hoặc sai thời gian tạo Kiot');
@@ -85,6 +87,7 @@ export function calculate(product, day) {
   if (result.price <= 0 || result.net <= 0) result.reasons.push('Giá sau giảm hoặc giá chốt không dương: cần xem xét');
   if (!Number.isInteger(result.allowance)) result.reasons.push('Quyền sale có phần lẻ VND: chờ quy tắc làm tròn');
   result.status = result.reasons.length ? 'waiting' : 'simulated';
+  if(result.status==='simulated'&&result.m>=1&&result.price<product.cost){result.status='needs_approval';result.belowCost=product.cost-result.price;result.reasons.push('Giá sale thấp hơn giá vốn: chờ duyệt');}
   result.notePreview = previewNote(product.notes || '', result, day);
   return result;
 }

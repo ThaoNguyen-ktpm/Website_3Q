@@ -21,6 +21,7 @@
         <!-- Giữ data-view để app.js nhận diện màn hình khi bấm menu. -->
         <nav aria-label="Màn hình">
           <a data-view="results" href="?view=results" class="active" aria-current="page">Kết quả kiểm thử</a>
+          <a data-view="approval" href="?view=approval">Duy?t</a>
           <a data-view="history" href="?view=history">Lịch sử</a>
           <!-- TASK-088: Thiết lập tạm ẩn cho đến khi người dùng yêu cầu mở lại. -->
         </nav>
@@ -37,13 +38,14 @@
           <div>
             <p class="eyebrow">SALE AI</p>
             <h1 id="title" tabindex="-1">Kết quả kiểm thử</h1>
-            <p class="muted">Kiểm tra giá trước khi ghi lên Kiot + Sapo.</p>
+            <p id="page-description" class="muted">Kiểm tra giá trước khi ghi lên Kiot + Sapo.</p>
           </div>
 
           <div id="header-metrics" aria-label="Thống kê sản phẩm" hidden></div>
         </header>
 
         <!-- Bảo 2026-10-21: one line for the data state and its reload button; yellow when the Kiot data is old. -->
+        <section id="auto-update" class="auto-update" aria-label="Lịch tự động cập nhật" hidden></section>
         <div id="data-bar" class="data-bar">
           <p id="sync-status" class="muted" aria-live="polite"></p>
           <div id="data-controls" class="toolbar">

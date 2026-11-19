@@ -3,7 +3,78 @@ import { historyEntries } from './history-model.js';
 import { ageCell } from './age-cell.js';
 const selected = new Set();
 const excluded = new Set();
+let autoEditing=false,autoSaving=false,autoSignature;
+export function renderAutoUpdate(settings,container,ctx){
+  if(!container||!settings)return;
+  const {esc,api,message}=ctx,s=settings;
+  const busy=ctx.canWrite?!ctx.canWrite():false;
+  const signature=JSON.stringify([s,autoEditing,autoSaving,busy]);
+  if(container.dataset.autoReady&&autoSignature===signature)return;
+  autoSignature=signature;container.dataset.autoReady='true';
+  const locked=s.running||autoSaving||busy;
+  const next=s.nextAt?new Intl.DateTimeFormat('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',weekday:'long',day:'2-digit',month:'2-digit',hourCycle:'h23'}).format(new Date(s.nextAt)):'';
+  container.innerHTML=`<div class="auto-row"><button class="auto-switch" role="switch" aria-checked="${s.enabled}" aria-label="Tự động cập nhật" aria-describedby="auto-note" ${locked?'disabled':''}></button>
+    <span class="auto-dot ${s.running?'running':s.enabled?'':'off'}" aria-hidden="true"></span><b>Tự động cập nhật: ${s.running?'Đang chạy':s.enabled?'Bật':'Tắt'}</b>
+    ${autoEditing?`<label>Giờ chạy <input type="time" value="${esc(s.time)}" required ${locked?'disabled':''}></label><button data-auto-save ${locked?'disabled':''}>Lưu</button><button data-auto-cancel ${autoSaving?'disabled':''}>Huỷ</button>`:`<span class="auto-tag">${esc(s.time)} · Thứ 2–Thứ 7</span><button data-auto-edit ${locked?'disabled':''}>Đổi giờ</button>`}
+    <span class="muted" id="auto-note">${s.running?'Lượt tự động đang chạy':s.enabled?`Lần tới: ${esc(next)}`:'Chỉ cập nhật khi bấm tay'}</span></div><div class="auto-confirm" aria-live="polite"></div>`;
+  const save=async body=>{
+    if(autoSaving||(ctx.canWrite&&!ctx.canWrite()))return;autoSaving=true;ctx.beginOperation();renderAutoUpdate(s,container,ctx);
+    try{Object.assign(s,await api('/api/auto-update/settings',body));autoEditing=false;message('Đã lưu lịch tự động cập nhật.');}
+    catch(error){message(error.message,true);}
+    finally{autoSaving=false;ctx.endOperation();autoSignature=undefined;renderAutoUpdate(s,container,ctx);await ctx.acceptUpdate();}
+  };
+  const ask=(text,body)=>{
+    const box=container.querySelector('.auto-confirm');
+    box.innerHTML=`<div class="auto-confirm-row"><span>${esc(text)}</span><button class="primary" data-auto-yes>Đồng ý</button><button data-auto-no>Huỷ</button></div>`;
+    box.querySelector('[data-auto-yes]').onclick=()=>save(body);
+    box.querySelector('[data-auto-no]').onclick=()=>{box.innerHTML='';container.querySelector('.auto-switch').focus();};
+    box.querySelector('[data-auto-yes]').focus();
+  };
+  container.querySelector('.auto-switch').onclick=()=>s.enabled?save({enabled:false,time:s.time}):ask(`Từ lần tới, ${s.time} Thứ 2–Thứ 7 máy sẽ tự ghi giá Kiot cho món M1–M6 (giữ giá sửa tay). Chỉ bật trên một máy để tránh ghi Kiot hai lần. Bật?`,{enabled:true,time:s.time});
+  const edit=container.querySelector('[data-auto-edit]');if(edit)edit.onclick=()=>{autoEditing=true;renderAutoUpdate(s,container,ctx);container.querySelector('input').focus();};
+  const cancel=container.querySelector('[data-auto-cancel]');if(cancel)cancel.onclick=()=>{autoEditing=false;renderAutoUpdate(s,container,ctx);container.querySelector('[data-auto-edit]').focus();};
+  const submit=container.querySelector('[data-auto-save]');if(submit)submit.onclick=()=>{
+    const input=container.querySelector('input');if(!input.reportValidity())return;
+    ask(`Đổi giờ tự động cập nhật thành ${input.value}, Thứ 2–Thứ 7?`,{enabled:s.enabled,time:input.value});
+  };
+}
 export function clearLiveSelection() { selected.clear();excluded.clear(); }
+export function renderApproval(state,container,ctx){
+  const {esc,money,pagedTable,api,message}=ctx;
+  const locked=!ctx.canWrite()||state.dataset!=='real';
+  const buttons=(r,group)=>group==='pending'?`<button data-approval="approve" data-code="${esc(r.code)}" class="primary" ${locked?'disabled':''}>Duyệt</button>`:
+    `<button data-approval="restore" data-code="${esc(r.code)}" class="primary" ${locked?'disabled':''}>Trả về giá vốn</button> <button data-approval="keep" data-code="${esc(r.code)}" ${locked?'disabled':''}>Giữ giá</button>`;
+  container.innerHTML=`<div class="toolbar"><input id="approval-search" class="search" aria-label="Tìm sản phẩm cần duyệt" placeholder="Tìm mã hoặc tên…" value="${esc(ctx.query||'')}"></div>`+
+    ['pending','legacy'].map(group=>{
+      const data=state[group]||{items:[],total:0},pending=group==='pending';
+      return `<section class="approval-group"><h2>${pending?'Chờ duyệt':'Đã lỡ giảm dưới vốn'} (${data.total})</h2><div class="selection-bar">${pending?`<button data-approval="approve" data-all class="primary" ${locked||!data.total?'disabled':''}>Duyệt tất cả (${data.total} món)</button>`:`<button data-approval="restore" data-all class="primary" ${locked||!data.total?'disabled':''}>Trả về giá vốn tất cả</button><button data-approval="keep" data-all ${locked||!data.total?'disabled':''}>Giữ giá tất cả</button>`}</div>`+
+        (data.items.length?pagedTable(pending?['Sản phẩm','M hiện tại → M mới','Giá Kiot / P0','Giá sale mới','Giá vốn','Thấp hơn vốn','Duyệt']:['Sản phẩm','M','Đang bán trên Kiot','Giá vốn','Thấp hơn vốn','Quyết định'],data.items,r=>`<tr><td><b>${esc(r.code)}</b><span class="small">${esc(r.name)}</span></td><td>${pending?`M${r.currentM??'—'} → M${r.m}`:`M${r.m??'—'}`}</td><td class="money">${money(r.currentPrice)}${pending?`<span class="small">P0: ${money(r.p0)}</span>`:''}</td>${pending?`<td class="money">${money(r.price)}</td>`:''}<td class="money">${money(r.cost)}</td><td class="money approval-loss">-${money(r.belowCost)}</td><td>${buttons(r,group)}</td></tr>`,group):`<p class="empty">${pending?'Không có món nào giảm dưới giá vốn hôm nay.':'Không có món nào đang bán dưới giá vốn.'}</p>`)+`</section>`;
+    }).join('');
+  container.querySelectorAll('[data-approval]').forEach(button=>button.onclick=async()=>{
+    if(!ctx.canWrite())return;ctx.beginOperation();container.querySelectorAll('[data-approval]').forEach(b=>b.disabled=true);
+    const kind=button.dataset.approval,group=kind==='approve'?'pending':'legacy';let proposal;
+    try{
+      const selection=button.hasAttribute('data-all')?await api(`/api/kiot/approval-selection?group=${group}&q=${encodeURIComponent(ctx.query||'')}`):{runId:state.runId,items:state[group].items.filter(r=>r.code===button.dataset.code)};
+      const codes=selection.items.map(r=>r.code);if(!codes.length)throw Error('Không còn món để duyệt; tải lại danh sách.');
+      if(kind!=='keep')proposal=await api('/api/kiot/prepare',{runId:selection.runId,codes,...(kind==='approve'?{approveBelowCost:true}:{restoreCost:true})});
+      const items=proposal?proposal.items.map(i=>({code:i.code,currentPrice:i.before.currentPrice,cost:i.row.cost,price:i.row.price})):selection.items.map(r=>({...r,price:r.currentPrice}));
+      const total=items.reduce((sum,r)=>sum+(kind==='restore'?r.cost-r.currentPrice:r.cost-(kind==='keep'?r.currentPrice:r.price)),0);
+      const text=kind==='restore'?`${items.length} món sẽ được ghi lại giá Kiot bằng giá vốn (tổng tăng ${money(total)})`:kind==='keep'?`${items.length} món giữ nguyên giá, chấp nhận thấp hơn giá vốn tổng ${money(total)}`:`Duyệt ${items.length} món thấp hơn giá vốn tổng ${money(total)}. Giá sẽ được ghi lên ${state.sapoWrite===false?'Kiot':'Kiot + Sapo'}.`;
+      if(!await confirmApproval(text,items,ctx)){if(proposal)await api('/api/kiot/cancel',{id:proposal.id});return;}
+      if(kind==='keep'){await api('/api/kiot/keep-below-cost',{codes,items:items.map(r=>({code:r.code,price:r.currentPrice,cost:r.cost})),confirmed:true});message(`Đã xác nhận giữ giá ${codes.length} món.`);}
+      else{const update=await api('/api/kiot/commit',{id:proposal.id,confirmed:true});notifyUpdate(update,ctx);}
+    }catch(error){message(error.message,true);}
+    finally{ctx.endOperation();await ctx.acceptUpdate();}
+  });
+}
+function confirmApproval(text,items,{esc,money}){
+  return new Promise(resolve=>{
+    const dialog=document.createElement('dialog');dialog.className='confirmation';dialog.setAttribute('aria-labelledby','approval-dialog-title');
+    dialog.innerHTML=`<h2 id="approval-dialog-title">Xác nhận duyệt</h2><p>${esc(text)}</p><div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Giá Kiot</th><th>Giá mới</th><th>Giá vốn</th></tr></thead><tbody>${items.map(r=>`<tr><td>${esc(r.code)}</td><td class="money">${money(r.currentPrice)}</td><td class="money">${money(r.price??r.currentPrice)}</td><td class="money">${money(r.cost)}</td></tr>`).join('')}</tbody></table></div><div class="toolbar"><button data-yes class="primary">Xác nhận</button><button data-no autofocus>Huỷ</button></div>`;
+    const close=value=>{dialog.close();dialog.remove();resolve(value);};
+    dialog.querySelector('[data-yes]').onclick=()=>close(true);dialog.querySelector('[data-no]').onclick=()=>close(false);dialog.oncancel=e=>{e.preventDefault();close(false);};document.body.append(dialog);dialog.showModal();
+  });
+}
 export function notifyUpdate(update,ctx) {
   const summary=updateReport(update);
   ctx.message(summaryText(summary,update)+(update.refreshError?' Tải lại dữ liệu chưa thành công: '+update.refreshError:''),summary.failed>0||!!update.skipped?.length||!!update.refreshError);
@@ -97,11 +168,13 @@ export function renderHistory(state,container,ctx,includeUpdates=true) {
   const entries=(state.history||historyEntries(state,includeUpdates)).filter(e=>state.dataset!=='real'||e.kind==='update');
   container.innerHTML=entries.length?pagedTable(['Ngày xét','Thời điểm chạy','Cách chạy','Kết quả'],entries,e=>{
     // "Theo lịch" / "Tự động cập nhật": entries made before the schedule was removed (21/10/2026).
+    // TASK-137 reuses the same label for the newly authorized schedule.
     if(e.kind==='simulation')return `<tr><td>${esc(e.day)}</td><td>${dateTime(e.at)}</td><td>${e.run.trigger==='schedule'?'Theo lịch':'Mô phỏng'}${e.run.customDate?' · Ngày giả định':''}</td><td><button data-run="${esc(e.id)}">Xem ${e.run.rowCount??e.run.rows.length} sản phẩm</button></td></tr>`;
     const summary=e.update.summary?.preflightFailed!==undefined?e.update.summary:updateReport(e.update);
+    if(e.update.mode==='auto-settings')return `<tr><td>${esc(e.day)}</td><td>${dateTime(e.at)}</td><td>Đổi lịch tự động</td><td>${esc(e.update.message)}</td></tr>`;
     const restore=e.update.mode==='restore-joint-v1',joint=restore||e.update.mode==='joint-v1';
     const manualSapo=state.sapoWrite===false&&!!(e.update.hasSapo||e.update.platformSummary?.sapo);
-    return `<tr><td>${esc(e.day)}</td><td>${dateTime(e.at)}</td><td>${(e.update.trigger==='schedule'?'Tự động cập nhật ':restore?'Khôi phục ':'Cập nhật ')+((joint&&e.update.platformSummary?.sapo||e.update.mode==='schedule-failed')?'Kiot + Sapo':'Kiot')}<span class="small">${esc(summaryText(summary,e.update))}</span>${e.update.error?`<span class="small">Chưa hoàn tất: ${esc(e.update.error)}</span>`:''}</td><td><div class="history-actions"><button data-update-details="${esc(e.id)}">Xem chi tiết (${Number(summary.total).toLocaleString('vi-VN')} món)</button>${manualSapo?'<span class="wait">Lượt cũ có Sapo — cần hoàn tác tay</span>':e.update.canRestore?`<button data-restore="${esc(e.id)}">${e.update.kiotDescription===false?'Khôi phục giá Kiot (Rollback)':'Khôi phục giá + mô tả (Rollback)'}</button>`:''}</div></td></tr>`;
+    return `<tr><td>${esc(e.day)}</td><td>${dateTime(e.at)}</td><td>${e.update.trigger==='schedule'?'<span class="auto-badge">AUTO</span> ':''}${(e.update.trigger==='schedule'?'Tự động cập nhật':restore?'Khôi phục ':'Cập nhật ')+(e.update.trigger==='schedule'?'':(joint&&e.update.platformSummary?.sapo||e.update.mode==='schedule-failed')?'Kiot + Sapo':'Kiot')}<span class="small">${esc(summaryText(summary,e.update))}</span>${e.update.error?`<span class="small">Chưa hoàn tất: ${esc(e.update.error)}</span>`:''}</td><td><div class="history-actions">${summary.total?`<button data-update-details="${esc(e.id)}">Xem chi tiết (${Number(summary.total).toLocaleString('vi-VN')} món)</button>`:''}${manualSapo?'<span class="wait">Lượt cũ có Sapo — cần hoàn tác tay</span>':e.update.canRestore?`<button data-restore="${esc(e.id)}">${e.update.kiotDescription===false?'Khôi phục giá Kiot (Rollback)':'Khôi phục giá + mô tả (Rollback)'}</button>`:''}</div></td></tr>`;
   },'history'):'<div class="empty">Chưa có lịch sử.</div>';
   container.querySelectorAll('[data-update-details]').forEach(b=>b.onclick=()=>showUpdateDetails(state,b.dataset.updateDetails,ctx));
   container.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{
@@ -133,8 +206,8 @@ export function showUpdateDetails(state,id,ctx) {
   let retryData=null;
   const eligible=code=>retryData?.codes?`<span class="small">${retryData.codes.includes(code)?'Đủ điều kiện cập nhật lại':'Không đủ điều kiện'}</span>`:'';
   const retryBar=()=>!retryData?'':retryData.error?`<p class="muted">${esc(retryData.error)}</p>`:retryData.total?`<div class="retry-bar"><span>Cập nhật lại ${retryData.codes.length} / ${retryData.total} món lỗi${retryData.notEligible?` (${retryData.notEligible} món không đủ điều kiện)`:''}</span><button class="primary" data-retry ${retryData.codes.length?'':'disabled'}>Cập nhật lại các món lỗi</button></div>`:'';
-  const statusLabel=p=>({skipped_sapo_zero_price:'Bỏ qua (Sapo giá 0)',done:'Thành công',preflight_failed:'Lỗi kiểm tra — chưa ghi',write_failed:'Lỗi khi ghi',unknown:'Chưa xác minh',not_sent:'Chưa gửi',unchanged:'Bỏ qua (đã đúng giá)'})[p.reportStatus||reportStatus(p)];
-  const row=p=>`<tr><td><b>${esc(p.code)}</b><span class="small">${esc(p.name)}</span></td><td class="money">${money(p.beforePrice)} → ${money(p.price)}</td><td>${esc(statusLabel(p))}${p.platforms?Object.entries(p.platforms).map(([name,result])=>`<span class="small">${name==='kiot'?'Kiot':'Sapo'}: ${esc(result.skipped?'Bỏ qua — không cần khôi phục':updateStatus(result.status))} ${esc(result.error||'')}</span>`).join(''):''}</td><td>${esc(failureReason(p))||'—'}${filter==='issues'?eligible(p.code):''}${p.stage?`<span class="small">${esc(p.failureStage||p.stage)} · ${esc(p.rollbackResult||'')}</span>`:''}</td></tr>`;
+  const statusLabel=p=>({skipped_manual_price:'Giữ giá sửa tay',skipped_sapo_zero_price:'Bỏ qua (Sapo giá 0)',done:'Thành công',preflight_failed:'Lỗi kiểm tra — chưa ghi',write_failed:'Lỗi khi ghi',unknown:'Chưa xác minh',not_sent:'Chưa gửi',unchanged:'Bỏ qua (đã đúng giá)'})[p.reportStatus||reportStatus(p)];
+  const row=p=>`<tr><td><b>${esc(p.code)}</b><span class="small">${esc(p.name)}</span></td><td class="money">${money(p.beforePrice)} → ${money(p.price)}${p.status==='skipped_manual_price'?`<span class="small">Sale AI ghi trước: ${money(p.expectedPrice)}</span>`:''}</td><td>${esc(statusLabel(p))}${p.platforms?Object.entries(p.platforms).map(([name,result])=>`<span class="small">${name==='kiot'?'Kiot':'Sapo'}: ${esc(result.skipped?'Bỏ qua — không cần khôi phục':updateStatus(result.status))} ${esc(result.error||'')}</span>`).join(''):''}</td><td>${esc(failureReason(p))||'—'}${filter==='issues'?eligible(p.code):''}${p.stage?`<span class="small">${esc(p.failureStage||p.stage)} · ${esc(p.rollbackResult||'')}</span>`:''}</td></tr>`;
   const close=()=>{controller?.abort();dialog.close();dialog.remove();};
   const controls=p=>`<div class="pagination" tabindex="-1" aria-label="Phân trang lượt cập nhật"><label>Sản phẩm mỗi trang <select aria-label="Số sản phẩm mỗi trang">${[10,50,100].map(n=>`<option ${p.size===n?'selected':''}>${n}</option>`).join('')}</select></label><span>Hiển thị ${p.total?(p.page-1)*p.size+1:0}–${Math.min(p.page*p.size,p.total)} / ${p.total}</span><button data-prev ${p.page===1?'disabled':''}>Trước</button><span role="status" aria-live="polite">Trang ${p.page} / ${p.totalPages}</span><button data-next ${p.page===p.totalPages?'disabled':''}>Sau</button></div>`;
   const table=p=>p.items.length?`<div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Giá trước → dự kiến</th><th>Trạng thái</th><th>Nguyên nhân</th></tr></thead><tbody>${p.items.map(row).join('')}</tbody></table></div>`:'<p>Không có sản phẩm trong bộ lọc này.</p>';
@@ -153,7 +226,7 @@ export function showUpdateDetails(state,id,ctx) {
       if(current!==sequence||!dialog.isConnected)return;
       const p=data.pagination;page=p.page;size=p.size;
       const s=data.update.summary,n=value=>Number(value||0).toLocaleString('vi-VN');
-      const filters=`<div class="history-filters" role="group" aria-label="Lọc sản phẩm trong lượt">${[['all','Tất cả',s.total],['success','Thành công',s.succeeded],['issues','Lỗi + chưa gửi',s.issues],['unchanged','Đã đúng giá',s.unchanged],...(s.skippedSapoZeroPrice?[['skipped_sapo_zero_price','Bỏ qua (Sapo giá 0)',s.skippedSapoZeroPrice]]:[])].map(([value,label,total])=>`<button data-history-filter="${value}" aria-pressed="${filter===value}">${label} (${n(total)})</button>`).join('')}</div>`;
+      const filters=`<div class="history-filters" role="group" aria-label="Lọc sản phẩm trong lượt">${[['all','Tất cả',s.total],['success','Thành công',s.succeeded],['issues','Lỗi + chưa gửi',s.issues],['unchanged','Đã đúng giá',s.unchanged],...(s.manualPriceSkipped?[['skipped_manual_price','Giữ giá sửa tay',s.manualPriceSkipped]]:[]),...(s.skippedSapoZeroPrice?[['skipped_sapo_zero_price','Bỏ qua (Sapo giá 0)',s.skippedSapoZeroPrice]]:[])].map(([value,label,total])=>`<button data-history-filter="${value}" aria-pressed="${filter===value}">${label} (${n(total)})</button>`).join('')}</div>`;
       dialog.innerHTML=`<h2 id="history-dialog-title">Chi tiết lượt ${data.update.mode==='restore-joint-v1'?'khôi phục':'cập nhật'}</h2><p>${dateTime(data.update.at)} · ${esc(data.update.message)}</p>${filters}${s.unnamedUnchanged&&filter==='all'?`<p class="muted">Lượt cũ có ${n(s.unnamedUnchanged)} món đã đúng giá nhưng không lưu danh sách mã.</p>`:''}${filter==='issues'?retryBar():''}${table(p)}${controls(p)}
         ${data.attempts.map(a=>`<details data-attempt="${a.index}"><summary>Lỗi lần thử ${a.index+1} · ${dateTime(a.at)}</summary><div class="attempt-content"></div></details>`).join('')}<div class="dialog-error" role="status"></div><button data-close>Đóng</button>`;
       dialog.querySelector('select').onchange=e=>{size=Number(e.target.value);page=1;draw('select');};

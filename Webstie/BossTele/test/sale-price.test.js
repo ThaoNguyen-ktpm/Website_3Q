@@ -28,8 +28,16 @@ function fixture(products, catalogRows) {
   fs.writeFileSync(catalogFile, JSON.stringify({ rows: { kiotviet: catalogRows } }));
   return { saleDir: dir, catalogFile };
 }
-const saved = (code, p0, createdAt, name = 'Túi Chanel') => ({ code, name, p0, currentPrice: p0, createdAt, active: true, stock: 1 });
-const live = (sku, price, onHand, createdDate, name = 'Túi Chanel') => ({ sku, name, price, onHand, detail: { createdDate, isActive: true, inventories: [{ branchId: 44466, onHand }] } });
+const saved = (code, p0, createdAt, name = 'Túi Chanel') => ({ cost:1, code, name, p0, currentPrice: p0, createdAt, active: true, stock: 1 });
+const live = (sku, price, onHand, createdDate, name = 'Túi Chanel') => ({ sku, name, price, onHand, detail: { createdDate, isActive: true, inventories: [{ branchId: 44466, cost:1, onHand }] } });
+
+test('sale price passes live and stored costs to the shared approval policy', {skip:!hasSaleAi}, async()=>{
+  const row=live('SP1',35e6,1,'2026-08-01');row.detail.inventories[0].cost=34.5e6;
+  const paths=fixture([saved('SP1',35e6,'2026-08-01'),{...saved('SP2',35e6,'2026-08-01'),cost:null}], [row]);
+  const {rows}=await createSalePricer({...paths,today:'2026-11-10'})(['SP1','SP2']);
+  assert.equal(rows[0].status,'needs_approval');assert.equal(rows[0].cost,34.5e6);assert.match(rows[0].reasons.join(),/chờ duyệt/);
+  assert.equal(rows[1].status,'excluded');assert.match(rows[1].reasons.join(),/Thiếu giá vốn/);
+});
 
 test('sale price follows the Sale AI skill example: P0 35tr, regular, M3', { skip: !hasSaleAi }, async () => {
   const paths = fixture([saved('SP1', 35000000, '2026-09-01T10:00:00')], [live('SP1', 34200000, 1, '2026-09-01T10:00:00')]);
@@ -59,7 +67,7 @@ test('new Kiot items use the current price as P0; sold-out and unknown items exp
 test('pre-July items explain không giảm without an error or sale price', { skip: !hasSaleAi }, async () => {
   const paths = fixture([saved('SP5', 35000000, '2026-03-15'), saved('SP6', 35000000, '2026-06-30', 'Túi !')], []);
   const { rows, formulaPolicy } = await createSalePricer({ ...paths, today: '2027-01-15' })(['SP5', 'SP6']);
-  assert.equal(formulaPolicy, 'baoq-2026-11-02-hide-600m-v11');
+  assert.equal(formulaPolicy, 'baoq-2026-11-10-cost-approval-v12');
   for (const row of rows) {
     assert.equal(row.status, 'excluded');
     assert.match(row.reasons.join(), /không giảm/);

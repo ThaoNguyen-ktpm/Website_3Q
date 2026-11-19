@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {START,ageFields,calculate} from '../lib/pricing.js';
-const product=(extras={})=>({name:'Túi',code:'START',createdAt:'2026-10-16',p0:35e6,currentPrice:35e6,active:true,stock:1,...extras});
+const product=(extras={})=>({name:'Túi',code:'START',createdAt:'2026-10-16',p0:35e6,cost:1,currentPrice:35e6,active:true,stock:1,...extras});
 test('global epoch stays 1 October; pre-July excluded and batch starts M0',()=>{
  assert.equal(START,'2026-10-01');
  assert.equal(ageFields(product({createdAt:'2026-07-01'}),'2026-10-01').ageDays,0);

@@ -8,7 +8,7 @@ import {calculate, POLICY} from '../lib/pricing.js';
 import {jobResult} from './job-result.js';
 
 const memory=(initial=null)=>{let value=initial;return {read:async()=>structuredClone(value),write:async next=>{value=structuredClone(next);}};};
-const item=(code,createdAt,extra={})=>({id:code,code,name:'Túi '+code,createdAt,p0:35e6,currentPrice:35e6,active:true,stock:1,notes:'Ghi chú '+code,...extra});
+const item=(code,createdAt,extra={})=>({id:code,code,name:'Túi '+code,createdAt,p0:35e6,cost:1,currentPrice:35e6,active:true,stock:1,notes:'Ghi chú '+code,...extra});
 const products=()=>[item('MARCH','2026-03-15'),item('JUNE','2026-06-30'),item('JULY','2026-07-01'),item('OCT','2026-10-20')];
 async function request(sale,url,method='GET',body={}) {
   const req=Readable.from(method==='POST'?[JSON.stringify(body)]:[]);

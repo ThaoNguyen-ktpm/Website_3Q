@@ -9,7 +9,7 @@ import { Store } from '../lib/store.js';
 import { SampleSource } from '../lib/samples.js';
 import { FakeSink, fakeApply, failureScenarios } from '../lib/fake-sync.js';
 import { createTestApp } from './http-fixture.js';
-const item = (overrides = {}) => ({ code:'T', name:'Test', p0:35e6, currentPrice:35e6,
+const item = (overrides = {}) => ({ code:'T', name:'Test', p0:35e6, cost:1,currentPrice:35e6,
   createdAt:'2026-10-16', stock:1, active:true, type:'normal', floor:0, notes:'Ghi chú gốc', ...overrides });
 const dayAt = age => new Date(Date.parse('2026-10-16') + age * 86400000).toISOString().slice(0,10);
 
@@ -75,6 +75,8 @@ test('under 5m policy covers exact boundaries, all M and both calendars with no 
   for(const p0 of [1,1999999,2000000,4999999]) for(const name of ['Hàng thường','Hottrend !']) for(let m=0;m<=6;m++) {
     const age=name.includes('!')?(m===0?44:30+m*15):m*15;
     const r=calculate(item({p0,name}),dayAt(age));
+    // TASK-139: P0=1 cannot exceed any positive integer cost; the new exclusion takes precedence.
+    if(p0===1){assert.equal(r.status,'excluded');assert.equal(r.excludedReason,'p0_not_above_cost');assert.equal(r.price,null);continue;}
     assert.equal(r.m,m);assert.equal(r.allowance,0);assert.equal(r.price,p0-(p0<2e6?0:m*200000));assert.equal(r.net,r.price);assert.equal(r.status,'simulated');
   }
   const exact5=calculate(item({p0:5e6}),dayAt(45));assert.equal(exact5.price,3.9e6);assert.equal(exact5.allowance,117000);

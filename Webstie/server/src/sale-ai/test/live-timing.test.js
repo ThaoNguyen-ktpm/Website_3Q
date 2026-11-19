@@ -6,7 +6,7 @@ import {POLICY} from '../lib/pricing.js';
 const memory=()=>({read:async()=>null,write:async()=>{}});
 test('auth and request timings contain only safe metadata and status identifies the active real operation',async()=>{
  let unblock;const waiting=new Promise(r=>unblock=r);
- const raw={id:1,code:'A',name:'Mẫu',basePrice:35e6,createdDate:'2026-10-13T12:00:00',isActive:true,inventories:[{branchId:44466,onHand:1}],description:'PRIVATE_NOTES'};
+ const raw={id:1,code:'A',name:'Mẫu',basePrice:35e6,createdDate:'2026-10-13T12:00:00',isActive:true,inventories:[{branchId:44466,cost:1,onHand:1}],description:'PRIVATE_NOTES'};
  const client=new KiotClient({credentials:{retailer:'baoqluxury',client:'PRIVATE_CLIENT',secret:'PRIVATE_SECRET'},fetcher:async(url,options)=>{if(url.includes('/connect/token')){await waiting;return {ok:true,json:async()=>({access_token:'PRIVATE_TOKEN',expires_in:3600})};}assert.equal(options.method,'GET');return {ok:true,json:async()=>raw};}});
  const app=await createTestApp({store:memory(),liveStore:memory(),sapoStore:memory(),source:{load:async()=>[]},client,clock:()=>new Date('2027-01-21T04:00:00Z')});app.live.timingSink=()=>{};
  // Isolated legacy auth-timing fixture, with fetcher already stubbed above.

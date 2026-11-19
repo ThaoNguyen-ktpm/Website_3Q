@@ -33,7 +33,7 @@ export function fakeApply(sink, day) {
   return { status: 'simulated', row };
 }
 export function failureScenarios() {
-  const product = { code: 'SANDBOX', name: 'Bản sao thử lỗi', p0: 15e6, currentPrice: 15e6,
+  const product = { cost:1, code: 'SANDBOX', name: 'Bản sao thử lỗi', p0: 15e6, currentPrice: 15e6,
     stock: 1, active: true, createdAt: '2026-10-16', type: 'normal', floor: 0, notes: 'Ghi chú gốc' };
   const day = new Date(Date.parse(product.createdAt) + (3 * STEP_DAYS + 9) * 86400000).toISOString().slice(0,10);
   return ['price', 'note', 'timeout'].map(failure => {

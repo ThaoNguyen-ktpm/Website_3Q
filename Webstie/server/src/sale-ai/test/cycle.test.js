@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {calculate, ageFields} from '../lib/pricing.js';
 import {migrateCycles, recoverP0} from '../lib/cycle.js';
 import {createTestApp} from './http-fixture.js';
-const p = (extras={}) => ({id:99,code:'CYCLE',name:'Mẫu',p0:0,currentPrice:12e6,createdAt:'2027-01-20T10:19:09.8700000',active:true,stock:1,notes:'',...extras});
+const p = (extras={}) => ({id:99,code:'CYCLE',name:'Mẫu',p0:0,cost:1,currentPrice:12e6,createdAt:'2027-01-20T10:19:09.8700000',active:true,stock:1,notes:'',...extras});
 const memory = initial => {let value=initial;return {read:async()=>structuredClone(value),write:async s=>{value=structuredClone(s);}};};
 test('valid date retains age and M despite P0 errors; invalid date does not invent age',()=>{
   const row=calculate(p(),'2027-01-20');assert.equal(row.age,0);assert.equal(row.m,0);assert.equal(row.price,null);assert.match(row.reasons.join(),/P0/);

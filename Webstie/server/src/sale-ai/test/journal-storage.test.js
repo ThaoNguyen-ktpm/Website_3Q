@@ -25,7 +25,7 @@ async function retrySelection(f,state,id){
 async function fixture(n=2){
  const dir=await mkdtemp(join(tmpdir(),'task126-test-')),path=join(dir,'kiot-state.json');
  const store=new SplitStore(path),clock=()=>new Date('2026-11-16T03:00:00Z');
- const products=Array.from({length:n},(_,i)=>normalizeProduct({id:i+1,code:'SP'+(i+1),name:'Túi '+i,basePrice:35e6,createdDate:'2026-09-01',description:'Gốc '+i,isActive:true,inventories:[{branchId:44466,onHand:1}]}));
+ const products=Array.from({length:n},(_,i)=>normalizeProduct({id:i+1,code:'SP'+(i+1),name:'Túi '+i,basePrice:35e6,createdDate:'2026-09-01',description:'Gốc '+i,isActive:true,inventories:[{branchId:44466,cost:1,onHand:1}]}));
  const calls={all:0,put:0,modified:[]},stages=[];
  const client={all:async()=>{calls.all++;return structuredClone(products);},listModified:async since=>{calls.modified.push(since);return structuredClone(products);},product:async id=>structuredClone(products.find(p=>p.id===id)),
  updateMany:async entries=>{calls.put++;for(const e of entries)products.find(p=>p.id===e.product.id).currentPrice=e.fields.basePrice;},

@@ -14,6 +14,7 @@ import {sapoNote,sapoSku} from './sapo.js';
 import {prepareRestore,commitRestore} from './restore.js';
 import {stopsPlatform} from './update-errors.js';
 import {fingerprint} from './kiot-fingerprint.js';
+import {approvalGroups} from './approval.js';
 export {fingerprint} from './kiot-fingerprint.js';
 
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -45,6 +46,7 @@ export class LiveService {
   readProduct(id){return this.timed('GET',()=>this.client.product(id));}
   sendUpdate(product,body){return this.timed('PUT',()=>this.client.update(product,body));}
   checkKiotSnapshot(state,item,fresh) {
+    if(fresh.cost!==item.row.cost)throw Error('Giá vốn trên Kiot đã thay đổi — tải lại và duyệt lại');
     if(fresh.id===item.id&&fingerprint(fresh)===item.row.liveBase)return;
     // Price-only no-ops tolerate the write timestamp, never changes to other fields.
     if(this.kiotDescription===false&&fresh.id===item.id&&fresh.currentPrice===item.row.price){
@@ -128,7 +130,7 @@ export class LiveService {
         const eligible=p=>validP0(p.currentPrice)&&validP0(p.p0);
         state.products=mergedProducts.filter(eligible);
         state.archivedProducts=[...old.values()].map(p=>({...p,active:false,seen:false})).concat(mergedProducts.filter(p=>!eligible(p)).map(p=>({...p,excludedReason:'missing_price'})));
-        const changed=!!state.tableStale||!state.pricedOnly||state.products.length!==current.size||state.products.some(p=>!current.has(p.id)||fingerprint(p)!==fingerprint(current.get(p.id))||p.p0!==current.get(p.id).p0);
+        const changed=!!state.tableStale||!state.pricedOnly||state.products.length!==current.size||state.products.some(p=>!current.has(p.id)||fingerprint(p)!==fingerprint(current.get(p.id))||p.p0!==current.get(p.id).p0||p.cost!==current.get(p.id).cost);
         state.tableStale=false;
         state.pricedOnly=true;
         state.importStats={...(this.client.lastImport||{read:downloaded.length}),kept:state.products.length,missingPrice:mergedProducts.length-state.products.length};
@@ -161,7 +163,10 @@ export class LiveService {
   snapshot(row,product,state) {
     return {...row,id:product.id,notesBefore:product.notes||'',liveBase:fingerprint(product),liveReadAt:product.liveReadAt||state.kiotReadAt||null,localKey:localKey(product),dataRevision:state.dataRevision};
   }
-  async prepare(runId,codes,{previewOnly=false,continueOnError=false,excludedCodes=[],batch,localOnly=false}={}) {
+  async prepare(runId,codes,{previewOnly=false,continueOnError=false,excludedCodes=[],batch,localOnly=false,schedule,approveBelowCost=false,restoreCost=false,by=null}={}) {
+    if(typeof approveBelowCost!=='boolean'||typeof restoreCost!=='boolean'||(approveBelowCost&&restoreCost))throw Error('Cờ duyệt không hợp lệ');
+    const approval=approveBelowCost||restoreCost?{kind:restoreCost?'restore_cost':'below_cost',at:this.clock().toISOString(),by}:null;
+    if(approval){continueOnError=false;localOnly=false;}
     // TASK-102: page updates (continue on error) check from list reads and write Kiot in bulk; restore keeps the old engine.
     batch??=this.batchWrites===true&&continueOnError&&!previewOnly&&typeof this.client.listModified==='function'&&typeof this.client.updateMany==='function';
     // Validate before creating a selected-record draft.
@@ -187,8 +192,11 @@ export class LiveService {
       }
       let items=(await readPool(codes,async code=>{
        try{
-        const row=run.rows.find(r=>r.code===code),local=state.products.find(p=>p.code===code);
-        if(!row||!local||row.status!=='simulated'||row.localKey!==localKey(local)) throw new Error(`${code}: dữ liệu chưa đủ điều kiện; cần kiểm thử lại`);
+        let row=run.rows.find(r=>r.code===code);const local=state.products.find(p=>p.code===code);
+        if(restoreCost&&!row&&local)row=this.snapshot(calculate(local,today),local,state);
+        const eligible=restoreCost?approvalGroups(state).legacy.some(r=>r.code===code):approveBelowCost?row?.status==='needs_approval'&&row.currentPrice!==row.price:row?.status==='simulated';
+        if(!row||!local||!eligible||row.localKey!==localKey(local)) throw new Error(`${code}: dữ liệu chưa đủ điều kiện; cần kiểm thử lại`);
+        if(restoreCost)row={...row,price:row.cost};
         const fresh=localOnly?local:batch?kiotList.get(local.id):await this.readProduct(local.id);
         if(!fresh)throw new Error(`${code}: Kiot không còn trong danh sách (hết hàng hoặc ngừng bán)`);
         this.stage('Đang đối chiếu',(this.operation?.processed||0)+1);
@@ -216,7 +224,9 @@ export class LiveService {
       })).filter(Boolean);
       if(previewOnly)return {previewOnly:true,items,day:today};
       const prepared={id:randomUUID(),runId,policy:POLICY,at:this.clock().toISOString(),day:today,revision:state.dataRevision,items,skipped,continueOnError,status:'prepared',kiotDescription:this.kiotDescription!==false,joint:useSapo,...(useSapo||this.sapoWrite===false?{platforms:useSapo?['kiot','sapo']:['kiot']}:{})};
+      if(approval)prepared.approval=approval;
       if(localOnly)prepared.localOnly=true;
+      if(schedule)prepared.schedule=structuredClone(schedule);
       if(batch){
         const cursors=items.map(i=>Date.parse(i.row.liveReadAt));
         prepared.batch=true;prepared.listAt=localOnly?(cursors.length&&cursors.every(t=>Number.isFinite(t)&&t<=this.clock().getTime())?new Date(Math.min(...cursors)).toISOString():null):listAt;
@@ -242,9 +252,11 @@ export class LiveService {
       // Kiot-only confirmations still use the verified per-platform engine so they keep restore snapshots.
       const platforms=prepared.platforms||(prepared.joint?['kiot','sapo']:null);
       const update={id:randomUUID(),at:this.clock().toISOString(),label:prepared.joint?'Cập nhật Kiot + Sapo':prepared.kiotDescription===false?'Cập nhật giá Kiot':'Cập nhật Kiot',kiotDescription:prepared.kiotDescription!==false,mode:platforms?'joint-v1':'stop-v1',...(platforms?{restoreVersion:1}:{}),...(prepared.joint?{sapoBinding:this.sapo.binding}:{}),items:prepared.items.map(item=>({...item,status:'journaled',actualAt:null,error:null,...(platforms?{platforms:Object.fromEntries(platforms.map(name=>[name,{status:'journaled'}]))}:{})}))};
+      if(prepared.approval)update.approval=structuredClone(prepared.approval);
       update.attempts=[{id:randomUUID(),at:this.clock().toISOString(),kind:'commit',status:'running'}];
       if(platforms?.length===1&&platforms[0]==='kiot'&&prepared.kiotDescription===false)update.journalVersion=2;
       update.continueOnError=prepared.continueOnError===true;update.skipped=structuredClone(prepared.skipped||[]);update.targets=platforms;
+      if(prepared.schedule){update.trigger='schedule';update.scheduleId=prepared.schedule.id;update.manualPriceSkips=structuredClone(prepared.schedule.manualPriceSkips);update.unverifiedSkips=structuredClone(prepared.schedule.unverifiedSkips);}
       if(prepared.localOnly)update.localOnly=true;
       if(prepared.batch&&platforms){update.batch=true;update.listAt=prepared.listAt;update.unchanged=prepared.unchanged||0;update.unchangedCodes=structuredClone(prepared.unchangedCodes||[]);
         // A side already right at the check counts as done and is never sent (restore skips it).
@@ -283,6 +295,30 @@ export class LiveService {
     state.runs=[{...run,id:randomUUID(),at:this.clock().toISOString(),trigger:'data_change',dataRevision:revision,rows},...state.runs];
   }
   async retry() {const error=new Error('Chức năng thử lại đã tắt');error.status=410;throw error;}
+  preflightRow(state,update,item,row){
+    if(update.approval?.kind==='restore_cost'){
+      if(!approvalGroups(state).legacy.some(r=>r.id===item.id)||row.cost!==item.row.cost)throw Error('Điều kiện trả về giá vốn đã thay đổi');
+      return {...row,price:row.cost};
+    }
+    if(update.approval?.kind==='below_cost'?row.status!=='needs_approval':row.status!=='simulated')throw Error('Điều kiện hoặc mốc M thay đổi');
+    return row;
+  }
+  async keepBelowCost(codes,confirmed,by=null,expectedItems){
+    if(confirmed!==true||!Array.isArray(codes)||!codes.length||new Set(codes).size!==codes.length||!Array.isArray(expectedItems)||expectedItems.length!==codes.length||new Set(expectedItems.map(i=>i?.code)).size!==codes.length)throw Error('Cần xác nhận danh sách giữ giá hợp lệ');
+    return this.transaction('keep-below-cost',codes,async state=>{
+      const legacy=approvalGroups(state).legacy,items=[];
+      for(const code of codes){
+        const row=legacy.find(r=>r.code===code);if(!row)throw Error('Danh sách món dưới vốn đã thay đổi; tải lại');
+        const expected=expectedItems.find(i=>i?.code===code);
+        if(!expected||expected.price!==row.currentPrice||expected.cost!==row.cost)throw Error('Giá hoặc giá vốn đã thay đổi; tải lại và xác nhận lại');
+        const local=state.products.find(p=>p.id===row.id),fresh=await this.readProduct(row.id);
+        this.checkKiotSnapshot(state,{id:row.id,row:row.liveBase?row:this.snapshot(row,local,state),before:local},fresh);
+        items.push({id:row.id,price:fresh.currentPrice,at:this.clock().toISOString(),by});
+      }
+      state.belowCostKeeps=[...(state.belowCostKeeps||[]).filter(k=>!items.some(i=>i.id===k.id)),...items];
+      return {count:items.length};
+    });
+  }
   writesSapo(){return !!this.sapo&&this.sapoWrite!==false;}
   prepareRestore(sourceId){return prepareRestore(this,sourceId);}
   commitRestore(id,confirmed){return commitRestore(this,id,confirmed);}

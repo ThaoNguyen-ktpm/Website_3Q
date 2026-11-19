@@ -57,7 +57,7 @@ function createSalePricer({ saleDir = defaults.saleDir, dataDir = saleDir === de
       if (!saved && !row) return { sku, status: 'missing', reasons: ['Không có trong Sale AI và danh mục KiotViet'] };
       const branch = row?.detail?.inventories?.find(inventory => inventory.branchId === BRANCH);
       const product = {
-        ...saved, code: sku,
+        ...saved, code: sku, cost:row?cost(row):saved?.cost??null,
         name: row?.name ?? saved.name, createdAt: row?.detail?.createdDate ?? saved.createdAt,
         currentPrice: row?.price ?? saved.currentPrice,
         active: row ? row.detail?.isActive !== false : saved.active, activeMissing: false,
@@ -68,7 +68,7 @@ function createSalePricer({ saleDir = defaults.saleDir, dataDir = saleDir === de
       const result = pricing.calculate(product, day);
       return { sku, name: product.name, day, type: result.type, ageDays: result.ageDays, m: result.m, p0: product.p0,
         price: result.price, allowance: result.allowance, net: result.net, currentPrice: product.currentPrice,
-        stock: product.stock, cost: row ? cost(row) : null, status: result.status,
+        stock: product.stock, cost: product.cost, status: result.status,
         reasons: result.excludedReason==='over_600m'?['không giảm (giá gốc từ 600 triệu)']:result.reasons, p0Source: saved?.p0 ? 'sale-ai' : 'kiot-now' };
     });
     return { day, policy: sale.policy, formulaPolicy: pricing.POLICY, saleLoadedAt: sale.loadedAt, rows };

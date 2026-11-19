@@ -21,7 +21,7 @@ test('GET retries three times with exponential backoff; PUT is never retried',as
 
 async function fixture(count=2,{batch=false}={}){
  let now=Date.parse('2026-11-16T03:00:00Z'),used=0,last=now,rejections=0;const calls=[],faults=new Map();
- const products=Array.from({length:count},(_,n)=>normalizeProduct({id:n+1,code:'SP'+String(n+1).padStart(6,'0'),name:'Túi '+n,basePrice:35e6,createdDate:'2026-09-01',isActive:true,description:'Kiot gốc',inventories:[{branchId:44466,onHand:1}]}));
+ const products=Array.from({length:count},(_,n)=>normalizeProduct({id:n+1,code:'SP'+String(n+1).padStart(6,'0'),name:'Túi '+n,basePrice:35e6,createdDate:'2026-09-01',isActive:true,description:'Kiot gốc',inventories:[{branchId:44466,cost:1,onHand:1}]}));
  const sapos=products.map(p=>({id:p.id,content:'HTML gốc',variants:[{id:p.id,sku:p.code,price:35e6}]}));
  const adapter=new SapoClient(config,async(url,options)=>{
   const path=new URL(url).pathname,id=Number(path.match(/products\/(\d+)/)?.[1]),key=options.method+':'+id;
@@ -125,7 +125,7 @@ test('core status stays readable while the Sapo queue sleeps and UI polling show
  assert.ok(status.sapoWait);release();await pending;
  let poll;const nodes={'#sync-status':{},'#update-progress':{}};
  const source=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
- const context=vm.createContext({polling:false,observedJob:undefined,finishedJob:undefined,setInterval:fn=>poll=fn,api:async()=>({...status,busy:true,operation:{running:true,source:'real',platforms:{sapo:{stage:'Đang gửi',processed:3,total:10}}}}),dataset:'real',renderProgress:()=>{},$:s=>nodes[s],document:{querySelector:()=>null},pending:true});
+ const context=vm.createContext({polling:false,statusOffline:false,state:{},context:()=>({}),renderAutoUpdate:()=>{},observedJob:undefined,finishedJob:undefined,setInterval:fn=>poll=fn,api:async()=>({...status,busy:true,operation:{running:true,source:'real',platforms:{sapo:{stage:'Đang gửi',processed:3,total:10}}}}),dataset:'real',renderProgress:()=>{},$:s=>nodes[s],document:{querySelector:()=>null},pending:true});
  vm.runInContext(source.slice(source.lastIndexOf('setInterval(async()=>{')),context);await poll();
  assert.match(nodes['#sync-status'].textContent,/Đang chờ giới hạn Sapo… · 3\/10/);
 });

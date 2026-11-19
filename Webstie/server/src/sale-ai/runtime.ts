@@ -58,7 +58,7 @@ export function startSaleAi(initialize = initializeSaleAi): Promise<void> {
       const core = await initialize();
       if (stopping) { await core.shutdown(); return; }
       current = core;unavailableReason = '';
-      const check = async () => { try { await core.keepCurrent(); } catch (error) { console.error(`Sale AI: không thể cập nhật bảng hôm nay: ${safeReason(error)}`); } };
+      const check = async () => { try { await core.checkAutoUpdate();await core.keepCurrent(); } catch (error) { console.error(`Sale AI: không thể cập nhật bảng hôm nay: ${safeReason(error)}`); } };
       await check();
       if (!stopping) checkTimer = setInterval(() => { void check(); }, 15_000).unref();
     } catch (error) {

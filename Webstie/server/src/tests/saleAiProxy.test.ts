@@ -13,7 +13,7 @@ vi.mock('../middlewares/requireAuth.js', () => ({ requireAuth: (req: any, res: a
 const sale = (path: string, permissions = 'sale.manage') => request(app).get(path).set('X-Test-User', '1').set('X-Test-Permissions', permissions);
 beforeEach(() => vi.mocked(getSaleAi).mockReturnValue(undefined));
 it('needs login and sale.manage for API and static pages', async () => {
- for (const path of ['/sale-ai/api/state', '/sale-ai/']) {
+ for (const path of ['/sale-ai/api/state', '/sale-ai/', '/sale-ai/api/auto-update/settings']) {
   expect((await request(app).get(path)).status).toBe(401);
   expect((await sale(path, 'products.view')).status).toBe(403);
  }
@@ -34,9 +34,16 @@ it('redirects to the trailing slash and reports startup as 503', async () => {
 it('rejects cross-site mutation before reaching the core', async () => {
  const handler = vi.fn();
  vi.mocked(getSaleAi).mockReturnValue({handler} as unknown as NonNullable<ReturnType<typeof getSaleAi>>);
- for (const path of ['/sale-ai/api/kiot/commit', '/sale-ai/api/run', '/sale-ai/api/manual-price']) {
+ for (const path of ['/sale-ai/api/kiot/commit', '/sale-ai/api/run', '/sale-ai/api/manual-price', '/sale-ai/api/auto-update/settings']) {
   expect((await request(app).post(path).set('X-Test-User','1').set('X-Test-Permissions','sale.manage').set('Origin','https://evil.test').send({confirmed:true})).status).toBe(403);
  }
+ expect(handler).not.toHaveBeenCalled();
+});
+it('auto-update settings POST needs login and sale.manage before the handler',async()=>{
+ const handler=vi.fn();vi.mocked(getSaleAi).mockReturnValue({handler} as unknown as NonNullable<ReturnType<typeof getSaleAi>>);
+ const path='/sale-ai/api/auto-update/settings',body={enabled:true,time:'10:00'};
+ expect((await request(app).post(path).send(body)).status).toBe(401);
+ expect((await request(app).post(path).set('X-Test-User','1').set('X-Test-Permissions','products.view').send(body)).status).toBe(403);
  expect(handler).not.toHaveBeenCalled();
 });
 it('only a logged-in sale manager reaches the real embedded core; a token header cannot bypass website guards', async () => {

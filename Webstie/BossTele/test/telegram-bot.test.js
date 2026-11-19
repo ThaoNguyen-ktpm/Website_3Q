@@ -5,6 +5,17 @@ const assert = require('node:assert/strict');
 const { createBot } = require('../telegram-bot');
 const { REJECT } = require('../lib/chat-commands');
 
+test('approval and cost exclusions use the unavailable sale caption without publishing a sale price',async()=>{
+  for(const [status,reason] of [['needs_approval','Giá sale thấp hơn giá vốn: chờ duyệt'],['excluded','Thiếu giá vốn trên Kiot: không tính'],['excluded','Giá gốc không cao hơn giá vốn: không giảm']]){
+    const sent=[];
+    const bot=createBot({allowFrom:['7'],newSession:()=>null,api:async(method,body)=>{if(method==='sendMessage')sent.push(body.text);},
+      quick:async()=>({products:[{sku:'SP1',name:'Dữ liệu mẫu',price:35e6,onHand:1}]}),
+      salePrices:async()=>({day:'2026-11-10',rows:[{sku:'SP1',status,price:34.2e6,reasons:[reason]}]})});
+    await bot.handleUpdate({message:{chat:{id:1,type:'private'},from:{id:7},text:'giá sale SP1'}});
+    assert.deepEqual(sent,[`Dữ liệu mẫu\nSP1 · Chưa tính được giá sale: ${reason}`]);
+  }
+});
+
 function setup({ ask = async () => 'Còn 1 cái, giá 26.000.000đ.', now = () => 0 } = {}) {
   const sent = [], asked = [], handled = [];
   const api = async (method, body) => { if (method === 'sendMessage') sent.push(body.text); };

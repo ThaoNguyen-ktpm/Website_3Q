@@ -6,6 +6,13 @@ import vm from 'node:vm';
 const source=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
 const apiSource=source.slice(source.indexOf('async function api('),source.indexOf('let messageTimer;'));
 
+test('settings POST sends only the strict enabled/time fields',async()=>{
+ let sent;const sandbox={dataset:'real',fetch:async(path,options)=>{sent=JSON.parse(options.body);return {ok:true,status:200,json:async()=>sent};}};
+ vm.createContext(sandbox);vm.runInContext(apiSource,sandbox);
+ await sandbox.api('/api/auto-update/settings',{enabled:true,time:'10:00'});
+ assert.deepEqual(sent,{enabled:true,time:'10:00'});
+});
+
 for(const failure of ['fetch','json'])test(`page API explains ${failure} connection loss without resending`,async()=>{
  let calls=0;const sandbox={dataset:'real',fetch:async()=>{calls++;if(failure==='fetch')throw new TypeError('Failed to fetch');return {ok:true,json:async()=>{throw new SyntaxError('Unexpected end of JSON input');}};}};
  vm.createContext(sandbox);vm.runInContext(apiSource,sandbox);
@@ -54,6 +61,18 @@ test('page API follows 202 using short GETs, sends confirmation once, and return
  assert.equal(update.id,'update-1');assert.equal(sandbox.finishedJob,'job-1');assert.equal(calls.length,3);
  assert.equal(calls[0].options.method,'POST');assert.equal(JSON.parse(calls[0].options.body).confirmed,true);
  assert.ok(calls.slice(1).every(c=>c.path==='api/jobs/job-1?dataset=real'&&c.options.method===undefined));
+});
+
+test('idle polling reloads controls after a busy job even when the price revision did not change',async()=>{
+ let tick,loads=0;const button={disabled:false},elements={'#update-progress':{hidden:true},'#sync-status':{},'#results-area':{querySelectorAll:()=>[button]}};
+ const statuses=[{busy:true,revision:'same',autoUpdate:{allowed:true}},{busy:false,revision:'same',autoUpdate:{allowed:true}}];
+ const sandbox={dataset:'real',state:{revision:'same',busy:false},polling:false,statusOffline:false,pending:false,
+  observedJob:undefined,finishedJob:undefined,loadedKey:'results',requestKey:()=>'results',context:()=>({}),renderAutoUpdate(){},
+  api:async()=>statuses.shift(),setInterval:fn=>{tick=fn;},$:selector=>elements[selector],syncLine:()=>'',
+  document:{querySelector:()=>null},message(){},loadView:async()=>{loads++;sandbox.state.busy=false;button.disabled=false;return true;}};
+ vm.createContext(sandbox);vm.runInContext(source.slice(source.indexOf('function renderProgress(')),sandbox);
+ await tick();assert.equal(button.disabled,true);assert.equal(loads,0);
+ await tick();assert.equal(loads,1);assert.equal(button.disabled,false);
 });
 test('page API surfaces background failure without resending the update',async()=>{
  let calls=0;

@@ -13,9 +13,9 @@ export async function executeBatch(service, state, update) {
     item.stage='Kiểm tra trước khi ghi';
     try {
       const local=state.products.find(p=>p.id===item.id);
-      const row=calculate(local,vietnamTime(service.clock()).date);
+      const row=service.preflightRow(state,update,item,calculate(local,vietnamTime(service.clock()).date));
       const localKey=createHash('sha256').update(JSON.stringify([local.p0,local.manualPricing])).digest('hex');
-      if(state.policy!==POLICY||localKey!==item.row.localKey||row.status!=='simulated'||row.price!==item.row.price||row.allowance!==item.row.allowance)throw Error('Điều kiện hoặc mốc M thay đổi');
+      if(state.policy!==POLICY||localKey!==item.row.localKey||row.price!==item.row.price||row.allowance!==item.row.allowance)throw Error('Điều kiện hoặc mốc M thay đổi');
       service.stage('Đang đối chiếu');
       const fresh=await service.readProduct(item.id);
       service.checkKiotSnapshot(state,item,fresh);
@@ -39,6 +39,7 @@ export async function executeBatch(service, state, update) {
       // Recheck immediately before sending, after other products may have changed.
       service.stage('Đang đối chiếu');
       const fresh=await service.readProduct(item.id);
+      service.checkKiotSnapshot(state,item,fresh);
       if(fingerprint(fresh)!==fingerprint(item.before)){item.status='conflict';throw Error('Dữ liệu thay đổi trước khi gửi');}
       if(update.kiotDescription===false&&fresh.currentPrice===item.row.price){service.skipCorrectKiot(state,item,fresh);await save();continue;}
       if(fresh.currentPrice===item.row.price&&fresh.notes===item.desiredNote) {

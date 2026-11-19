@@ -1,9 +1,11 @@
+export const approvalLabel=approval=>({below_cost:'Duyệt dưới giá vốn',restore_cost:'Trả về giá vốn'})[approval?.kind]||'';
 export function updateSummary(items = []) {
   const succeeded = items.filter(p => p.status === 'done').length;
-  return { total: items.length, succeeded, failed: items.filter(p=>!['done','unchanged','skipped_sapo_zero_price'].includes(p.status)).length };
+  return { total: items.length, succeeded, failed: items.filter(p=>!['done','unchanged','skipped_sapo_zero_price','skipped_manual_price'].includes(p.status)).length };
 }
 // Display classification only; never change the journal's write/restore statuses.
 export function reportStatus(item) {
+  if(item.status==='skipped_manual_price')return item.status;
   if(item.status==='skipped_sapo_zero_price')return item.status;
   if (item.status==='unchanged') return 'unchanged';
   const platforms=Object.values(item.platforms||{}),states=platforms.map(p=>p.status);
@@ -25,7 +27,9 @@ export function reportRows(update={}) {
     const allSkipped=platforms.length&&platforms.every(result=>result.skipped&&!result.alreadyOk);
     add(allSkipped?{...p,status:'skipped',error:skipped.get(p.code)?.error||p.error||'Không có thay đổi đã kiểm chứng để khôi phục'}:p);
   }
-  for(const p of update.skipped||[])add({...p,status:'skipped'});
+  for(const p of update.skipped||[])add({...p,status:p.status==='skipped_manual_price'?p.status:'skipped'});
+  for(const p of update.manualPriceSkips||[])add(p);
+  for(const p of update.unverifiedSkips||[])add(p);
   const unchanged=Array.isArray(update.unchanged)?update.unchanged:update.unchangedCodes||[];
   for(const p of unchanged)add(typeof p==='string'?{code:p,status:'unchanged'}:{...p,status:'unchanged'});
   return rows;
@@ -37,7 +41,7 @@ export function updateReport(update={}) {
   const succeeded=count('done'),preflightFailed=count('preflight_failed'),writeFailed=count('write_failed'),unverified=count('unknown'),notSent=count('not_sent'),unchanged=count('unchanged')+unnamedUnchanged;
   const skippedSapoZeroPrice=count('skipped_sapo_zero_price');
   const failed=preflightFailed+writeFailed+unverified;
-  return {total:rows.length+unnamedUnchanged,succeeded,failed,skippedSapoZeroPrice,preflightFailed,writeFailed,unverified,notSent,unchanged,issues:failed+notSent,unnamedUnchanged};
+  return {total:rows.length+unnamedUnchanged,succeeded,failed,manualPriceSkipped:count('skipped_manual_price'),skippedSapoZeroPrice,preflightFailed,writeFailed,unverified,notSent,unchanged,issues:failed+notSent,unnamedUnchanged};
 }
 export function failureReason(item) {
   if (item.status === 'done'||item.status==='unchanged') return '';
@@ -53,11 +57,13 @@ export const reportItems = items => items.map(p => ({id:p.id,code:p.code,name:p.
   stage:p.stage,failureStage:p.failureStage,rollbackResult:p.rollbackResult,requestSent:p.requestSent,diagnostic:p.diagnostic,verificationDiagnostic:p.verificationDiagnostic,...(p.platforms?{platforms:Object.fromEntries(Object.entries(p.platforms).map(([name,{afterProduct,...result}])=>[name,result]))}:{})}));
 // Bảo 2026-10-19 (TASK-037): an update reports only how many products succeeded; errors are listed in Lịch sử.
 // TASK-114 now displays every selected product and separates failure stages.
-export const issueCount=update=>new Set([...(update.items||[]).filter(p=>!['done','unchanged','skipped_sapo_zero_price'].includes(p.status)),...(update.skipped||[])].map(p=>p.code)).size;
+export const issueCount=update=>new Set([...(update.items||[]),...(update.skipped||[]),...(update.unverifiedSkips||[])].filter(p=>!['done','unchanged','skipped_sapo_zero_price','skipped_manual_price'].includes(p.status)).map(p=>p.code)).size;
 export function summaryText(summary,update) {
   const s=summary?.preflightFailed!==undefined?summary:updateReport(update),n=value=>Number(value||0).toLocaleString('vi-VN');
+  if(update?.message)return update.message;
   const parts=[`${n(s.succeeded)}/${n(s.total)} thành công`];
   if(s.skippedSapoZeroPrice){parts.push(`${n(s.failed)} lỗi`,`${n(s.skippedSapoZeroPrice)} bỏ qua (Sapo giá 0)`);return parts.join(' · ');}
   for(const [key,label] of [['preflightFailed','lỗi kiểm tra'],['writeFailed','lỗi khi ghi'],['unverified','chưa xác minh'],['notSent','chưa gửi'],['unchanged','đã đúng giá']])if(s[key])parts.push(`${n(s[key])} ${label}`);
-  return (update?.mode==='restore-joint-v1'?'Khôi phục — ':'')+parts.join(' · ');
+  if(s.manualPriceSkipped)parts.push(`${n(s.manualPriceSkipped)} giữ giá sửa tay`);
+  return (approvalLabel(update?.approval)?approvalLabel(update.approval)+' ? ':'')+(update?.mode==='restore-joint-v1'?'Khôi phục — ':'')+parts.join(' · ');
 }
